@@ -11,8 +11,8 @@ export class RobotJobController {
   constructor(private readonly robotJobService: RobotJobService) {}
 
   @Post(':warehouse_id/create_task')
-  createTask(@Param('warehouse_id') warehouseId: string, @Body() createRobotJobDto: TaskGenerationReq) : TaskGenerationRes{
-    return this.robotJobService.createTask(warehouseId, createRobotJobDto);
+  async createTask(@Param('warehouse_id') warehouseId: string, @Body() createRobotJobDto: TaskGenerationReq) : Promise<TaskGenerationRes> {
+    return await this.robotJobService.createTask(warehouseId, createRobotJobDto);
   }
 
   @Patch(':warehouse_id/update_task')
