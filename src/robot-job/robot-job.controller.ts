@@ -3,6 +3,7 @@ import { RobotJobService } from './robot-job.service';
 import { CreateRobotJobDto } from './dto/create-robot-job.dto';
 import { UpdateRobotJobDto } from './dto/update-robot-job.dto';
 import { TaskGenerationReq, TaskGenerationRes } from './model/Task_Generation.model';
+import { TaskUpdateReq, TaskUpdateRes } from './model/Task_Update.model';
 
 @Controller('robot-job')
 export class RobotJobController {
@@ -11,6 +12,11 @@ export class RobotJobController {
   @Post(':warehouse_id/create_task')
   createTask(@Param('warehouse_id') warehouseId: string, @Body() createRobotJobDto: TaskGenerationReq) : TaskGenerationRes{
     return this.robotJobService.createTask(warehouseId, createRobotJobDto);
+  }
+
+  @Patch(':warehouse_id/update_task')
+  updateTask(@Param('warehouse_id') warehouseId: string, @Body() updateRobotJobDto: TaskUpdateReq): TaskUpdateRes {
+    return this.robotJobService.updateTask(warehouseId, updateRobotJobDto);
   }
 
   @Post()

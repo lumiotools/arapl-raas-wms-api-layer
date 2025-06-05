@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { CreateRobotJobDto } from './dto/create-robot-job.dto';
 import { UpdateRobotJobDto } from './dto/update-robot-job.dto';
 import { Task, TaskGenerationReq, TaskGenerationRes } from './model/Task_Generation.model';
+import { TaskUpdateReq, TaskUpdateRes } from './model/Task_Update.model';
+import { Task as UpdateTask } from './model/Task_Update.model';
 
 @Injectable()
 export class RobotJobService {
@@ -10,6 +12,23 @@ export class RobotJobService {
     return {
       batch_job_id: createRobotJobDto.batch_job_id,
       status: 'success',
+    };
+  }
+
+  updateTask(warehouse_id: string, updateRobotJobDto: TaskUpdateReq): TaskUpdateRes {
+    const updatedTasks: UpdateTask[] = updateRobotJobDto.updates.map(task => ({
+      ...task,
+      task_id: task.task_id,
+      updated_at: new Date().toISOString(),
+      status: 'updated',
+      message: 'Task updated successfully',
+    }));
+
+    return {
+      task_id: updatedTasks[0].task_id,
+      status: 'success',
+      updated_at: new Date().toISOString(),
+      message: 'Tasks updated successfully',
     };
   }
 
