@@ -1,4 +1,4 @@
-import { Dimension, Wait } from "./Task_Generation.model";
+import { Dimension, Wait } from "./Task_Generation.dto";
 
 export class Cargo{
     cargo_code: string;

@@ -2,9 +2,9 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { RobotJobService } from './robot-job.service';
 import { CreateRobotJobDto } from './dto/create-robot-job.dto';
 import { UpdateRobotJobDto } from './dto/update-robot-job.dto';
-import { TaskGenerationReq, TaskGenerationRes } from './model/Task_Generation.model';
-import { TaskUpdateReq, TaskUpdateRes } from './model/Task_Update.model';
-import { TaskCancelReq, TaskCancelRes } from './model/Task_Cancel.model';
+import { TaskGenerationReq, TaskGenerationRes } from './dto/Task_Generation.dto';
+import { TaskUpdateReq, TaskUpdateRes } from './dto/Task_Update.dto';
+import { TaskCancelReq, TaskCancelRes } from './dto/Task_Cancel.dto';
 
 @Controller('robot-job')
 export class RobotJobController {

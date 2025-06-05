@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { CreateRobotJobDto } from './dto/create-robot-job.dto';
 import { UpdateRobotJobDto } from './dto/update-robot-job.dto';
-import { Task, TaskGenerationReq, TaskGenerationRes } from './model/Task_Generation.model';
-import { TaskUpdateReq, TaskUpdateRes } from './model/Task_Update.model';
-import { Task as UpdateTask } from './model/Task_Update.model';
-import { TaskCancelReq, TaskCancelRes } from './model/Task_Cancel.model';
+import { Task, TaskGenerationReq, TaskGenerationRes } from './dto/Task_Generation.dto';
+import { TaskUpdateReq, TaskUpdateRes } from './dto/Task_Update.dto';
+import { Task as UpdateTask } from './dto/Task_Update.dto';
+import { TaskCancelReq, TaskCancelRes } from './dto/Task_Cancel.dto';
 
 @Injectable()
 export class RobotJobService {
