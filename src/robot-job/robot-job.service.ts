@@ -4,6 +4,7 @@ import { UpdateRobotJobDto } from './dto/update-robot-job.dto';
 import { Task, TaskGenerationReq, TaskGenerationRes } from './model/Task_Generation.model';
 import { TaskUpdateReq, TaskUpdateRes } from './model/Task_Update.model';
 import { Task as UpdateTask } from './model/Task_Update.model';
+import { TaskCancelReq, TaskCancelRes } from './model/Task_Cancel.model';
 
 @Injectable()
 export class RobotJobService {
@@ -29,6 +30,15 @@ export class RobotJobService {
       status: 'success',
       updated_at: new Date().toISOString(),
       message: 'Tasks updated successfully',
+    };
+  }
+
+  cancelTask(warehouse_id: string, updateRobotJobDto: TaskCancelReq): TaskCancelRes {
+    return {
+      task_id: updateRobotJobDto.task_id,
+      status: 'cancelled',
+      cancelled_at: new Date().toISOString(),
+      message: 'Task cancelled successfully',
     };
   }
 

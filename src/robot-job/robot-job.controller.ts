@@ -4,6 +4,7 @@ import { CreateRobotJobDto } from './dto/create-robot-job.dto';
 import { UpdateRobotJobDto } from './dto/update-robot-job.dto';
 import { TaskGenerationReq, TaskGenerationRes } from './model/Task_Generation.model';
 import { TaskUpdateReq, TaskUpdateRes } from './model/Task_Update.model';
+import { TaskCancelReq, TaskCancelRes } from './model/Task_Cancel.model';
 
 @Controller('robot-job')
 export class RobotJobController {
@@ -17,6 +18,11 @@ export class RobotJobController {
   @Patch(':warehouse_id/update_task')
   updateTask(@Param('warehouse_id') warehouseId: string, @Body() updateRobotJobDto: TaskUpdateReq): TaskUpdateRes {
     return this.robotJobService.updateTask(warehouseId, updateRobotJobDto);
+  }
+
+  @Patch(':warehouse_id/cancel_task')
+  cancelTask(@Param('warehouse_id') warehouseId: string, @Body() updateRobotJobDto: TaskCancelReq): TaskCancelRes {
+    return this.robotJobService.cancelTask(warehouseId, updateRobotJobDto);
   }
 
   @Post()
