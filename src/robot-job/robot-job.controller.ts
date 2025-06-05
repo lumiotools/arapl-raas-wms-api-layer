@@ -2,10 +2,16 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { RobotJobService } from './robot-job.service';
 import { CreateRobotJobDto } from './dto/create-robot-job.dto';
 import { UpdateRobotJobDto } from './dto/update-robot-job.dto';
+import { TaskGenerationReq, TaskGenerationRes } from './model/Task_Generation.model';
 
 @Controller('robot-job')
 export class RobotJobController {
   constructor(private readonly robotJobService: RobotJobService) {}
+
+  @Post(':warehouse_id/create_task')
+  createTask(@Param('warehouse_id') warehouseId: string, @Body() createRobotJobDto: TaskGenerationReq) : TaskGenerationRes{
+    return this.robotJobService.createTask(warehouseId, createRobotJobDto);
+  }
 
   @Post()
   create(@Body() createRobotJobDto: CreateRobotJobDto) {
