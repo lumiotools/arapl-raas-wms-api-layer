@@ -10,6 +10,15 @@ import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { BatchJob } from './entities/batch_task.entity';
 import { Task } from './entities/task.entity'; // Adjust the import path as necessary
+import { OschestratorService } from 'src/oschestrator/oschestrator.service'; // Adjust the import path as necessary
+
+
+
+/*
+      task orchestration: pick tasks in pending state and process (dummy) and put in queue
+      after in queue, -> main logic later (inqueue to  processing (proess for sometime)) -> completed
+
+    */
 
 @Injectable()
 export class RobotJobService {
@@ -20,6 +29,8 @@ export class RobotJobService {
 
     @InjectRepository(Task)
     private readonly TaskRepository: Repository<Task>,
+
+    private readonly oschestratorService: OschestratorService, // Inject the orchestrator service
   ){}
 
   async createTask(warehouseId: string, createRobotJobDto: TaskGenerationReq): Promise<TaskGenerationRes> {
@@ -31,28 +42,29 @@ export class RobotJobService {
     });
     await this.BatchJobRepository.save(newBatchJob);
 
+    const newTasks: Task[] = []
     const Tasks: any[] = createRobotJobDto.tasks;
     for (const task of Tasks) {
-    const newTask = this.TaskRepository.create({
-      task_id: task.task_id,
-      task_dependency: task.task_dependency,
-      start_location_id: task.start_location_id,
-      end_location_id: task.end_location_id,
-      start_location_action: task.start_location_action,
-      end_location_action: task.end_location_action,
-      wait_time: task.wait_time,
-      cargos: task.cargos,
-      batch_job: newBatchJob,
-    });
-  /*
-    task orchestration: pick tasks in pending state and process (dummy) and put in queue
-    after in queue, -> main logic later (inqueue to  processing (proess for sometime)) -> completed
-
-  */
-    await this.TaskRepository.save(newTask);
+      const newTask = this.TaskRepository.create({
+        task_id: task.task_id,
+        task_dependency: task.task_dependency,
+        start_location_id: task.start_location_id,
+        end_location_id: task.end_location_id,
+        start_location_action: task.start_location_action,
+        end_location_action: task.end_location_action,
+        wait_time: task.wait_time,
+        cargos: task.cargos,
+        batch_job: newBatchJob,
+      });
+    
+      await this.TaskRepository.save(newTask);
+      newTasks.push(newTask);
     }
 
-    await new Promise(resolve => setTimeout(resolve, 10000));
+    await this.oschestratorService.orchestrate(newBatchJob, newTasks) // Collect tasks to process them
+    // await new Promise(resolve => setTimeout(resolve, 10000));
+    
+    
     const payload = {
       "pagination": {
         "current_page": 1,

@@ -3,11 +3,16 @@ import { RobotJobService } from './robot-job.service';
 import { RobotJobController } from './robot-job.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BatchJob } from './entities/batch_task.entity';
-import { Task } from './entities/task.entity'; // Adjust the import path as necessary
+import { Task } from './entities/task.entity';
+import { OschestratorService } from 'src/oschestrator/oschestrator.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([BatchJob, Task])], // Add your entities here
+  imports: [TypeOrmModule.forFeature([BatchJob, Task])],
   controllers: [RobotJobController],
-  providers: [RobotJobService],
+  providers: [RobotJobService, OschestratorService],
+  exports: [
+    RobotJobService,
+    TypeOrmModule, // Export TypeOrmModule to make repositories available
+  ],
 })
 export class RobotJobModule {}

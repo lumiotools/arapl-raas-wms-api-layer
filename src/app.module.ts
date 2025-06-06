@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { RobotJobModule } from './robot-job/robot-job.module';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { OschestratorModule } from './oschestrator/oschestrator.module';
 import { DBConfig }  from './config/db.config';
 
 @Module({
@@ -11,6 +12,7 @@ import { DBConfig }  from './config/db.config';
     ConfigModule.forRoot({isGlobal: true}),
     TypeOrmModule.forRoot(DBConfig),
     RobotJobModule,
+    OschestratorModule,
   ],
   controllers: [AppController],
   providers: [AppService],
