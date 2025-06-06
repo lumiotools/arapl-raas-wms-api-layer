@@ -49,11 +49,11 @@ export class RobotJobService {
     for (const task of Tasks) {
       const newTask = this.TaskRepository.create({
         task_id: task.task_id,
+        task_pallet_id: task.task_pallet_id,
+        task_type: task.task_type,
         task_dependency: task.task_dependency,
-        start_location_id: task.start_location_id,
-        end_location_id: task.end_location_id,
-        start_location_action: task.start_location_action,
-        end_location_action: task.end_location_action,
+        start_location: task.start_location,
+        end_location: task.end_location,
         wait_time: task.wait_time,
         cargos: task.cargos,
         batch_job: newBatchJob,
@@ -81,34 +81,34 @@ export class RobotJobService {
 
   async updateTask(warehouse_id: string, updateRobotJobDto: TaskUpdateReq): Promise<TaskUpdateRes> {
     const tasks: UpdateTask[] = updateRobotJobDto.updates;
-    for (const task of tasks) {
-      const taskRepo: Task | null = await this.TaskRepository.findOne({ where: { task_id: task.task_id, batch_job: { batch_job_id: updateRobotJobDto.batch_job_id } }, relations: ['batch_job'] });
-      if (!taskRepo) {
-        console.log(`Task with ID ${task.task_id} not found.`);
-        continue;
-      }
-      taskRepo.task_dependency = task.task_dependency ?? taskRepo.task_dependency;
-      taskRepo.start_location_id = task.start_location_id;
-      taskRepo.end_location_id = task.end_location_id;
-      taskRepo.wait_time = task.wait_time;
-      for (const cargo of task.cargos) {
-        const existingCargo = taskRepo.cargos.find(c => c.cargo_code === cargo.cargo_code);
-        if (existingCargo) {
-          existingCargo.cargo_dimension = cargo.cargo_dimension;
-          existingCargo.cargo_weight = cargo.cargo_weight ?? existingCargo.cargo_weight;
-        }
-      }
-      await this.TaskRepository.save(taskRepo);
-    }
+    // for (const task of tasks) {
+    //   const taskRepo: Task | null = await this.TaskRepository.findOne({ where: { task_id: task.task_id, batch_job: { batch_job_id: updateRobotJobDto.batch_job_id } }, relations: ['batch_job'] });
+    //   if (!taskRepo) {
+    //     console.log(`Task with ID ${task.task_id} not found.`);
+    //     continue;
+    //   }
+    //   taskRepo.task_dependency = task.task_dependency ?? taskRepo.task_dependency;
+    //   taskRepo.start_location_id = task.start_location_id;
+    //   taskRepo.end_location_id = task.end_location_id;
+    //   taskRepo.wait_time = task.wait_time;
+    //   for (const cargo of task.cargos) {
+    //     const existingCargo = taskRepo.cargos.find(c => c.cargo_code === cargo.cargo_code);
+    //     if (existingCargo) {
+    //       existingCargo.cargo_dimension = cargo.cargo_dimension;
+    //       existingCargo.cargo_weight = cargo.cargo_weight ?? existingCargo.cargo_weight;
+    //     }
+    //   }
+    //   await this.TaskRepository.save(taskRepo);
+    // }
 
-    if (tasks.length === 0) {
-      return {
-        task_id: '',
-        status: 'no_updates',
-        updated_at: new Date().toISOString(),
-        message: 'No tasks to update.',
-      };
-    }
+    // if (tasks.length === 0) {
+    //   return {
+    //     task_id: '',
+    //     status: 'no_updates',
+    //     updated_at: new Date().toISOString(),
+    //     message: 'No tasks to update.',
+    //   };
+    // }
 
     return {
       task_id: tasks[0].task_id,

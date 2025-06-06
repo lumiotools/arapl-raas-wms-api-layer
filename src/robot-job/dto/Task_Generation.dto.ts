@@ -32,17 +32,25 @@ export class Cargo{
 
 export class Wait{
     wait_type: string;
-    start_location_wait_time: number;
-
-    @Optional()
-    end_location_wait_time: number;
+    start_location_wait_time: number=0;
+    end_location_wait_time: number=0;
 }
-
+enum LocationAction {
+    Pick = "Pick",
+    Drop = "Drop",
+    Nop = "Nop",
+    WaitPick = "WaitPick",
+    WaitDrop = "WaitDrop",
+    Wait = "Wait",
+    Destack = "Destack"
+}
 export class Location {
     location_id: string;
 
     @Optional()
-    location_action: string;
+    location_zone: string;
+
+    location_action: LocationAction;
 
     location_dimension: Dimension;
 
@@ -50,20 +58,31 @@ export class Location {
     location_attribute: Attribute;
 }
 
+enum TaskType{
+    CrossDocking = "Crossdock",
+    Putaway = "Putaway",
+    Picking = "Picking",
+}
 export class Task {
     task_id: string;
 
     @Optional()
+    task_pallet_id: string;
+
+    task_type: TaskType;
+
+    @Optional()
     task_dependency: string;
 
-    start_location_id: Location;
-    end_location_id: Location;
+    start_location: Location; //**** */
 
-    @Optional()
-    start_location_action: string;
+    end_location: Location;
 
-    @Optional()
-    end_location_action: string;
+    // @Optional()
+    // start_location_action: string;
+
+    // @Optional()
+    // end_location_action: string;
 
     @Optional()
     wait_time: Wait;
@@ -71,15 +90,19 @@ export class Task {
     cargos: Cargo[];
 }
 
+export enum batch_type {
+    Continuous = "Continuous",
+    Discrete = "Discrete"
+}
+
 export class TaskGenerationReq {
     batch_job_id: string;
 
     @Optional()
-    batch_priority: number;
+    batch_priority: number = 5;
 
     @Optional()
-    batch_type: string;
-
+    batch_type: batch_type = batch_type.Discrete;
 
     tasks: Task[];
 

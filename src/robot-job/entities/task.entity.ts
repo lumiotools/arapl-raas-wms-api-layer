@@ -7,25 +7,25 @@ export class Task {
     task_id: string;
 
     @Column({ nullable: true })
+    task_pallet_id: string;
+
+    @Column({ type: 'enum', enum: ["Crossdock", "Putaway", "Picking"], default: "Crossdock" })
+    task_type: string;
+
+    @Column({ nullable: true })
     task_dependency : string;
 
     @Column({type: 'json'})
-    start_location_id: Location;
+    start_location: Location;
 
     @Column({type: 'json'})
-    end_location_id: Location;
-
-    @Column({ nullable: true })
-    start_location_action : string;
-
-    @Column({ nullable: true })
-    end_location_action?: string;
+    end_location: Location;
 
     @Column({ type: 'json', nullable: true })
-    wait_time?: Wait; // Replace 'any' with 'Wait' if you have a proper transformer/entity
+    wait_time?: Wait; 
 
     @Column({ type: 'json' })
-    cargos: Cargo[]; // Replace 'any' with 'Cargo' if you have a proper transformer/entity
+    cargos: Cargo[];
 
     @ManyToOne(() => BatchJob, {
         nullable: true,

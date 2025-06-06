@@ -39,7 +39,7 @@ export class OschestratorService {
                 "task_id": task.task_id,
                 "status": task.status,
                 "robot_id": "ROBOT-001", // Placeholder for robot ID
-                "end_location": task.end_location_id, // Assuming end_location_id is a Location object
+                "end_location": task.end_location, // Assuming end_location_id is a Location object
             }))
         }
         return defaultPagination;

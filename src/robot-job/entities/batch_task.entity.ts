@@ -1,5 +1,5 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, PrimaryColumn, OneToMany } from 'typeorm';
-import { Task } from './task.entity';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, PrimaryColumn, OneToMany, BatchType } from 'typeorm';
+import { batch_type } from '../dto/Task_Generation.dto';
 
 @Entity('batch_tasks')
 export class BatchJob {
@@ -9,8 +9,8 @@ export class BatchJob {
     @Column({ type: 'int', nullable: true })
     batch_priority: number;
 
-    @Column({ type: 'varchar', nullable: true })
-    batch_type: string;
+    @Column({ type: 'enum', enum: ["Continuous","Discrete"], nullable: true , default: batch_type.Discrete })
+    batch_type: batch_type;
 
     @Column({ type: 'int', nullable: true })
     batch_frequency: number;
