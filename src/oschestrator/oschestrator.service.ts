@@ -83,6 +83,13 @@ export class OschestratorService {
             this.taskQueue.length = 0; // Clear the queue
 
             for (const queueElement of tasksToProcess) {
+                const existingBatchJob = await this.batchJobRepository.findOne({
+                    where: { batch_job_id: queueElement.batchJob.batchJob.batch_job_id },
+                });
+                if (!existingBatchJob) {
+                    this.logger.warn(`Batch job ${queueElement.batchJob.batchJob.batch_job_id} does not exist or Cancelled. Skipping.`);
+                    continue;
+                }
                 const batchJob = queueElement.batchJob.batchJob;
                 batchJob.status = 'processing';
                 await this.batchJobRepository.save(batchJob);
