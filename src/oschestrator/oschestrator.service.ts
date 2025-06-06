@@ -95,6 +95,13 @@ export class OschestratorService {
                 await this.batchJobRepository.save(batchJob);
 
                 for (const task of queueElement.tasks) {
+                    const existingTask = await this.taskRepository.findOne({
+                        where: { task_id: task.task_id },
+                    });
+                    if (!existingTask) {
+                        this.logger.warn(`Task ${task.task_id} does not exist or was cancelled. Skipping.`);
+                        continue;
+                    }
                     task.status = 'processing';
                     await this.wms_url_webhook({batchJob: queueElement.batchJob, tasks: [task]});
                     await this.taskRepository.save(task);
