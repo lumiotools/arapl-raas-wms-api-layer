@@ -16,8 +16,8 @@ export class RobotJobController {
   }
 
   @Patch(':warehouse_id/update_task')
-  updateTask(@Param('warehouse_id') warehouseId: string, @Body() updateRobotJobDto: TaskUpdateReq): TaskUpdateRes {
-    return this.robotJobService.updateTask(warehouseId, updateRobotJobDto);
+  async updateTask(@Param('warehouse_id') warehouseId: string, @Body() updateRobotJobDto: TaskUpdateReq): Promise<TaskUpdateRes> {
+    return await this.robotJobService.updateTask(warehouseId, updateRobotJobDto);
   }
 
   @Patch(':warehouse_id/cancel_task')

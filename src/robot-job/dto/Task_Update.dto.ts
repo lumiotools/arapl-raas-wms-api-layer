@@ -1,4 +1,5 @@
-import { Dimension, Wait } from "./Task_Generation.dto";
+import { Optional } from "@nestjs/common";
+import { Attribute, Dimension, Wait } from "./Task_Generation.dto";
 
 export class Cargo{
     cargo_code: string;
@@ -10,14 +11,25 @@ export class Cargo{
 export class Location {
     location_id: string;
     location_dimension: Dimension;
-    cargo_quantity?: number;
+
+    @Optional()
+    cargo_quantity: number;
+
+    @Optional()
+    location_action: string;
+
+    @Optional()
+    location_attribute: Attribute;
 }
 
 export class Task {
     task_id: string;
-    task_dependency?: string;
-    start_location: Location;
-    end_location: Location;
+
+    @Optional()
+    task_dependency: string;
+
+    start_location_id: Location;
+    end_location_id: Location;
     wait_time?: Wait;
     cargos: Cargo[];
 }
