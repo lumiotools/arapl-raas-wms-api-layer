@@ -37,6 +37,6 @@ export class Task {
     @JoinColumn({ name: 'batch_job_id' })
     batch_job: BatchJob;
 
-    @Column ({ type: 'boolean', default: false })
-    status: boolean;
+    @Column ({ type: 'varchar', default: "pending" })
+    status: string;
 }

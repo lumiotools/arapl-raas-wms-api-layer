@@ -44,9 +44,13 @@ export class RobotJobService {
       cargos: task.cargos,
       batch_job: newBatchJob,
     });
-  
-  await this.TaskRepository.save(newTask);
-}
+  /*
+    task orchestration: pick tasks in pending state and process (dummy) and put in queue
+    after in queue, -> main logic later (inqueue to  processing (proess for sometime)) -> completed
+
+  */
+    await this.TaskRepository.save(newTask);
+    }
 
     await new Promise(resolve => setTimeout(resolve, 10000));
     const payload = {
@@ -144,6 +148,15 @@ export class RobotJobService {
       await this.TaskRepository.save(taskRepo);
     }
 
+    if (tasks.length === 0) {
+      return {
+        task_id: '',
+        status: 'no_updates',
+        updated_at: new Date().toISOString(),
+        message: 'No tasks to update.',
+      };
+    }
+
     return {
       task_id: tasks[0].task_id,
       status: 'success',
@@ -161,6 +174,14 @@ export class RobotJobService {
         status: 'not_found',
         cancelled_at: new Date().toISOString(),
         message: `Task with ID ${task_id} not found.`,
+      };
+    }
+    if (taskRepo.status === 'completed'){
+      return {
+        task_id: task_id,
+        status: 'already_completed',
+        cancelled_at: new Date().toISOString(),
+        message: `Task with ID ${task_id} is already completed and cannot be cancelled.`,
       };
     }
     await this.TaskRepository.remove(taskRepo);

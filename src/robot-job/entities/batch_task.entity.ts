@@ -15,7 +15,7 @@ export class BatchJob {
     @Column({ type: 'int', nullable: true })
     batch_frequency: number;
 
-    @Column ({ type: 'boolean', default: false })
-    status: boolean;
+    @Column ({ type: 'varchar', default: "pending" })
+    status: string;
 
 }
