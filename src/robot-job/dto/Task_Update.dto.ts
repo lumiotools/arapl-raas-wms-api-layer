@@ -4,8 +4,12 @@ import { Attribute, Dimension, Wait } from "./Task_Generation.dto";
 export class Cargo{
     cargo_code: string;
     cargo_dimension: Dimension;
-    cargo_quantity?: number;
-    cargo_weight?: number;
+
+    @Optional()
+    cargo_quantity: number;
+
+    @Optional()
+    cargo_weight: number;
 }
 
 export class Location {
@@ -14,12 +18,6 @@ export class Location {
 
     @Optional()
     cargo_quantity: number;
-
-    @Optional()
-    location_action: string;
-
-    @Optional()
-    location_attribute: Attribute;
 }
 
 export class Task {
@@ -28,16 +26,21 @@ export class Task {
     @Optional()
     task_dependency: string;
 
-    start_location_id: Location;
-    end_location_id: Location;
-    wait_time?: Wait;
+    start_location: Location;
+    end_location: Location;
+
+    @Optional()
+    wait_time: Wait;
+
     cargos: Cargo[];
 }
 
 export class TaskUpdateReq {
     batch_job_id: string;
     updates: Task[];
-    timestamp?: string;
+
+    @Optional()
+    timestamp: string;
 }
 
 export class TaskUpdateRes {

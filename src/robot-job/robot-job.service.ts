@@ -81,34 +81,40 @@ export class RobotJobService {
 
   async updateTask(warehouse_id: string, updateRobotJobDto: TaskUpdateReq): Promise<TaskUpdateRes> {
     const tasks: UpdateTask[] = updateRobotJobDto.updates;
-    // for (const task of tasks) {
-    //   const taskRepo: Task | null = await this.TaskRepository.findOne({ where: { task_id: task.task_id, batch_job: { batch_job_id: updateRobotJobDto.batch_job_id } }, relations: ['batch_job'] });
-    //   if (!taskRepo) {
-    //     console.log(`Task with ID ${task.task_id} not found.`);
-    //     continue;
-    //   }
-    //   taskRepo.task_dependency = task.task_dependency ?? taskRepo.task_dependency;
-    //   taskRepo.start_location_id = task.start_location_id;
-    //   taskRepo.end_location_id = task.end_location_id;
-    //   taskRepo.wait_time = task.wait_time;
-    //   for (const cargo of task.cargos) {
-    //     const existingCargo = taskRepo.cargos.find(c => c.cargo_code === cargo.cargo_code);
-    //     if (existingCargo) {
-    //       existingCargo.cargo_dimension = cargo.cargo_dimension;
-    //       existingCargo.cargo_weight = cargo.cargo_weight ?? existingCargo.cargo_weight;
-    //     }
-    //   }
-    //   await this.TaskRepository.save(taskRepo);
-    // }
+    for (const task of tasks) {
+      const taskRepo: Task | null = await this.TaskRepository.findOne({ where: { task_id: task.task_id, batch_job: { batch_job_id: updateRobotJobDto.batch_job_id } }, relations: ['batch_job'] });
+      if (!taskRepo) {
+        console.log(`Task with ID ${task.task_id} not found.`);
+        continue;
+      }
+      taskRepo.task_dependency = task.task_dependency ?? taskRepo.task_dependency;
 
-    // if (tasks.length === 0) {
-    //   return {
-    //     task_id: '',
-    //     status: 'no_updates',
-    //     updated_at: new Date().toISOString(),
-    //     message: 'No tasks to update.',
-    //   };
-    // }
+      taskRepo.start_location.location_id = task.start_location.location_id;
+      taskRepo.start_location.location_dimension = task.start_location.location_dimension;
+
+      taskRepo.end_location.location_id = task.end_location.location_id;
+      taskRepo.end_location.location_dimension = task.end_location.location_dimension;
+      
+      taskRepo.wait_time = task.wait_time;
+
+      for (const cargo of task.cargos) {
+        const existingCargo = taskRepo.cargos.find(c => c.cargo_code === cargo.cargo_code);
+        if (existingCargo) {
+          existingCargo.cargo_dimension = cargo.cargo_dimension;
+          existingCargo.cargo_weight = cargo.cargo_weight ?? existingCargo.cargo_weight;
+        }
+      }
+      await this.TaskRepository.save(taskRepo);
+    }
+
+    if (tasks.length === 0) {
+      return {
+        task_id: '',
+        status: 'no_updates',
+        updated_at: new Date().toISOString(),
+        message: 'No tasks to update.',
+      };
+    }
 
     return {
       task_id: tasks[0].task_id,
@@ -120,7 +126,7 @@ export class RobotJobService {
 
   async cancelTask(warehouse_id: string, updateRobotJobDto: TaskCancelReq): Promise<TaskCancelRes> {
     const task_id = updateRobotJobDto.task_id;
-    const taskRepo: Task | null =  await this.TaskRepository.findOne({ where: {task_id: task_id }}) ?? null;
+    const taskRepo: Task | null =  await this.TaskRepository.findOne({ where: {task_id: task_id }});
     if (!taskRepo) {
       return {
         task_id: task_id,
