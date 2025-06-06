@@ -152,12 +152,23 @@ export class RobotJobService {
     };
   }
 
-  cancelTask(warehouse_id: string, updateRobotJobDto: TaskCancelReq): TaskCancelRes {
+  async cancelTask(warehouse_id: string, updateRobotJobDto: TaskCancelReq): Promise<TaskCancelRes> {
+    const task_id = updateRobotJobDto.task_id;
+    const taskRepo: Task | null =  await this.TaskRepository.findOne({ where: {task_id: task_id }}) ?? null;
+    if (!taskRepo) {
+      return {
+        task_id: task_id,
+        status: 'not_found',
+        cancelled_at: new Date().toISOString(),
+        message: `Task with ID ${task_id} not found.`,
+      };
+    }
+    await this.TaskRepository.remove(taskRepo);
     return {
-      task_id: updateRobotJobDto.task_id,
+      task_id: task_id,
       status: 'cancelled',
       cancelled_at: new Date().toISOString(),
-      message: 'Task cancelled successfully',
+      message: `Task with ID ${task_id} has been cancelled.`,
     };
   }
 
