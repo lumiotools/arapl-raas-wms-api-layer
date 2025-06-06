@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ForeignKey, ManyToOne, JoinTable, PrimaryColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ForeignKey, ManyToOne, JoinTable, PrimaryColumn, JoinColumn } from 'typeorm';
 import { Cargo, Location, Wait } from '../dto/Task_Generation.dto'; // Adjust the import path as necessary
 import { BatchJob } from './batch_task.entity'; // Adjust the import path as necessary
 @Entity('tasks')
@@ -34,6 +34,7 @@ export class Task {
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE',
     })
+    @JoinColumn({ name: 'batch_job_id' })
     batch_job: BatchJob;
 
     @Column ({ type: 'boolean', default: false })
