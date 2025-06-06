@@ -13,6 +13,7 @@ import { Task } from './entities/task.entity'; // Adjust the import path as nece
 import { OschestratorService } from 'src/oschestrator/oschestrator.service'; // Adjust the import path as necessary
 import { queueElementDto } from 'src/oschestrator/dto/queue.dto';
 import { queue } from 'rxjs';
+import { BatchCancelReq, BatchCancelRes } from './dto/Batch_Cancel.dto';
 
 
 
@@ -124,7 +125,35 @@ export class RobotJobService {
     };
   }
 
-  async cancelTask(warehouse_id: string, updateRobotJobDto: TaskCancelReq): Promise<TaskCancelRes> {
+  async cancelTask(warehouse_id: string, updateRobotJobDto: TaskCancelReq | BatchCancelReq): Promise<TaskCancelRes | BatchCancelRes> {
+    if ('batch_job_id' in updateRobotJobDto) {
+      // Handle batch cancellation
+      const batchJob = await this.BatchJobRepository.findOne({ where: { batch_job_id: updateRobotJobDto.batch_job_id }});
+      if (!batchJob) {
+        return {
+          task_id: updateRobotJobDto.batch_job_id,
+          status: 'not_found',
+          cancelled_at: new Date().toISOString(),
+          message: `Batch job with ID ${updateRobotJobDto.batch_job_id} not found.`,
+        };
+      }
+      const tasks = await this.TaskRepository.find({ where: { batch_job: batchJob} });
+      if (tasks.length === 0) {
+        return {
+          task_id: '',
+          status: 'no_tasks',
+          cancelled_at: new Date().toISOString(),
+          message: `No tasks found for batch job with ID ${updateRobotJobDto.batch_job_id}.`,
+        };
+      }
+      await this.BatchJobRepository.remove(batchJob);
+      return {
+        task_id: tasks[0].task_id,
+        status: 'cancelled',
+        cancelled_at: new Date().toISOString(),
+        message: `Batch job with ID ${updateRobotJobDto.batch_job_id} and its tasks have been cancelled.`,
+      };
+    }
     const task_id = updateRobotJobDto.task_id;
     const taskRepo: Task | null =  await this.TaskRepository.findOne({ where: {task_id: task_id }});
     if (!taskRepo) {

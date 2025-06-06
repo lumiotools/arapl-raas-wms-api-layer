@@ -5,6 +5,7 @@ import { UpdateRobotJobDto } from './dto/update-robot-job.dto';
 import { TaskGenerationReq, TaskGenerationRes } from './dto/Task_Generation.dto';
 import { TaskUpdateReq, TaskUpdateRes } from './dto/Task_Update.dto';
 import { TaskCancelReq, TaskCancelRes } from './dto/Task_Cancel.dto';
+import { BatchCancelReq, BatchCancelRes } from './dto/Batch_Cancel.dto';
 
 @Controller('robot-job')
 export class RobotJobController {
@@ -21,7 +22,7 @@ export class RobotJobController {
   }
 
   @Patch(':warehouse_id/cancel_task')
-  async cancelTask(@Param('warehouse_id') warehouseId: string, @Body() updateRobotJobDto: TaskCancelReq): Promise<TaskCancelRes> {
+  async cancelTask(@Param('warehouse_id') warehouseId: string, @Body() updateRobotJobDto: TaskCancelReq | BatchCancelReq): Promise<TaskCancelRes | BatchCancelRes> {
     return  await this.robotJobService.cancelTask(warehouseId, updateRobotJobDto);
   }
 
