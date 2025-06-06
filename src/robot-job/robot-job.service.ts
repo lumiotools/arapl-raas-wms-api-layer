@@ -11,6 +11,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { BatchJob } from './entities/batch_task.entity';
 import { Task } from './entities/task.entity'; // Adjust the import path as necessary
 import { OschestratorService } from 'src/oschestrator/oschestrator.service'; // Adjust the import path as necessary
+import { queueElementDto } from 'src/oschestrator/dto/queue.dto';
+import { queue } from 'rxjs';
 
 
 
@@ -34,7 +36,7 @@ export class RobotJobService {
   ){}
 
   async createTask(warehouseId: string, createRobotJobDto: TaskGenerationReq): Promise<TaskGenerationRes> {
-    const newBatchJob = this.BatchJobRepository.create({
+    const newBatchJob: BatchJob = this.BatchJobRepository.create({
       batch_job_id: createRobotJobDto.batch_job_id,
       batch_priority: createRobotJobDto.batch_priority,
       batch_type: createRobotJobDto.batch_type,
@@ -61,77 +63,16 @@ export class RobotJobService {
       newTasks.push(newTask);
     }
 
-    await this.oschestratorService.orchestrate(newBatchJob, newTasks) // Collect tasks to process them
-    // await new Promise(resolve => setTimeout(resolve, 10000));
-    
-    
-    const payload = {
-      "pagination": {
-        "current_page": 1,
-        "total_pages": 3,
-        "total_records": 12
+    const queueElementDto: queueElementDto = {
+      batchJob: {
+        batchJob: newBatchJob,
+        warehouseId: warehouseId,
       },
-      "batch_job_id": "BATCH-20240413-004",
-      "batch_priority": 2,
-      "batch_job_status": "task_in_progress",
-      "timestamp": "2024-04-13T12:45:00Z",
-      "tasks_status": [
-        {
-          "task_id": "TASK-001",
-          "status": "robot_assigned",
-          "robot_id": "ROBOT-001",
-          "end_location": {
-            "location_id": "LOC-END-001",
-            "location_dimension": {
-              "length": 120,
-              "width": 90,
-              "height": 160
-            }
-          },
-          "cargos": [
-            {
-              "cargo_code": "CARGO-001",
-              "cargo_weight": 50
-            }
-          ]
-        },
-        {
-          "task_id": "TASK-002",
-          "status": "pickup_successful",
-          "start_location": {
-            "location_id": "LOC-START-002",
-            "location_dimension": {
-              "length": 100,
-              "width": 80,
-              "height": 150
-            }
-          },
-          "end_location": {
-            "location_id": "LOC-END-002",
-            "location_dimension": {
-              "length": 110,
-              "width": 85,
-              "height": 155
-            }
-          },
-          "cargos": [
-            {
-              "cargo_code": "CARGO-002",
-              "cargo_weight": 45
-            }
-          ]
-        }
-      ]
+      tasks: newTasks,
     }
-    const response = await axios.post(
-      `http://localhost:6789/api/webhook/${warehouseId}/task_status_update_webhook`,
-      payload,
-      {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      }
-    );
+    
+    await this.oschestratorService.orchestrate(queueElementDto); 
+
     return {
       batch_job_id: createRobotJobDto.batch_job_id,
       status: 'success',

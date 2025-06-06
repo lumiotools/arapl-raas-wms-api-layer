@@ -5,9 +5,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { BatchJob } from './entities/batch_task.entity';
 import { Task } from './entities/task.entity';
 import { OschestratorService } from 'src/oschestrator/oschestrator.service';
+import { queueElementDto } from 'src/oschestrator/dto/queue.dto';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([BatchJob, Task])],
+  imports: [TypeOrmModule.forFeature([BatchJob, Task, queueElementDto])],
   controllers: [RobotJobController],
   providers: [RobotJobService, OschestratorService],
   exports: [
