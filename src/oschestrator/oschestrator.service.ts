@@ -57,6 +57,7 @@ export class OschestratorService {
             this.logger.log(`Task ${task.task_id} added to queue.`);
         }
         this.taskQueue.push(queueElementDto);
+        await this.wms_url_webhook(queueElementDto);
         this.logger.log(`Task added to queue: ${queueElementDto.batchJob.batchJob.batch_job_id}`);
     }
 
@@ -86,18 +87,21 @@ export class OschestratorService {
 
                 for (const task of queueElement.tasks) {
                     task.status = 'processing';
+                    await this.wms_url_webhook({batchJob: queueElement.batchJob, tasks: [task]});
                     await this.taskRepository.save(task);
+
                     // Simulate task processing time of 0.5 seconds
                     await new Promise(resolve => setTimeout(resolve, 500));
 
                     task.status = 'completed';
                     await this.taskRepository.save(task);
+                    await this.wms_url_webhook({batchJob: queueElement.batchJob, tasks: [task]});
                 }
 
                 batchJob.status = 'completed';
                 await this.batchJobRepository.save(batchJob);
 
-                const response = await this.wms_url_webhook(queueElement);
+                await this.wms_url_webhook(queueElement);
 
             }
         } catch (error) {
@@ -124,7 +128,6 @@ export class OschestratorService {
 
     }
     async orchestrate(queueElementDto: queueElementDto): Promise<void> {
-        
         try {
             await this.collectTasks(queueElementDto);
         } catch (error) {
