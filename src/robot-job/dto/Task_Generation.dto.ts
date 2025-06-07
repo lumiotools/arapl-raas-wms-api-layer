@@ -58,7 +58,7 @@ export class Location {
     location_attribute: Attribute;
 }
 
-enum TaskType{
+export enum TaskType{
     CrossDocking = "Crossdock",
     Putaway = "Putaway",
     Picking = "Picking",
