@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { CreateRobotJobDto } from './dto/create-robot-job.dto';
 import { UpdateRobotJobDto } from './dto/update-robot-job.dto';
 import { TaskGenerationReq, TaskGenerationRes } from './dto/Task_Generation.dto';
@@ -14,6 +14,8 @@ import { OschestratorService } from 'src/oschestrator/oschestrator.service'; // 
 import { queueElementDto } from 'src/oschestrator/dto/queue.dto';
 import { queue } from 'rxjs';
 import { BatchCancelReq, BatchCancelRes } from './dto/Batch_Cancel.dto';
+import { Location } from './entities/locations.entity'; // Adjust the import path as necessary
+import { GetLocationReq, GetLocationRes } from './dto/GetLocation.dto';
 
 
 
@@ -32,6 +34,9 @@ export class RobotJobService {
 
     @InjectRepository(Task)
     private readonly TaskRepository: Repository<Task>,
+
+    @InjectRepository(Location)
+    private readonly LocationRepository: Repository<Location>,
 
     private readonly oschestratorService: OschestratorService, // Inject the orchestrator service
   ){}
@@ -178,6 +183,35 @@ export class RobotJobService {
       status: 'cancelled',
       cancelled_at: new Date().toISOString(),
       message: `Task with ID ${task_id} has been cancelled.`,
+    };
+  }
+
+  async getEmptyLocations(warehouseId: string, getLocationReq: GetLocationReq): Promise<GetLocationRes> {
+    const locations = await this.LocationRepository.find({
+      where: {
+        location_zone: getLocationReq.zone_id,
+        location_action: getLocationReq.location_type,
+        isEmpty: true,
+      },
+    });
+
+    if (locations.length === 0) {
+      return {
+        zone_id: getLocationReq.zone_id,
+        available_location_types: [],
+      };
+    }
+
+    
+    if (getLocationReq.location_type === 'Drop') {
+      locations.sort((a, b) => (a.dropPriority ?? 0) - (b.dropPriority ?? 0));
+    }
+    else if (getLocationReq.location_type === 'Pick') {
+      locations.sort((a, b) => (a.pickupPriority ?? 0) - (b.pickupPriority ?? 0));
+    }
+    return {
+      zone_id: getLocationReq.zone_id,
+      available_location_types: locations,
     };
   }
 

@@ -6,6 +6,7 @@ import { TaskGenerationReq, TaskGenerationRes } from './dto/Task_Generation.dto'
 import { TaskUpdateReq, TaskUpdateRes } from './dto/Task_Update.dto';
 import { TaskCancelReq, TaskCancelRes } from './dto/Task_Cancel.dto';
 import { BatchCancelReq, BatchCancelRes } from './dto/Batch_Cancel.dto';
+import { GetLocationReq, GetLocationRes } from './dto/GetLocation.dto';
 
 @Controller('robot-job')
 export class RobotJobController {
@@ -24,6 +25,11 @@ export class RobotJobController {
   @Patch(':warehouse_id/cancel_task')
   async cancelTask(@Param('warehouse_id') warehouseId: string, @Body() updateRobotJobDto: TaskCancelReq | BatchCancelReq): Promise<TaskCancelRes | BatchCancelRes> {
     return  await this.robotJobService.cancelTask(warehouseId, updateRobotJobDto);
+  }
+
+  @Post(':warehouse_id/get_empty_locations')
+  async getEmptyLocations(@Param('warehouse_id') warehouseId: string, @Body() GetLocationReq: GetLocationReq ): Promise<GetLocationRes> {
+    return await this.robotJobService.getEmptyLocations(warehouseId, GetLocationReq);
   }
 
   @Post()

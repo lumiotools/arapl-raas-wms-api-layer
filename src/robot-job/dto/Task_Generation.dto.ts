@@ -35,7 +35,7 @@ export class Wait{
     start_location_wait_time: number=0;
     end_location_wait_time: number=0;
 }
-enum LocationAction {
+export enum LocationAction {
     Pick = "Pick",
     Drop = "Drop",
     Nop = "Nop",

@@ -6,9 +6,10 @@ import { BatchJob } from './entities/batch_task.entity';
 import { Task } from './entities/task.entity';
 import { OschestratorService } from 'src/oschestrator/oschestrator.service';
 import { queueElementDto } from 'src/oschestrator/dto/queue.dto';
+import { Location } from './entities/locations.entity'; // Adjust the import path as necessary
 
 @Module({
-  imports: [TypeOrmModule.forFeature([BatchJob, Task, queueElementDto])],
+  imports: [TypeOrmModule.forFeature([BatchJob, Task, queueElementDto, Location])],
   controllers: [RobotJobController],
   providers: [RobotJobService, OschestratorService],
   exports: [
