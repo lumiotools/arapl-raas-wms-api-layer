@@ -77,7 +77,7 @@ export class RobotJobService {
       tasks: newTasks,
     }
     
-    await this.oschestratorService.orchestrate(queueElementDto); 
+    // await this.oschestratorService.orchestrate(queueElementDto); 
 
     return {
       batch_job_id: createRobotJobDto.batch_job_id,
@@ -142,14 +142,24 @@ export class RobotJobService {
           message: `Batch job with ID ${updateRobotJobDto.batch_job_id} not found.`,
         };
       }
-      const tasks = await this.TaskRepository.find({ where: { batch_job: batchJob} });
-      if (tasks.length === 0) {
+      const tasks = await this.TaskRepository.find({ where: { batch_job: { batch_job_id: updateRobotJobDto.batch_job_id } } });
+      
+      if (tasks.length === 0) { 
         return {
-          task_id: '',
-          status: 'no_tasks',
+          task_id: updateRobotJobDto.batch_job_id,
+          status: 'not_found',
           cancelled_at: new Date().toISOString(),
           message: `No tasks found for batch job with ID ${updateRobotJobDto.batch_job_id}.`,
         };
+
+      }
+      if (batchJob.status !== 'pending') {
+        return {
+          task_id: updateRobotJobDto.batch_job_id,
+          status: 'already_completed',
+          cancelled_at: new Date().toISOString(),
+          message: `Batch job with ID ${updateRobotJobDto.batch_job_id} is not in pending state and cannot be cancelled.`,
+        }
       }
       await this.BatchJobRepository.remove(batchJob);
       return {
@@ -169,12 +179,12 @@ export class RobotJobService {
         message: `Task with ID ${task_id} not found.`,
       };
     }
-    if (taskRepo.status === 'completed'){
+    if (taskRepo.status !== 'pending') {
       return {
         task_id: task_id,
         status: 'already_completed',
         cancelled_at: new Date().toISOString(),
-        message: `Task with ID ${task_id} is already completed and cannot be cancelled.`,
+        message: `Task with ID ${task_id} is not in pending state and cannot be cancelled.`,
       };
     }
     await this.TaskRepository.remove(taskRepo);
