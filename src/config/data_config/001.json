@@ -1,0 +1,48 @@
+{
+  "batch_job_id": "input.jobId",
+  "batch_priority": "input.priority",
+  "batch_type": "input.type",
+  "tasks": {
+    "source": "input.operations",
+    "map": {
+      "task_id": "op.id",
+      "task_type": "op.kind",
+      "start_location": {
+        "source": "op.start",
+        "location_id": "id",
+        "location_action": "action",
+        "location_dimension": {
+          "source": "size",
+          "length": "l",
+          "width": "w",
+          "height": "h"
+        }
+      },
+      "end_location": {
+        "source": "op.end",
+        "location_id": "op.end.id",
+        "location_action": "op.end.action",
+        "location_dimension": {
+            "source": "size",
+          "length": "l",
+          "width": "w",
+          "height": "h"
+        }
+      },
+      "cargos": {
+        "source": "op.items",
+        "map": {
+          "cargo_code": "item.code",
+          "cargo_type": "item.type",
+          "cargo_dimension": {
+            "source": "item.size",      
+            "length": "l",
+            "width": "w",
+            "height": "h"
+          },
+          "cargo_weight": "item.weight"
+        }
+      }
+    }
+  }
+}

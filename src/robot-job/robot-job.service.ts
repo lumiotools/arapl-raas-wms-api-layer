@@ -1,9 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { CreateRobotJobDto } from './dto/create-robot-job.dto';
 import { UpdateRobotJobDto } from './dto/update-robot-job.dto';
-import { TaskGenerationReq, TaskGenerationRes } from './dto/Task_Generation.dto';
+import { Attribute, TaskGenerationReq, TaskGenerationRes } from './dto/Task_Generation.dto';
 import { TaskUpdateReq, TaskUpdateRes } from './dto/Task_Update.dto';
 import { Task as UpdateTask } from './dto/Task_Update.dto';
+import { Task as TaskReq } from './dto/Task_Generation.dto';
 import { TaskCancelReq, TaskCancelRes } from './dto/Task_Cancel.dto';
 import axios from 'axios';
 import { Repository } from 'typeorm';
@@ -16,6 +17,10 @@ import { queue } from 'rxjs';
 import { BatchCancelReq, BatchCancelRes } from './dto/Batch_Cancel.dto';
 import { Location } from './entities/locations.entity'; // Adjust the import path as necessary
 import { GetLocationReq, GetLocationRes } from './dto/GetLocation.dto';
+import * as fs from 'fs/promises';
+import { start } from 'repl';
+import { json } from 'stream/consumers';
+import { PartialType } from '@nestjs/mapped-types';
 
 
 
@@ -83,6 +88,131 @@ export class RobotJobService {
       batch_job_id: createRobotJobDto.batch_job_id,
       status: 'success',
     };
+  }
+
+  unstructureHelper(input: any, jsonData: any, expression: string, sliceString : string | null = 'input'): any{
+    try {
+        const prop = sliceString !== null ? expression.slice(`${sliceString}.`.length): expression;
+        const requirement = input[prop];
+        return requirement;
+      } catch (e) {
+        return "gotError";
+      }
+  }
+  async createUnstructuredTask (warehouseId: string, input: any, config_id: number): Promise<any> {
+    const filePath = `src/config/data_config/${config_id}.json`; 
+    try {
+      const fileContent = await fs.readFile(filePath, 'utf-8');
+      const jsonData = JSON.parse(fileContent);
+      const Tasks: TaskReq[] = [];
+      const taskArray = this.unstructureHelper(input, jsonData, jsonData['tasks'].source) ;
+      for (const op of taskArray) {
+        const map = jsonData['tasks']['map']
+        console.log('map', map);
+        console.log('op', op);
+
+        const startLocation = this.unstructureHelper(op, jsonData, map.start_location.source,'op');
+        console.log('startLocation', startLocation);
+        const startLocationDimension =  this.unstructureHelper(startLocation, jsonData, map.start_location.location_dimension.source, null);
+        console.log('startLocationDimension', startLocationDimension);
+        const startLocationAttribute = ("location_attribute" in map.start_location) ? this.unstructureHelper(startLocation, jsonData, startLocation['location_attribute'], 'op') : null;
+
+        const endLocation = this.unstructureHelper(op, jsonData, map.end_location.source, 'op');
+        console.log('endLocation', endLocation);
+        const endLocationDimension = this.unstructureHelper(endLocation, jsonData, map.end_location.location_dimension.source, null);
+        const endLocationAttribute: Attribute = ("location_attribute" in map.end_location) ? this.unstructureHelper(endLocation, jsonData, endLocation['location_attribute'], 'op') : null;
+        console.log('endLocationDimension', endLocationDimension);
+        console.log('endLocationAttribute', endLocationAttribute);
+        const cargoArray = this.unstructureHelper(op, jsonData, map['cargos'].source, 'op');
+        const cargoMap = map['cargos']['map'];
+        const cargoDimension = cargoMap['cargo_dimension'];
+        const cargos: any[] = [];
+        console.log('cargoArray', cargoArray);
+        console.log('cargoMap', cargoMap);
+        console.log('cargoDimension', cargoDimension);
+        for (const cargo of cargoArray) {
+          const cargo_code = this.unstructureHelper(cargo, jsonData, cargoMap['cargo_code'], 'item');
+          const cargoDimensionData = this.unstructureHelper(cargo, jsonData, cargoDimension.source, 'item');
+          const cargoDimensionObj = {
+            length: this.unstructureHelper(cargoDimensionData, jsonData, cargoDimension['length'], null),
+            width: this.unstructureHelper(cargoDimensionData, jsonData, cargoDimensionData['width'], null),
+            height: this.unstructureHelper(cargoDimensionData, jsonData, cargoDimensionData['height'], null),
+          };
+          const cargoAttributes =  null;
+          const cargoWeight = this.unstructureHelper(cargo, jsonData, cargoMap['cargo_weight'], 'item');
+        
+          cargos.push({
+            cargo_code: cargo_code,
+            cargo_type: ("cargo_type" in cargoMap) ? this.unstructureHelper(cargo, jsonData, cargoMap['cargo_type'], 'item') : null,
+            cargo_dimension: cargoDimensionObj,
+            cargo_attributes: cargoAttributes,
+            cargo_weight: cargoWeight,
+          });
+        }
+
+
+        const task: TaskReq = {
+          task_id: this.unstructureHelper(op, jsonData, jsonData['tasks']['map']['task_id'], 'op'),
+          task_pallet_id: ("task_pallet_id" in map) ?this.unstructureHelper(op, jsonData, map['task_pallet_id'], 'op') : null,
+          task_type: ("task_type" in map) ? this.unstructureHelper(op, jsonData, map['task_type'], 'op'): 'Crossdock',
+          task_dependency: ("task_dependency" in map) ? this.unstructureHelper(op, jsonData, map['task_dependency'], 'op') : null,
+          start_location: {
+            location_id: this.unstructureHelper(startLocation, jsonData, startLocation['location_id'], null),
+            location_zone: ("location_zone" in startLocation) ? this.unstructureHelper(startLocation, jsonData,startLocation['location_zone'], null): null,
+            location_action: this.unstructureHelper(startLocation, jsonData,startLocation['location_action'], null),
+            location_dimension: {
+              length: this.unstructureHelper(startLocationDimension, jsonData,startLocationDimension['length'], null),
+              width: this.unstructureHelper(startLocationDimension, jsonData,startLocationDimension['width'], null),
+              height: this.unstructureHelper(startLocationDimension, jsonData,startLocationDimension['height'], null),
+            },
+            location_attribute: startLocationAttribute ? {
+              attribute_name: this.unstructureHelper(startLocationAttribute, jsonData,startLocationAttribute['attribute_name'], null),
+              attribute_value: this.unstructureHelper(startLocationAttribute, jsonData,startLocationAttribute['attribute_value'], null),
+            } : {'attribute_name': null, 'attribute_value': null} ,
+          },
+          end_location: {
+            location_id: this.unstructureHelper(endLocation, jsonData, endLocation['location_id'], null),
+            location_zone: ("location_zone" in endLocation) ? this.unstructureHelper(endLocation, jsonData,endLocation['location_zone'], null): null,
+            location_action: this.unstructureHelper(endLocation, jsonData,endLocation['location_action'], null),
+            location_dimension: {
+              length: this.unstructureHelper(endLocationDimension, jsonData,endLocationDimension['length'], null),
+              width: this.unstructureHelper(endLocationDimension, jsonData,endLocationDimension['width'], null),
+              height: this.unstructureHelper(endLocationDimension, jsonData,endLocationDimension['height'], null),
+            },
+            location_attribute: endLocationAttribute ? {
+              attribute_name: this.unstructureHelper(endLocationAttribute, jsonData,endLocationAttribute['attribute_name'], null),
+              attribute_value: this.unstructureHelper(endLocationAttribute, jsonData,endLocationAttribute['attribute_value'], null),
+            }: {'attribute_name': null, 'attribute_value': null} ,
+          },  
+          cargos: cargos,
+          wait_time: {
+            wait_type: 'null',
+            start_location_wait_time: 0,
+            end_location_wait_time: 0,
+          }
+
+        };
+
+        Tasks.push(task);
+
+      }
+
+      const TaskReq: TaskGenerationReq = {
+        batch_job_id: this.unstructureHelper(input, jsonData, 'batch_job_id'),
+        batch_priority: ('batch_priority' in jsonData) ? this.unstructureHelper(input, jsonData, jsonData['batch_priority']): 5,
+        batch_type: ('batch_type' in jsonData) ? this.unstructureHelper(input, jsonData, jsonData['batch_type']) : 'Discrete',
+        batch_frequency: ('batch_frequency' in jsonData) ? this.unstructureHelper(input, jsonData, jsonData['batch_frequency']) : undefined,
+        tasks: Tasks,
+      }
+      return TaskReq;
+    } catch (error) {
+      return {
+        status: 'error',
+        message: `Failed to load JSON: ${error.message}`,
+      };
+    }
+    // Evaluate the expression in jsonData.batch_job_id using input as context
+    
   }
 
   async updateTask(warehouse_id: string, updateRobotJobDto: TaskUpdateReq): Promise<TaskUpdateRes> {

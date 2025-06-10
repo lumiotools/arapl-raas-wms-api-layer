@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { RobotJobService } from './robot-job.service';
 import { CreateRobotJobDto } from './dto/create-robot-job.dto';
 import { UpdateRobotJobDto } from './dto/update-robot-job.dto';
-import { TaskGenerationReq, TaskGenerationRes } from './dto/Task_Generation.dto';
+import { Task, TaskGenerationReq, TaskGenerationRes } from './dto/Task_Generation.dto';
 import { TaskUpdateReq, TaskUpdateRes } from './dto/Task_Update.dto';
 import { TaskCancelReq, TaskCancelRes } from './dto/Task_Cancel.dto';
 import { BatchCancelReq, BatchCancelRes } from './dto/Batch_Cancel.dto';
@@ -15,6 +15,11 @@ export class RobotJobController {
   @Post(':warehouse_id/create_task')
   async createTask(@Param('warehouse_id') warehouseId: string, @Body() createRobotJobDto: TaskGenerationReq) : Promise<TaskGenerationRes> {
     return await this.robotJobService.createTask(warehouseId, createRobotJobDto);
+  }
+
+  @Post(':warehouse_id/create_unstructured_task/:config_id')
+  async createUnstructuredTask(@Param('warehouse_id') warehouseId: string, @Body() createRobotJobDto: any, @Param('config_id') config_id: number): Promise<any> {
+    return await this.robotJobService.createUnstructuredTask(warehouseId, createRobotJobDto,config_id);
   }
 
   @Patch(':warehouse_id/update_task')
