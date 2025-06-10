@@ -1,0 +1,32 @@
+{
+    "jobId": "BATCH-20240413-001",
+    "priority": 3,
+    "type": "Discrete",
+    "operations": [
+      {
+        "id": "TASK-001",
+        "kind": "Crossdock",
+        "start_id": "start",
+        "start_location_id": "LOC-START-01",
+        "start_action": "Pick",
+        "start": {
+          "size": { "l": 100, "w": 80, "h": 150 }
+        },
+        "end_size": { "l": 120, "w": 90, "h": 160 },
+        "end": {
+          "id": "LOC-END-01",
+          "action": "Drop"
+        },
+        
+        "items": [
+          {
+            "cargo_code": "CARGO-001",
+            "type": "Pallet",
+            "l": 100,
+            "size": { "w": 80, "h": 120 },
+            "weight": 50
+          }
+        ]
+      }
+    ]
+  }
