@@ -36,7 +36,7 @@ export class RobotJobController {
     );
   }
 
-  @Post(':warehouse_id/create_unstructured_task/:config_name')
+  @Post(':warehouse_id/create_raw_task/:config_name')
   async createUnstructuredTask(
     @Param('warehouse_id') warehouseId: string,
     @Param('config_name') configName: string,
