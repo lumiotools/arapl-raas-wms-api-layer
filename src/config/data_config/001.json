@@ -1,49 +1,49 @@
 {
-    "batch_job_id": "input.jobId",
-    "batch_priority": "input.priority",
-    "batch_type": "input.type",
-    "batch_frequency": "null",
-    "tasks": {
-        "source": "input.operations",
+  "batch_job_id": "input.jobId",
+  "batch_priority": "input.priority",
+  "batch_type": "input.type",
+  "batch_frequency": "null",
+  "tasks": {
+    "source": "input.operations",
+    "map": {
+      "task_id": "op.id",
+      "task_type": "op.kind",
+      "start_location_id": "op.start.id",
+      "start_location_action": "op.start.action",
+
+      "start_location_dimension_length": "op.start.size.l",
+      "start_location_dimension_width": "op.start.size.w",
+      "start_location_dimension_height": "op.start.size.h",
+      "start_location_attribute_name": "null",
+      "start_location_attribute_value": "null",
+      "start_location_zone": "null",
+
+      "end_location_id": "op.end.id",
+      "end_location_action": "op.end.action",
+      "end_location_dimension_length": "op.end.size.l",
+      "end_location_dimension_width": "op.end.size.w",
+      "end_location_dimension_height": "op.end.size.h",
+      "end_location_zone": "null",
+      "end_location_attribute_name": "null",
+      "end_location_attribute_value": "null",
+
+      "wait_time_wait_type": "null",
+      "wait_time_start_location_wait_time": "null",
+      "wait_time_end_location_wait_time": "null",
+
+      "cargos": {
+        "source": "op.items",
         "map": {
-                "task_id": "op.id",
-                "task_type": "op.kind",
-                "start_location_id": "op.start.id",
-                "start_location_action": "op.start.action",
-
-                "start_location_dimension_length": "op.start.size.l",
-                "start_location_dimension_width": "op.start.size.w",
-                "start_location_dimension_height": "op.start.size.h",
-                "start_location_attribute_name": "null",
-                "start_location_attribute_value": "null",
-                "start_location_zone": "null",
-
-                "end_location_id": "op.end.id",
-                "end_location_action": "op.end.action",
-                "end_location_dimension_length": "op.end.size.l",
-                "end_location_dimension_width": "op.end.size.w",
-                "end_location_dimension_height": "op.end.size.h",
-                "end_location_zone": "null",
-                "end_location_attribute_name": "null",
-                "end_location_attribute_value": "null",
-
-                "wait_time_wait_type": "null",
-                "wait_time_start_location_wait_time": "null",
-                "wait_time_end_location_wait_time" : "null",
-                
-                "cargos":{
-                "source": "op.items",
-                "map": {
-                        "cargo_code": "item.code",
-                        "cargo_type": "item.type",
-                        "cargo_dimension_length": "item.size.l",
-                        "cargo_dimension_width": "item.size.w",
-                        "cargo_dimension_height": "item.size.h",
-                        "cargo_weight": "item.weight",
-                        "cargo_attributes_name": "null",
-                        "cargo_attributes_value": "null"
-                    }
-                }
-            }
+          "cargo_code": "item.code",
+          "cargo_type": "item.type",
+          "cargo_dimension_length": "item.size.l",
+          "cargo_dimension_width": "item.size.w",
+          "cargo_dimension_height": "item.size.h",
+          "cargo_weight": "item.weight",
+          "cargo_attributes_name": "null",
+          "cargo_attributes_value": "null"
         }
+      }
+    }
+  }
 }
