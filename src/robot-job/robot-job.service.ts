@@ -124,12 +124,8 @@ export class RobotJobService {
         return [false, null];
     }
   }
-  async createUnstructuredTask (warehouseId: string, input: any, config_id: number): Promise<any> {
-    const filePath = `src/config/data_config/${config_id}.json`; 
-    try {
-      const fileContent = await fs.readFile(filePath, 'utf-8');
-      const jsonData = JSON.parse(fileContent);
-      const Tasks: TaskReq[] = [];
+  async transform(input: any, jsonData: any): Promise<any> {
+    const Tasks: TaskReq[] = [];
       let taskArray = this.unstructureHelper(input, jsonData['tasks'].source);
       if (!taskArray[0]) {
         return {
@@ -228,10 +224,6 @@ export class RobotJobService {
               message: 'Failed to unstructure cargo data',
             };
           }
-          // console.log('cargo_code', cargo_code[1]);
-          // console.log('cargo_dimension_length', cargo_dimension_length[1]);
-          // console.log('cargo_dimension_width', cargo_dimension_width[1]);
-          // console.log('cargo_dimension_height', cargo_dimension_height[1]);
           
           CARGOLIST.push({
             cargo_code: cargo_code[1],
@@ -298,7 +290,6 @@ export class RobotJobService {
       let batch_type = this.unstructureHelper(input, jsonData['batch_type']);
       let batch_frequency = this.unstructureHelper(input, jsonData['batch_frequency']);
 
-      // let batch_frequency = this.unstructureHelper(input, jsonData['batch_frequency'].source);
       if (batch_job_id[0]===false || batch_priority[0] === false || batch_type[0] === false || batch_frequency[0] === false) {
         return {
           status: 'error',
@@ -313,7 +304,18 @@ export class RobotJobService {
         batch_frequency: batch_frequency[1] ? batch_frequency[1] : null,
         tasks: Tasks,
       }
-      const response = await this.createTask(warehouseId, TaskReq);
+      return TaskReq;
+  }
+  async createUnstructuredTask (warehouseId: string, input: any, config_id: number): Promise<any> {
+    const filePath = `src/config/data_config/${config_id}.json`; 
+    try {
+      const fileContent = await fs.readFile(filePath, 'utf-8');
+      const jsonData = JSON.parse(fileContent);
+
+      const taskrequest = await this.transform(input, jsonData);
+
+
+      const response = await this.createTask(warehouseId, taskrequest);
       return {
         status: 'success',
         message: 'Unstructured task created successfully',
