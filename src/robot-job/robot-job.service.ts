@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { CreateRobotJobDto } from './dto/create-robot-job.dto';
 import { UpdateRobotJobDto } from './dto/update-robot-job.dto';
-import { Attribute, TaskGenerationReq, TaskGenerationRes } from './dto/Task_Generation.dto';
+import { Attribute, Cargo, TaskGenerationReq, TaskGenerationRes } from './dto/Task_Generation.dto';
 import { TaskUpdateReq, TaskUpdateRes } from './dto/Task_Update.dto';
 import { Task as UpdateTask } from './dto/Task_Update.dto';
 import { Task as TaskReq } from './dto/Task_Generation.dto';
@@ -90,14 +90,39 @@ export class RobotJobService {
     };
   }
 
-  unstructureHelper(input: any, jsonData: any, expression: string, sliceString : string | null = 'input'): any{
+  unstructureHelper(input: any, expression: string): any{
     try {
-        const prop = sliceString !== null ? expression.slice(`${sliceString}.`.length): expression;
-        const requirement = input[prop];
-        return requirement;
-      } catch (e) {
-        return "gotError";
-      }
+        if (expression === 'null'){
+          return [true, null];
+        }
+        // Split the property path into individual keys
+        const keys = expression.split('.').slice(1);
+        console.log('keys', keys);
+        
+        // Start with the input object
+        let current = input;
+        
+        // Traverse through each key in the path
+        for (const key of keys) {
+            if (current === null || current === undefined) {
+                return [false, null];
+            }
+            
+            if (typeof current !== 'object') {
+                return [false, null];
+            }
+            
+            if (!(key in current)) {
+                return [false, null];
+            }
+            
+            current = current[key];
+        }
+        
+        return [true, current];
+    } catch (e) {
+        return [false, null];
+    }
   }
   async createUnstructuredTask (warehouseId: string, input: any, config_id: number): Promise<any> {
     const filePath = `src/config/data_config/${config_id}.json`; 
@@ -105,107 +130,189 @@ export class RobotJobService {
       const fileContent = await fs.readFile(filePath, 'utf-8');
       const jsonData = JSON.parse(fileContent);
       const Tasks: TaskReq[] = [];
-      const taskArray = this.unstructureHelper(input, jsonData, jsonData['tasks'].source) ;
-      for (const op of taskArray) {
-        const map = jsonData['tasks']['map']
-        console.log('map', map);
-        console.log('op', op);
+      let taskArray = this.unstructureHelper(input, jsonData['tasks'].source);
+      if (!taskArray[0]) {
+        return {
+          status: 'error',
+          message: "Didn't find the task array in the input data",
+        };
+      }
+      taskArray = taskArray[1];
+      if (!Array.isArray(taskArray)) {
+        return {
+          status: 'error',
+          message: 'Task array is not an array',
+        };
+      }
+      if (taskArray.length === 0) {
+        return {
+          status: 'error',
+          message: 'Task array is empty',
+        };
+      }
 
-        const startLocation = this.unstructureHelper(op, jsonData, map.start_location.source,'op');
-        console.log('startLocation', startLocation);
-        const startLocationDimension =  this.unstructureHelper(startLocation, jsonData, map.start_location.location_dimension.source, null);
-        console.log('startLocationDimension', startLocationDimension);
-        const startLocationAttribute = ("location_attribute" in map.start_location) ? this.unstructureHelper(startLocation, jsonData, startLocation['location_attribute'], 'op') : null;
+      for (const op of taskArray){
+        const map = jsonData['tasks']['map'];
 
-        const endLocation = this.unstructureHelper(op, jsonData, map.end_location.source, 'op');
-        console.log('endLocation', endLocation);
-        const endLocationDimension = this.unstructureHelper(endLocation, jsonData, map.end_location.location_dimension.source, null);
-        const endLocationAttribute: Attribute = ("location_attribute" in map.end_location) ? this.unstructureHelper(endLocation, jsonData, endLocation['location_attribute'], 'op') : null;
-        console.log('endLocationDimension', endLocationDimension);
-        console.log('endLocationAttribute', endLocationAttribute);
-        const cargoArray = this.unstructureHelper(op, jsonData, map['cargos'].source, 'op');
-        const cargoMap = map['cargos']['map'];
-        const cargoDimension = cargoMap['cargo_dimension'];
-        const cargos: any[] = [];
-        console.log('cargoArray', cargoArray);
-        console.log('cargoMap', cargoMap);
-        console.log('cargoDimension', cargoDimension);
-        for (const cargo of cargoArray) {
-          const cargo_code = this.unstructureHelper(cargo, jsonData, cargoMap['cargo_code'], 'item');
-          const cargoDimensionData = this.unstructureHelper(cargo, jsonData, cargoDimension.source, 'item');
-          const cargoDimensionObj = {
-            length: this.unstructureHelper(cargoDimensionData, jsonData, cargoDimension['length'], null),
-            width: this.unstructureHelper(cargoDimensionData, jsonData, cargoDimension['width'], null),
-            height: this.unstructureHelper(cargoDimensionData, jsonData, cargoDimension['height'], null),
+        let task_id = this.unstructureHelper(op, map['task_id']); //*
+        let task_type = this.unstructureHelper(op, map['task_type']); //*
+        let task_pallet_id = this.unstructureHelper(op, map['task_pallet_id']);
+        let task_dependency = this.unstructureHelper(op, map['task_dependency']);
+
+
+        let start_location_id = this.unstructureHelper(op, map['start_location_id']);//*
+        let start_location_action = this.unstructureHelper(op, map['start_location_action']);//*
+        let start_location_dimension_length = this.unstructureHelper(op, map['start_location_dimension_length']);//*
+        let start_location_dimension_width = this.unstructureHelper(op, map['start_location_dimension_width']);//*
+        let start_location_dimension_height = this.unstructureHelper(op, map['start_location_dimension_height']);//*
+        let start_location_zone = this.unstructureHelper(op, map['start_location_zone']);
+        let start_location_attribute_name = this.unstructureHelper(op, map['start_location_attribute_name']);
+        let start_location_attribute_value = this.unstructureHelper(op, map['start_location_attribute_value']);
+
+        let end_location_id = this.unstructureHelper(op, map['end_location_id']);
+        let end_location_action = this.unstructureHelper(op, map['end_location_action']);
+        let end_location_dimension_length = this.unstructureHelper(op, map['end_location_dimension_length']);
+        let end_location_dimension_width = this.unstructureHelper(op, map['end_location_dimension_width']);
+        let end_location_dimension_height = this.unstructureHelper(op, map['end_location_dimension_height']);
+        let end_location_zone = this.unstructureHelper(op, map['end_location_zone']);
+        let end_location_attribute_name = this.unstructureHelper(op, map['end_location_attribute_name']);
+        let end_location_attribute_value = this.unstructureHelper(op, map['end_location_attribute_value']);
+
+        let wait_time_wait_type = this.unstructureHelper(op, map['wait_time_wait_type']);
+        let wait_time_start_location_wait_time = this.unstructureHelper(op, map['wait_time_start_location_wait_time']);
+        let wait_time_end_location_wait_time = this.unstructureHelper(op, map['wait_time_end_location_wait_time']);
+
+        if (task_id[0] === false || task_type[0] === false || start_location_id[0] === false ||
+            start_location_action[0] === false || start_location_dimension_length[0] === false ||
+            start_location_dimension_width[0] === false || start_location_dimension_height[0] === false ||
+            end_location_id[0] === false || end_location_action[0] === false ||
+            end_location_dimension_length[0] === false || end_location_dimension_width[0] === false ||
+            end_location_dimension_height[0] === false || wait_time_wait_type[0] === false ||
+            wait_time_start_location_wait_time[0] === false || wait_time_end_location_wait_time[0] === false || start_location_zone[0] === false ||
+            end_location_zone[0] === false || start_location_attribute_name[0] === false ||
+            start_location_attribute_value[0] === false || end_location_attribute_name[0] === false || end_location_attribute_value[0] === false) {
+          return {
+            status: 'error',
+            message: 'Failed to unstructure task data',
           };
-          const cargoAttributes =  null;
-          const cargoWeight = this.unstructureHelper(cargo, jsonData, cargoMap['cargo_weight'], 'item');
+        }
 
-          console.log('Cargo dimension Object', cargoDimensionObj);
-          cargos.push({
-            cargo_code: cargo_code,
-            cargo_type: ("cargo_type" in cargoMap) ? this.unstructureHelper(cargo, jsonData, cargoMap['cargo_type'], 'item') : null,
-            cargo_dimension: cargoDimensionObj,
-            cargo_attributes: cargoAttributes,
-            cargo_weight: cargoWeight,
+        let cargos = this.unstructureHelper(op, map['cargos'].source);
+        if (!cargos[0]) {
+          return {
+            status: 'error',
+            message: 'Failed to unstructure cargos data',
+          };
+        }
+        cargos = cargos[1];
+        const CARGOLIST: Cargo[] = [];
+        const mapCargos = map['cargos']['map'];
+        for (let i = 0; i < cargos.length; i++) {
+          const item = cargos[i];
+          let cargo_code = this.unstructureHelper(item,mapCargos['cargo_code']);
+          let cargo_type = this.unstructureHelper(item,mapCargos['cargo_type']);
+          let cargo_dimension_length = this.unstructureHelper(item,mapCargos['cargo_dimension_length']);
+          let cargo_dimension_width = this.unstructureHelper(item,mapCargos['cargo_dimension_width']);
+          let cargo_dimension_height = this.unstructureHelper(item,mapCargos['cargo_dimension_height']);
+          let cargo_weight = this.unstructureHelper(item,mapCargos['cargo_weight']);
+          let cargo_attributes_name = this.unstructureHelper(item,mapCargos['cargo_attributes_name']);
+          let cargo_attributes_value = this.unstructureHelper(item,mapCargos['cargo_attributes_value']);
+
+
+
+          if (cargo_code[0] === false || cargo_dimension_length[0] === false || cargo_dimension_width[0] === false ||
+              cargo_dimension_height[0] === false || cargo_weight[0] === false || cargo_attributes_name[0] === false ||
+              cargo_attributes_value[0] === false) {
+            return {
+              status: 'error',
+              message: 'Failed to unstructure cargo data',
+            };
+          }
+          // console.log('cargo_code', cargo_code[1]);
+          // console.log('cargo_dimension_length', cargo_dimension_length[1]);
+          // console.log('cargo_dimension_width', cargo_dimension_width[1]);
+          // console.log('cargo_dimension_height', cargo_dimension_height[1]);
+          
+          CARGOLIST.push({
+            cargo_code: cargo_code[1],
+            cargo_type: cargo_type[1] ? cargo_type[1] : null,
+            cargo_dimension: {
+              length: cargo_dimension_length[1] ? cargo_dimension_length[1] : null,
+              width: cargo_dimension_width[1] ? cargo_dimension_width[1] : null,
+              height: cargo_dimension_height[1] ? cargo_dimension_height[1] : null,
+            },
+            cargo_weight: cargo_weight[1] ? cargo_weight[1] : null,
+            cargo_attributes: {
+              attribute_name: cargo_attributes_name[1] ? cargo_attributes_name[1] : null,
+              attribute_value: cargo_attributes_value[1] ? cargo_attributes_value[1] : null,
+            } as Attribute,
           });
         }
 
-
         const task: TaskReq = {
-          task_id: this.unstructureHelper(op, jsonData, jsonData['tasks']['map']['task_id'], 'op'),
-          task_pallet_id: ("task_pallet_id" in map) ?this.unstructureHelper(op, jsonData, map['task_pallet_id'], 'op') : null,
-          task_type: ("task_type" in map) ? this.unstructureHelper(op, jsonData, map['task_type'], 'op'): 'Crossdock',
-          task_dependency: ("task_dependency" in map) ? this.unstructureHelper(op, jsonData, map['task_dependency'], 'op') : null,
+          task_id: task_id[1],
+          task_pallet_id: task_pallet_id[1] ? task_pallet_id[1] : null,
+          task_type: task_type[1] ? task_type[1] : 'Crossdock',
+          task_dependency: task_dependency[1] ? task_dependency[1] : null,
           start_location: {
-            location_id: this.unstructureHelper(startLocation, jsonData, startLocation['location_id'], null),
-            location_zone: ("location_zone" in startLocation) ? this.unstructureHelper(startLocation, jsonData,startLocation['location_zone'], null): null,
-            location_action: this.unstructureHelper(startLocation, jsonData,startLocation['location_action'], null),
+            location_id: start_location_id[1],
+            location_zone: start_location_zone[1] ? start_location_zone[1] : null,
+            location_action: start_location_action[1] ? start_location_action[1] : 'Nop',
             location_dimension: {
-              length: this.unstructureHelper(startLocationDimension, jsonData,map.start_location.location_dimension.length, null),
-              width: this.unstructureHelper(startLocationDimension, jsonData, map.start_location.location_dimension.width , null),
-              height: this.unstructureHelper(startLocationDimension, jsonData,map.start_location.location_dimension.height , null),
+              length: start_location_dimension_length[1] ? start_location_dimension_length[1] : null,
+              width: start_location_dimension_width[1] ? start_location_dimension_width[1] : null,
+              height: start_location_dimension_height[1] ? start_location_dimension_height[1] : null,
             },
-            location_attribute: startLocationAttribute ? {
-              attribute_name: this.unstructureHelper(startLocationAttribute, jsonData,startLocationAttribute['attribute_name'], null),
-              attribute_value: this.unstructureHelper(startLocationAttribute, jsonData,startLocationAttribute['attribute_value'], null),
-            } : {'attribute_name': null, 'attribute_value': null} ,
+            location_attribute: {
+              attribute_name: start_location_attribute_name[1] ? start_location_attribute_name[1] : null,
+              attribute_value: start_location_attribute_value[1] ? start_location_attribute_value[1] : null,
+            }
           },
           end_location: {
-            location_id: this.unstructureHelper(endLocation, jsonData, endLocation['location_id'], null),
-            location_zone: ("location_zone" in endLocation) ? this.unstructureHelper(endLocation, jsonData,endLocation['location_zone'], null): null,
-            location_action: this.unstructureHelper(endLocation, jsonData,endLocation['location_action'], null),
+            location_id: end_location_id[1],
+            location_zone: end_location_zone[1] ? end_location_zone[1] : null,
+            location_action: end_location_action[1] ? end_location_action[1] : 'Nop',
             location_dimension: {
-              length: this.unstructureHelper(endLocationDimension, jsonData,map.end_location.location_dimension.length, null),
-              width: this.unstructureHelper(endLocationDimension, jsonData, map.end_location.location_dimension.width , null),
-              height: this.unstructureHelper(endLocationDimension, jsonData,map.end_location.location_dimension.height , null),
+              length: end_location_dimension_length[1] ? end_location_dimension_length[1] : null,
+              width: end_location_dimension_width[1] ? end_location_dimension_width[1] : null,
+              height: end_location_dimension_height[1] ? end_location_dimension_height[1] : null,
             },
-            location_attribute: endLocationAttribute ? {
-              attribute_name: this.unstructureHelper(endLocationAttribute, jsonData,endLocationAttribute['attribute_name'], null),
-              attribute_value: this.unstructureHelper(endLocationAttribute, jsonData,endLocationAttribute['attribute_value'], null),
-            }: {'attribute_name': null, 'attribute_value': null} ,
-          },  
-          cargos: cargos,
+            location_attribute: {
+              attribute_name: end_location_attribute_name[1] ? end_location_attribute_name[1] : null,
+              attribute_value: end_location_attribute_value[1] ? end_location_attribute_value[1] : null,
+            }
+          },
+          cargos: CARGOLIST,
           wait_time: {
-            wait_type: 'null',
-            start_location_wait_time: 0,
-            end_location_wait_time: 0,
+            wait_type: wait_time_wait_type[1] ? wait_time_wait_type[1] : 'None',
+            start_location_wait_time: wait_time_start_location_wait_time[1] ? wait_time_start_location_wait_time[1] : 0,
+            end_location_wait_time: wait_time_end_location_wait_time[1] ? wait_time_end_location_wait_time[1] : 0,
           }
-
         };
-
         Tasks.push(task);
 
       }
 
+      let batch_job_id = this.unstructureHelper(input, jsonData['batch_job_id']);
+      let batch_priority = this.unstructureHelper(input, jsonData['batch_priority']);
+      let batch_type = this.unstructureHelper(input, jsonData['batch_type']);
+      let batch_frequency = this.unstructureHelper(input, jsonData['batch_frequency']);
+
+      // let batch_frequency = this.unstructureHelper(input, jsonData['batch_frequency'].source);
+      if (batch_job_id[0]===false || batch_priority[0] === false || batch_type[0] === false || batch_frequency[0] === false) {
+        return {
+          status: 'error',
+          message: 'Failed to unstructure batch job data',
+        };
+      }
+
       const TaskReq: TaskGenerationReq = {
-        batch_job_id: this.unstructureHelper(input, jsonData, jsonData['batch_job_id']),
-        batch_priority: ('batch_priority' in jsonData) ? this.unstructureHelper(input, jsonData, jsonData['batch_priority']): 5,
-        batch_type: ('batch_type' in jsonData) ? this.unstructureHelper(input, jsonData, jsonData['batch_type']) : 'Discrete',
-        batch_frequency: ('batch_frequency' in jsonData) ? this.unstructureHelper(input, jsonData, jsonData['batch_frequency']) : undefined,
+        batch_job_id: batch_job_id[1],
+        batch_priority: batch_priority[1] ? batch_priority[1] : 5,
+        batch_type: batch_type[1] ? batch_type[1] : 'Discrete',
+        batch_frequency: batch_frequency[1] ? batch_frequency[1] : null,
         tasks: Tasks,
       }
-      console.log('TaskReq', TaskReq);
       const response = await this.createTask(warehouseId, TaskReq);
       return {
         status: 'success',
