@@ -224,8 +224,8 @@ export class OschestratorService {
 
             for (const task of tasksToProcess) {
                     task.status = 'processing';
-                    await this.wms_webhook({tasks: [task], existingBatchJob: existingBatchJob});
                     await this.taskRepository.save(task);
+                    await this.wms_webhook({tasks: [task], existingBatchJob: existingBatchJob});
 
                     // Simulate task processing time of 0.5 seconds
                     await new Promise(resolve => setTimeout(resolve, 500));
