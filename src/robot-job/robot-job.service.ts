@@ -43,6 +43,7 @@ export class RobotJobService {
   ): Promise<TaskGenerationRes> {
     const newBatchJob: BatchJob = this.BatchJobRepository.create({
       batch_job_id: createRobotJobDto.batch_job_id,
+      warehouse_id: warehouseId, // Changed: Added warehouse_id here
       batch_priority: createRobotJobDto.batch_priority,
       batch_type: createRobotJobDto.batch_type,
       batch_frequency: createRobotJobDto.batch_frequency,
@@ -414,12 +415,18 @@ export class RobotJobService {
       const taskRepo: Task | null = await this.TaskRepository.findOne({
         where: {
           task_id: task.task_id,
-          batch_job: { batch_job_id: updateRobotJobDto.batch_job_id },
+          // Changed: Scope query by warehouse_id for security
+          batch_job: {
+            batch_job_id: updateRobotJobDto.batch_job_id,
+            warehouse_id: warehouse_id,
+          },
         },
         relations: ['batch_job'],
       });
       if (!taskRepo) {
-        console.log(`Task with ID ${task.task_id} not found.`);
+        console.log(
+          `Task with ID ${task.task_id} not found in warehouse ${warehouse_id}.`,
+        );
         continue;
       }
       taskRepo.task_dependency =
@@ -472,14 +479,18 @@ export class RobotJobService {
     if ('batch_job_id' in updateRobotJobDto) {
       // Handle batch cancellation
       const batchJob = await this.BatchJobRepository.findOne({
-        where: { batch_job_id: updateRobotJobDto.batch_job_id },
+        // Changed: Scope query by warehouse_id
+        where: {
+          batch_job_id: updateRobotJobDto.batch_job_id,
+          warehouse_id: warehouse_id,
+        },
       });
       if (!batchJob) {
         return {
           task_id: updateRobotJobDto.batch_job_id,
           status: 'not_found',
           cancelled_at: new Date().toISOString(),
-          message: `Batch job with ID ${updateRobotJobDto.batch_job_id} not found.`,
+          message: `Batch job with ID ${updateRobotJobDto.batch_job_id} not found in warehouse ${warehouse_id}.`,
         };
       }
       const tasks = await this.TaskRepository.find({
@@ -511,15 +522,19 @@ export class RobotJobService {
       };
     }
     const task_id = updateRobotJobDto.task_id;
+    // Changed: Scope query by warehouse_id for single task cancellation
     const taskRepo: Task | null = await this.TaskRepository.findOne({
-      where: { task_id: task_id },
+      where: {
+        task_id: task_id,
+        batch_job: { warehouse_id: warehouse_id },
+      },
     });
     if (!taskRepo) {
       return {
         task_id: task_id,
         status: 'not_found',
         cancelled_at: new Date().toISOString(),
-        message: `Task with ID ${task_id} not found.`,
+        message: `Task with ID ${task_id} not found in warehouse ${warehouse_id}.`,
       };
     }
     if (taskRepo.status !== 'pending') {
@@ -543,6 +558,8 @@ export class RobotJobService {
     warehouseId: string,
     getLocationReq: GetLocationReq,
   ): Promise<GetLocationRes> {
+    // Recommendation: If your Location entity has a warehouse_id,
+    // you should add it to the 'where' clause here for better filtering.
     const locations = await this.LocationRepository.find({
       where: {
         location_zone: getLocationReq.zone_id,
