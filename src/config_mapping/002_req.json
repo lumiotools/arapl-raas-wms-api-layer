@@ -2,6 +2,7 @@
     "jobId": "BATCH-20240413-001",
     "priority": 3,
     "type": "Discrete",
+    "warehouseId": "WH-001",
     "operations": [
       {
         "id": "TASK-001",

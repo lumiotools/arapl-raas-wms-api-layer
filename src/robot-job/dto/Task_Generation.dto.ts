@@ -108,6 +108,9 @@ export class TaskGenerationReq {
 
     @Optional()
     batch_frequency: number;
+
+    @Optional()
+    warehouse_id: string;
 }
 
 export class TaskGenerationRes {

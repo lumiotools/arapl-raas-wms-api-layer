@@ -143,7 +143,7 @@ export class RobotJobService {
       const processedData: { [key: string]: any } = {};
 
       for (const key of keysToProcess) {
-        if (key === 'cargos') continue;
+        if (key.includes('cargo')) continue;
 
         const [success, value, failedKey] = this.unstructureHelper(
           op,
@@ -168,14 +168,14 @@ export class RobotJobService {
         if (!cargo_code[0]) {
           return {
             status: 'error',
-            message: `IFO-Cargo list is not present. Failed to create unstructured task, '${cargo_code[2]}' is incorrect and does not exist in the config file.`,
+            message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_code[2]}' is incorrect and does not exist in the config file.`,
           };
         }
         let cargo_type = this.unstructureHelper(op,map['cargo_type']);
         if (!cargo_type[0]) {
           return {
             status: 'error',
-            message: `IFO-Cargo list is not present. Failed to create unstructured task, '${cargo_type[2]}' is incorrect and does not exist in the config file.`,
+            message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_type[2]}' is incorrect and does not exist in the config file.`,
           };
         }
 
@@ -183,7 +183,7 @@ export class RobotJobService {
         if (!cargo_dimension_length[0]) {
           return {
             status: 'error',
-            message: `IFO-Cargo list is not present. Failed to create unstructured task, '${cargo_dimension_length[2]}' is incorrect and does not exist in the config file.`,
+            message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_dimension_length[2]}' is incorrect and does not exist in the config file.`,
           };
         }
 
@@ -191,7 +191,7 @@ export class RobotJobService {
         if (!cargo_dimension_width[0]) {
           return {
             status: 'error',
-            message: `IFO-Cargo list is not present. Failed to create unstructured task, '${cargo_dimension_width[2]}' is incorrect and does not exist in the config file.`,
+            message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_dimension_width[2]}' is incorrect and does not exist in the config file.`,
           };
         }
 
@@ -199,14 +199,14 @@ export class RobotJobService {
         if (!cargo_dimension_height[0]) {
           return {
             status: 'error',
-            message: `IFO-Cargo list is not present. Failed to create unstructured task, '${cargo_dimension_height[2]}' is incorrect and does not exist in the config file.`,
+            message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_dimension_height[2]}' is incorrect and does not exist in the config file.`,
           };
         }
         let cargo_weight = this.unstructureHelper(op,map['cargo_weight']);
         if (!cargo_weight[0]) {
           return {
             status: 'error',
-            message: `IFO-Cargo list is not present. Failed to create unstructured task, '${cargo_weight[2]}' is incorrect and does not exist in the config file.`,
+            message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_weight[2]}' is incorrect and does not exist in the config file.`,
           };
         }
 
@@ -214,7 +214,7 @@ export class RobotJobService {
         if (!cargo_attributes_name[0]) {
           return {
             status: 'error',
-            message: `IFO-Cargo list is not present. Failed to create unstructured task, '${cargo_attributes_name[2]}' is incorrect and does not exist in the config file.`,
+            message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_attributes_name[2]}' is incorrect and does not exist in the config file.`,
           };
         }
 
@@ -222,7 +222,7 @@ export class RobotJobService {
         if (!cargo_attributes_value[0]) {
           return {
             status: 'error',
-            message: `IFO-Cargo list is not present. Failed to create unstructured task, '${cargo_attributes_value[2]}' is incorrect and does not exist in the config file.`,
+            message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_attributes_value[2]}' is incorrect and does not exist in the config file.`,
           };
         }
 
@@ -361,11 +361,21 @@ export class RobotJobService {
       };
     }
 
+    const [warehouseIdSuccess, warehouse_id, failedWarehouseIdKey] =
+      this.unstructureHelper(input, jsonData['warehouse_id']);
+    if (!warehouseIdSuccess) {
+      return {
+        status: 'error',
+        message: `Failed to create unstructured task, '${failedWarehouseIdKey}' is incorrect and does not exist in the config file.`,
+      };
+    }
+
     const TaskReq: TaskGenerationReq = {
       batch_job_id: batch_job_id,
       batch_priority: batch_priority || 5,
       batch_type: batch_type || 'Discrete',
       batch_frequency: batch_frequency,
+      warehouse_id: warehouse_id,
       tasks: Tasks,
     };
     return TaskReq;
@@ -375,7 +385,7 @@ export class RobotJobService {
     configName: string,
     input: any,
   ): Promise<any> {
-    const filePath = `src/config/data_config/${configName}.json`;
+    const filePath = `src/config_mapping/${configName}.json`;
     try {
       const fileContent = await fs.readFile(filePath, 'utf-8');
       const jsonData = JSON.parse(fileContent);

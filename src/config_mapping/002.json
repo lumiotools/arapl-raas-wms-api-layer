@@ -3,6 +3,7 @@
     "batch_priority": "input.priority",
     "batch_type": "input.type",
     "batch_frequency": "null",
+    "warehouse_id": "input.warehouseId",
     "tasks": {
         "source": "input.operations",
         "map": {
