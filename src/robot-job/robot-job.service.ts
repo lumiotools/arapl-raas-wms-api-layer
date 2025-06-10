@@ -161,49 +161,122 @@ export class RobotJobService {
         op,
         map['cargos'].source,
       );
-
-      if (!cargosSuccess) {
-        return {
-          status: 'error',
-          message: `Failed to create unstructured task, '${failedCargoKey}' is incorrect and does not exist in the config file.`,
-        };
-      }
-
       const CARGOLIST: Cargo[] = [];
-      const mapCargos = map['cargos']['map'];
-      for (let i = 0; i < cargos.length; i++) {
-        const item = cargos[i];
-        const cargoKeysToProcess = Object.keys(mapCargos);
-        const processedCargoData: { [key: string]: any } = {};
+      if (!cargosSuccess) {
+        let cargo_code = this.unstructureHelper(op,map['cargo_code']);
+        if (!cargo_code[0]) {
+          return {
+            status: 'error',
+            message: `IFO-Cargo list is not present. Failed to create unstructured task, '${cargo_code[2]}' is incorrect and does not exist in the config file.`,
+          };
+        }
+        let cargo_type = this.unstructureHelper(op,map['cargo_type']);
+        if (!cargo_type[0]) {
+          return {
+            status: 'error',
+            message: `IFO-Cargo list is not present. Failed to create unstructured task, '${cargo_type[2]}' is incorrect and does not exist in the config file.`,
+          };
+        }
 
-        for (const key of cargoKeysToProcess) {
-          const [success, value, failedKey] = this.unstructureHelper(
-            item,
-            mapCargos[key],
-          );
-          if (!success) {
-            return {
-              status: 'error',
-              message: `Failed to create unstructured task, '${failedKey}' is incorrect and does not exist in the config file.`,
-            };
-          }
-          processedCargoData[key] = value;
+        let cargo_dimension_length = this.unstructureHelper(op,map['cargo_dimension_length']);
+        if (!cargo_dimension_length[0]) {
+          return {
+            status: 'error',
+            message: `IFO-Cargo list is not present. Failed to create unstructured task, '${cargo_dimension_length[2]}' is incorrect and does not exist in the config file.`,
+          };
+        }
+
+        let cargo_dimension_width = this.unstructureHelper(op,map['cargo_dimension_width']);
+        if (!cargo_dimension_width[0]) {
+          return {
+            status: 'error',
+            message: `IFO-Cargo list is not present. Failed to create unstructured task, '${cargo_dimension_width[2]}' is incorrect and does not exist in the config file.`,
+          };
+        }
+
+        let cargo_dimension_height = this.unstructureHelper(op,map['cargo_dimension_height']);
+        if (!cargo_dimension_height[0]) {
+          return {
+            status: 'error',
+            message: `IFO-Cargo list is not present. Failed to create unstructured task, '${cargo_dimension_height[2]}' is incorrect and does not exist in the config file.`,
+          };
+        }
+        let cargo_weight = this.unstructureHelper(op,map['cargo_weight']);
+        if (!cargo_weight[0]) {
+          return {
+            status: 'error',
+            message: `IFO-Cargo list is not present. Failed to create unstructured task, '${cargo_weight[2]}' is incorrect and does not exist in the config file.`,
+          };
+        }
+
+        let cargo_attributes_name = this.unstructureHelper(op,map['cargo_attributes_name']);
+        if (!cargo_attributes_name[0]) {
+          return {
+            status: 'error',
+            message: `IFO-Cargo list is not present. Failed to create unstructured task, '${cargo_attributes_name[2]}' is incorrect and does not exist in the config file.`,
+          };
+        }
+
+        let cargo_attributes_value = this.unstructureHelper(op,map['cargo_attributes_value']);
+        if (!cargo_attributes_value[0]) {
+          return {
+            status: 'error',
+            message: `IFO-Cargo list is not present. Failed to create unstructured task, '${cargo_attributes_value[2]}' is incorrect and does not exist in the config file.`,
+          };
         }
 
         CARGOLIST.push({
-          cargo_code: processedCargoData.cargo_code,
-          cargo_type: processedCargoData.cargo_type,
+          cargo_code: cargo_code[1],
+          cargo_type: cargo_type[1] ? cargo_type[1] : null,
           cargo_dimension: {
-            length: processedCargoData.cargo_dimension_length,
-            width: processedCargoData.cargo_dimension_width,
-            height: processedCargoData.cargo_dimension_height,
+            length: cargo_dimension_length[1] ? cargo_dimension_length[1] : null,
+            width: cargo_dimension_width[1] ? cargo_dimension_width[1] : null,
+            height: cargo_dimension_height[1] ? cargo_dimension_height[1] : null,
           },
-          cargo_weight: processedCargoData.cargo_weight,
+          cargo_weight: cargo_weight[1] ? cargo_weight[1] : null,
           cargo_attributes: {
-            attribute_name: processedCargoData.cargo_attributes_name,
-            attribute_value: processedCargoData.cargo_attributes_value,
+            attribute_name: cargo_attributes_name[1] ? cargo_attributes_name[1] : null,
+            attribute_value: cargo_attributes_value[1] ? cargo_attributes_value[1] : null,
           } as Attribute,
         });
+      }
+      else{
+        
+        const mapCargos = map['cargos']['map'];
+        for (let i = 0; i < cargos.length; i++) {
+          const item = cargos[i];
+          const cargoKeysToProcess = Object.keys(mapCargos);
+          const processedCargoData: { [key: string]: any } = {};
+
+          for (const key of cargoKeysToProcess) {
+            const [success, value, failedKey] = this.unstructureHelper(
+              item,
+              mapCargos[key],
+            );
+            if (!success) {
+              return {
+                status: 'error',
+                message: `Failed to create unstructured task, '${failedKey}' is incorrect and does not exist in the config file.`,
+              };
+            }
+            processedCargoData[key] = value;
+          }
+
+          CARGOLIST.push({
+            cargo_code: processedCargoData.cargo_code,
+            cargo_type: processedCargoData.cargo_type ? processedCargoData.cargo_type : null,
+            cargo_dimension: {
+              length: processedCargoData.cargo_dimension_length ? processedCargoData.cargo_dimension_length : null,
+              width: processedCargoData.cargo_dimension_width ? processedCargoData.cargo_dimension_width : null,
+              height: processedCargoData.cargo_dimension_height ? processedCargoData.cargo_dimension_height : null,
+            },
+            cargo_weight: processedCargoData.cargo_weight ? processedCargoData.cargo_weight : null,
+            cargo_attributes: {
+              attribute_name: processedCargoData.cargo_attributes_name ? processedCargoData.cargo_attributes_name : null,
+              attribute_value: processedCargoData.cargo_attributes_value ? processedCargoData.cargo_attributes_value : null,
+            } as Attribute,
+          });
+        }
       }
 
       const task: TaskReq = {

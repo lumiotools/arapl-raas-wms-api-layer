@@ -30,7 +30,17 @@
                 "wait_time_wait_type": "null",
                 "wait_time_start_location_wait_time": "null",
                 "wait_time_end_location_wait_time" : "null",
-                
+
+                "cargo_code": "op.cargo_code",
+                "cargo_type": "op.type",
+                "cargo_dimension_length": "op.l",
+                "cargo_dimension_width": "op.size.w",
+                "cargo_dimension_height": "op.size.h",
+                "cargo_weight": "op.weight",
+                "cargo_attributes_name": "null",
+                "cargo_attributes_value": "null",
+
+
                 "cargos":{
                 "source": "op.items",
                 "map": {
