@@ -127,7 +127,7 @@ export class RobotJobService {
     if (!Array.isArray(taskArray)) {
       return {
         status: 'error',
-        message: 'Task array is not an array',
+        message: 'Task array not Found',
       };
     }
     if (taskArray.length === 0) {
@@ -150,10 +150,11 @@ export class RobotJobService {
           map[key],
         );
         if (!success) {
-          return {
-            status: 'error',
-            message: `Failed to create unstructured task, '${failedKey}' is incorrect and does not exist in the config file.`,
-          };
+          // return {
+          //   status: 'error',
+          //   message: `Failed to create unstructured task, '${failedKey}' is incorrect and does not exist in the config file.`,
+          // };
+          processedData[key] = null;
         }
         processedData[key] = value;
       }
@@ -166,64 +167,65 @@ export class RobotJobService {
       if (!cargosSuccess || cargos === null) {
         let cargo_code = this.unstructureHelper(op,map['cargo_code']);
         if (!cargo_code[0]) {
-          return {
-            status: 'error',
-            message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_code[2]}' is incorrect and does not exist in the config file.`,
-          };
+          // return {
+          //   status: 'error',
+          //   message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_code[2]}' is incorrect and does not exist in the config file.`,
+          // };
+          
         }
         let cargo_type = this.unstructureHelper(op,map['cargo_type']);
         if (!cargo_type[0]) {
-          return {
-            status: 'error',
-            message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_type[2]}' is incorrect and does not exist in the config file.`,
-          };
+          // return {
+          //   status: 'error',
+          //   message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_type[2]}' is incorrect and does not exist in the config file.`,
+          // };
         }
 
         let cargo_dimension_length = this.unstructureHelper(op,map['cargo_dimension_length']);
         if (!cargo_dimension_length[0]) {
-          return {
-            status: 'error',
-            message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_dimension_length[2]}' is incorrect and does not exist in the config file.`,
-          };
+          // return {
+          //   status: 'error',
+          //   message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_dimension_length[2]}' is incorrect and does not exist in the config file.`,
+          // };
         }
 
         let cargo_dimension_width = this.unstructureHelper(op,map['cargo_dimension_width']);
         if (!cargo_dimension_width[0]) {
-          return {
-            status: 'error',
-            message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_dimension_width[2]}' is incorrect and does not exist in the config file.`,
-          };
+          // return {
+          //   status: 'error',
+          //   message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_dimension_width[2]}' is incorrect and does not exist in the config file.`,
+          // };
         }
 
         let cargo_dimension_height = this.unstructureHelper(op,map['cargo_dimension_height']);
         if (!cargo_dimension_height[0]) {
-          return {
-            status: 'error',
-            message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_dimension_height[2]}' is incorrect and does not exist in the config file.`,
-          };
+          // return {
+          //   status: 'error',
+          //   message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_dimension_height[2]}' is incorrect and does not exist in the config file.`,
+          // };
         }
         let cargo_weight = this.unstructureHelper(op,map['cargo_weight']);
         if (!cargo_weight[0]) {
-          return {
-            status: 'error',
-            message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_weight[2]}' is incorrect and does not exist in the config file.`,
-          };
+          // return {
+          //   status: 'error',
+          //   message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_weight[2]}' is incorrect and does not exist in the config file.`,
+          // };
         }
 
         let cargo_attributes_name = this.unstructureHelper(op,map['cargo_attributes_name']);
         if (!cargo_attributes_name[0]) {
-          return {
-            status: 'error',
-            message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_attributes_name[2]}' is incorrect and does not exist in the config file.`,
-          };
+          // return {
+          //   status: 'error',
+          //   message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_attributes_name[2]}' is incorrect and does not exist in the config file.`,
+          // };
         }
 
         let cargo_attributes_value = this.unstructureHelper(op,map['cargo_attributes_value']);
         if (!cargo_attributes_value[0]) {
-          return {
-            status: 'error',
-            message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_attributes_value[2]}' is incorrect and does not exist in the config file.`,
-          };
+          // return {
+          //   status: 'error',
+          //   message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_attributes_value[2]}' is incorrect and does not exist in the config file.`,
+          // };
         }
 
         CARGOLIST.push({
@@ -255,10 +257,10 @@ export class RobotJobService {
               mapCargos[key],
             );
             if (!success) {
-              return {
-                status: 'error',
-                message: `Failed to create unstructured task, '${failedKey}' is incorrect and does not exist in the config file.`,
-              };
+              // return {
+              //   status: 'error',
+              //   message: `Failed to create unstructured task, '${failedKey}' is incorrect and does not exist in the config file.`,
+              // };
             }
             processedCargoData[key] = value;
           }
@@ -279,7 +281,12 @@ export class RobotJobService {
           });
         }
       }
-
+      if (processedData.task_id === null){
+        return {
+          status: 'error',
+          message: "Task ID can't be null"
+        }
+      }
       const task: TaskReq = {
         task_id: processedData.task_id,
         task_pallet_id: processedData.task_pallet_id ? processedData.task_pallet_id : null,
@@ -336,46 +343,46 @@ export class RobotJobService {
     const [batchPrioritySuccess, batch_priority, failedBatchPriorityKey] =
       this.unstructureHelper(input, jsonData['batch_priority']);
     if (!batchPrioritySuccess) {
-      return {
-        status: 'error',
-        message: `Failed to create unstructured task, '${failedBatchPriorityKey}' is incorrect and does not exist in the config file.`,
-      };
+      // return {
+      //   status: 'error',
+      //   message: `Failed to create unstructured task, '${failedBatchPriorityKey}' is incorrect and does not exist in the config file.`,
+      // };
     }
 
     const [batchTypeSuccess, batch_type, failedBatchTypeKey] =
       this.unstructureHelper(input, jsonData['batch_type']);
     if (!batchTypeSuccess) {
-      return {
-        status: 'error',
-        message: `Failed to create unstructured task, '${failedBatchTypeKey}' is incorrect and does not exist in the config file.`,
-      };
+      // return {
+      //   status: 'error',
+      //   message: `Failed to create unstructured task, '${failedBatchTypeKey}' is incorrect and does not exist in the config file.`,
+      // };
     }
 
     const [batchFrequencySuccess, batch_frequency, failedBatchFrequencyKey] =
       this.unstructureHelper(input, jsonData['batch_frequency']);
 
     if (!batchFrequencySuccess) {
-      return {
-        status: 'error',
-        message: `Failed to create unstructured task, '${failedBatchFrequencyKey}' is incorrect and does not exist in the config file.`,
-      };
+      // return {
+      //   status: 'error',
+      //   message: `Failed to create unstructured task, '${failedBatchFrequencyKey}' is incorrect and does not exist in the config file.`,
+      // };
     }
 
     const [warehouseIdSuccess, warehouse_id, failedWarehouseIdKey] =
       this.unstructureHelper(input, jsonData['warehouse_id']);
     if (!warehouseIdSuccess) {
-      return {
-        status: 'error',
-        message: `Failed to create unstructured task, '${failedWarehouseIdKey}' is incorrect and does not exist in the config file.`,
-      };
+      // return {
+      //   status: 'error',
+      //   message: `Failed to create unstructured task, '${failedWarehouseIdKey}' is incorrect and does not exist in the config file.`,
+      // };
     }
 
     const TaskReq: TaskGenerationReq = {
       batch_job_id: batch_job_id,
       batch_priority: batch_priority || 5,
       batch_type: batch_type || 'Discrete',
-      batch_frequency: batch_frequency,
-      warehouse_id: warehouse_id,
+      batch_frequency: batch_frequency ? batch_frequency : null,
+      warehouse_id: warehouse_id ? warehouse_id: null,
       tasks: Tasks,
     };
     return TaskReq;

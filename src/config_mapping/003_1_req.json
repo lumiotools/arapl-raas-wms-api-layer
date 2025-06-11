@@ -1,0 +1,83 @@
+{
+  "job_id": "BATCH-20240413-002",
+  "job_type": "Continuous",
+  "job_frequency": 30,
+  "job_tasks": [
+    {
+      "id": "TASK-101",
+      "type": "Crossdock",
+      "source_location": {
+        "id": "ZONE-A1-START",
+        "action": "Waitpick",
+        "dimensions": {
+          "len": 90,
+          "wid": 70,
+          "ht": 100
+        }
+      },
+      "destination_location": {
+        "id": "ZONE-A1-END",
+        "action": "Waitdrop",
+        "dimensions": {
+          "len": 100,
+          "wid": 80,
+          "ht": 110
+        }
+      },
+      "wait_config": {
+        "type": "Time",
+        "source_wait": 15,
+        "destination_wait": 30
+      },
+      "cargo_items": [
+        {
+          "code": "CARGO-XYZ-123",
+          "type": "BaleClampBox",
+          "weight": 35
+        }
+      ]
+    },
+    {
+      "id": "TASK-102",
+      "type": "Putaway",
+      "depends_on": "TASK-101",
+      "source_location": {
+        "id": "ZONE-B1-START",
+        "action": "Pick",
+        "dimensions": {
+          "len": 95,
+          "wid": 75,
+          "ht": 105
+        },
+        "attributes": {
+          "name": "temperature_zone",
+          "value": "cold"
+        }
+      },
+      "destination_location": {
+        "id": "ZONE-B1-END",
+        "action": "Drop",
+        "dimensions": {
+          "len": 105,
+          "wid": 85,
+          "ht": 120
+        }
+      },
+      "cargo_items": [
+        {
+          "code": "CARGO-ABC-789",
+          "dimensions": {
+            "len": 100,
+            "wid": 70,
+            "ht": 110
+          },
+          "attributes": {
+            "name": "fragile",
+            "value": "true"
+          },
+          "weight": 60
+        }
+      ]
+    }
+  ]
+}

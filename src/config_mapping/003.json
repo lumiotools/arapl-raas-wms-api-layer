@@ -2,21 +2,23 @@
     "batch_job_id": "input.job_id",
     "batch_priority": "input.job_priority",
     "batch_type": "input.job_type",
-    "batch_frequency": "null",
+    "batch_frequency": "input.job_frequency",
     "warehouse_id": "null",
     "tasks": {
         "source": "input.job_tasks",
         "map": {
                 "task_id": "op.id",
                 "task_type": "op.type",
+                "task_pallet_id": "null",
+                "task_dependency": "op.depends_on",
                 "start_location_id": "op.source_location.id",
                 "start_location_action": "op.source_location.action",
 
                 "start_location_dimension_length": "op.source_location.dimensions.len",
                 "start_location_dimension_width": "op.source_location.dimensions.wid",
                 "start_location_dimension_height": "op.source_location.dimensions.ht",
-                "start_location_attribute_name": "op.start_attr_name",
-                "start_location_attribute_value": "op.start_attr_val",
+                "start_location_attribute_name": "op.source_location.attributes.name",
+                "start_location_attribute_value": "op.source_location.attributes.value",
                 "start_location_zone": "null",
 
                 "end_location_id": "op.destination_location.id",
@@ -43,16 +45,16 @@
 
 
                 "cargos":{
-                "source": "op.cargo_items",
+                "source": "null",
                 "map": {
-                        "cargo_code": "item.cargo_code",
+                        "cargo_code": "item.code",
                         "cargo_type": "item.type",
-                        "cargo_dimension_length": "null",
-                        "cargo_dimension_width": "null",
-                        "cargo_dimension_height": "null",
+                        "cargo_dimension_length": "item.dimensions.len",
+                        "cargo_dimension_width": "item.dimensions.wid",
+                        "cargo_dimension_height": "item.dimensions.ht",
                         "cargo_weight": "item.weight",
-                        "cargo_attributes_name": "null",
-                        "cargo_attributes_value": "null"
+                        "cargo_attributes_name": "item.attributes.name",
+                        "cargo_attributes_value": "item.attributes.value"
                     }
                 }
             }
