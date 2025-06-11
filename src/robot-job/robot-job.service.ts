@@ -163,7 +163,7 @@ export class RobotJobService {
         map['cargos'].source,
       );
       const CARGOLIST: Cargo[] = [];
-      if (!cargosSuccess) {
+      if (!cargosSuccess || cargos === null) {
         let cargo_code = this.unstructureHelper(op,map['cargo_code']);
         if (!cargo_code[0]) {
           return {
@@ -282,35 +282,35 @@ export class RobotJobService {
 
       const task: TaskReq = {
         task_id: processedData.task_id,
-        task_pallet_id: processedData.task_pallet_id,
+        task_pallet_id: processedData.task_pallet_id ? processedData.task_pallet_id : null,
         task_type: processedData.task_type || 'Crossdock',
-        task_dependency: processedData.task_dependency,
+        task_dependency: processedData.task_dependency ? processedData.task_dependency : null,
         start_location: {
-          location_id: processedData.start_location_id,
-          location_zone: processedData.start_location_zone,
-          location_action: processedData.start_location_action || 'Nop',
+          location_id: processedData.start_location_id ? processedData.start_location_id : null,
+          location_zone: processedData.start_location_zone ? processedData.start_location_zone : null,
+          location_action: processedData.start_location_action ? processedData.start_location_action : null,
           location_dimension: {
-            length: processedData.start_location_dimension_length,
-            width: processedData.start_location_dimension_width,
-            height: processedData.start_location_dimension_height,
+            length: processedData.start_location_dimension_length ? processedData.start_location_dimension_length : null,
+            width: processedData.start_location_dimension_width ? processedData.start_location_dimension_width : null,
+            height: processedData.start_location_dimension_height ? processedData.start_location_dimension_height : null,
           },
           location_attribute: {
-            attribute_name: processedData.start_location_attribute_name,
-            attribute_value: processedData.start_location_attribute_value,
+            attribute_name: processedData.start_location_attribute_name ? processedData.start_location_attribute_name : null,
+            attribute_value: processedData.start_location_attribute_value ? processedData.start_location_attribute_value : null,
           },
         },
         end_location: {
-          location_id: processedData.end_location_id,
-          location_zone: processedData.end_location_zone,
-          location_action: processedData.end_location_action || 'Nop',
+          location_id: processedData.end_location_id ? processedData.end_location_id : null,
+          location_zone: processedData.end_location_zone ? processedData.end_location_zone : null,
+          location_action: processedData.end_location_action ? processedData.end_location_action : null,
           location_dimension: {
-            length: processedData.end_location_dimension_length,
-            width: processedData.end_location_dimension_width,
-            height: processedData.end_location_dimension_height,
+            length: processedData.end_location_dimension_length ? processedData.end_location_dimension_length : null,
+            width: processedData.end_location_dimension_width ? processedData.end_location_dimension_width : null,
+            height: processedData.end_location_dimension_height ? processedData.end_location_dimension_height : null,
           },
           location_attribute: {
-            attribute_name: processedData.end_location_attribute_name,
-            attribute_value: processedData.end_location_attribute_value,
+            attribute_name: processedData.end_location_attribute_name ? processedData.end_location_attribute_name : null,
+            attribute_value: processedData.end_location_attribute_value ? processedData.end_location_attribute_value : null,
           },
         },
         cargos: CARGOLIST,
@@ -401,6 +401,7 @@ export class RobotJobService {
         status: 'success',
         message: 'Unstructured task created successfully',
         batch_job_id: response.batch_job_id,
+        taskrequest : taskrequest
       };
     } catch (error) {
       if (error.code === 'ENOENT') {

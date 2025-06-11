@@ -16,7 +16,6 @@ export class OschestratorService {
 
     private TaskQueue: Task[] = []
     private isCheckBatchJobStatus = false;
-    private isTaskQueueProcessing = false;
 
     constructor (
         @InjectRepository(Task)

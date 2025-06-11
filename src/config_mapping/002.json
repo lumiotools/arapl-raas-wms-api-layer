@@ -2,7 +2,7 @@
     "batch_job_id": "input.jobId",
     "batch_priority": "input.priority",
     "batch_type": "input.type",
-    "batch_frequency": "null",
+    "batch_frequency": "input.frequency_batch",
     "warehouse_id": "input.warehouseId",
     "tasks": {
         "source": "input.operations",
@@ -15,8 +15,8 @@
                 "start_location_dimension_length": "op.start.size.l",
                 "start_location_dimension_width": "op.start.size.w",
                 "start_location_dimension_height": "op.start.size.h",
-                "start_location_attribute_name": "null",
-                "start_location_attribute_value": "null",
+                "start_location_attribute_name": "op.start_attr_name",
+                "start_location_attribute_value": "op.start_attr_val",
                 "start_location_zone": "null",
 
                 "end_location_id": "op.end.id",

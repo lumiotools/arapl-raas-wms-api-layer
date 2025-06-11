@@ -3,6 +3,7 @@
     "priority": 3,
     "type": "Discrete",
     "warehouseId": "WH-001",
+    "frequency_batch": 5,
     "operations": [
       {
         "id": "TASK-001",
@@ -10,6 +11,8 @@
         "start_id": "start",
         "start_location_id": "LOC-START-01",
         "start_action": "Pick",
+        "start_attr_name": "rishav",
+        "start_attr_val": "raj",
         "start": {
           "size": { "l": 100, "w": 80, "h": 150 }
         },
@@ -18,14 +21,16 @@
           "id": "LOC-END-01",
           "action": "Drop"
         },
+
+        "cargo_code": "CARGO-001",
+        "type": "Pallet",
+        "l": 100,
+        "size": { "w": 80, "h": 120 },
+        "weight": 50,
         
         "items": [
           {
-            "cargo_code": "CARGO-001",
-            "type": "Pallet",
-            "l": 100,
-            "size": { "w": 80, "h": 120 },
-            "weight": 50
+            
           }
         ]
       }

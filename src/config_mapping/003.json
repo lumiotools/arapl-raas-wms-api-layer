@@ -1,0 +1,60 @@
+{
+    "batch_job_id": "input.job_id",
+    "batch_priority": "input.job_priority",
+    "batch_type": "input.job_type",
+    "batch_frequency": "null",
+    "warehouse_id": "null",
+    "tasks": {
+        "source": "input.job_tasks",
+        "map": {
+                "task_id": "op.id",
+                "task_type": "op.type",
+                "start_location_id": "op.source_location.id",
+                "start_location_action": "op.source_location.action",
+
+                "start_location_dimension_length": "op.source_location.dimensions.len",
+                "start_location_dimension_width": "op.source_location.dimensions.wid",
+                "start_location_dimension_height": "op.source_location.dimensions.ht",
+                "start_location_attribute_name": "op.start_attr_name",
+                "start_location_attribute_value": "op.start_attr_val",
+                "start_location_zone": "null",
+
+                "end_location_id": "op.destination_location.id",
+                "end_location_action": "op.destination_location.action",
+                "end_location_dimension_length": "op.destination_location.dimensions.len",
+                "end_location_dimension_width": "op.destination_location.dimensions.wid",
+                "end_location_dimension_height": "op.destination_location.dimensions.ht",
+                "end_location_zone": "null",
+                "end_location_attribute_name": "null",
+                "end_location_attribute_value": "null",
+
+                "wait_time_wait_type": "op.wait_config.type",
+                "wait_time_start_location_wait_time": "op.wait_config.source_wait",
+                "wait_time_end_location_wait_time" : "op.wait_config.destination_wait",
+
+                "cargo_code": "op.code",
+                "cargo_type": "op.cargo_type",
+                "cargo_dimension_length": "null",
+                "cargo_dimension_width": "null",
+                "cargo_dimension_height": "null",
+                "cargo_weight": "op.weight",
+                "cargo_attributes_name": "null",
+                "cargo_attributes_value": "null",
+
+
+                "cargos":{
+                "source": "op.cargo_items",
+                "map": {
+                        "cargo_code": "item.cargo_code",
+                        "cargo_type": "item.type",
+                        "cargo_dimension_length": "null",
+                        "cargo_dimension_width": "null",
+                        "cargo_dimension_height": "null",
+                        "cargo_weight": "item.weight",
+                        "cargo_attributes_name": "null",
+                        "cargo_attributes_value": "null"
+                    }
+                }
+            }
+        }
+}
