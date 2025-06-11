@@ -1,51 +1,79 @@
-import { Optional } from "@nestjs/common";
-import { Attribute, Dimension, Wait } from "./Task_Generation.dto";
+import { Optional } from '@nestjs/common';
+import { Attribute, Dimension, Wait } from './Task_Generation.dto';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsArray,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 
-export class Cargo{
-    cargo_code: string;
-    cargo_dimension: Dimension;
+export class Cargo {
+  cargo_code: string;
+  cargo_dimension: Dimension;
 
-    @Optional()
-    cargo_quantity: number;
+  @Optional()
+  cargo_quantity: number;
 
-    @Optional()
-    cargo_weight: number;
+  @Optional()
+  cargo_weight: number;
 }
 
 export class Location {
-    location_id: string;
-    location_dimension: Dimension;
+  location_id: string;
+  location_dimension: Dimension;
 
-    @Optional()
-    cargo_quantity: number;
+  @Optional()
+  cargo_quantity: number;
 }
 
 export class Task {
-    task_id: string;
+  @IsString()
+  @IsNotEmpty()
+  task_id: string;
 
-    @Optional()
-    task_dependency: string;
+  @IsOptional()
+  @IsString()
+  task_dependency: string;
 
-    start_location: Location;
-    end_location: Location;
+  @ValidateNested()
+  @Type(() => Location)
+  start_location: Location;
 
-    @Optional()
-    wait_time: Wait;
+  @ValidateNested()
+  @Type(() => Location)
+  end_location: Location;
 
-    cargos: Cargo[];
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => Wait)
+  wait_time: Wait;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => Cargo)
+  cargos: Cargo[];
 }
 
 export class TaskUpdateReq {
-    batch_job_id: string;
-    updates: Task[];
+  @IsString()
+  @IsNotEmpty()
+  batch_job_id: string;
 
-    @Optional()
-    timestamp: string;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => Task)
+  updates: Task[];
+
+  @IsOptional()
+  @IsString()
+  timestamp: string;
 }
 
 export class TaskUpdateRes {
-    task_id: string;
-    status: string;
-    updated_at: string;
-    message: string;
+  task_id: string;
+  status: string;
+  updated_at: string;
+  message: string;
 }

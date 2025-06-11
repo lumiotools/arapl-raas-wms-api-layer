@@ -1,0 +1,45 @@
+{
+  "batch_job_id": "input.job_id",
+  "timestamp": "input.update_timestamp",
+  "updates": {
+    "source": "input.tasks_to_update",
+    "map": {
+      "task_id": "op.id",
+      "task_dependency": "op.depends_on",
+      "start_location": {
+        "location_id": "op.source_location.id",
+        "location_dimension": {
+          "length": "op.source_location.dimensions.len",
+          "width": "op.source_location.dimensions.wid",
+          "height": "op.source_location.dimensions.ht"
+        }
+      },
+      "end_location": {
+        "location_id": "op.destination_location.id",
+        "location_dimension": {
+          "length": "op.destination_location.dimensions.len",
+          "width": "op.destination_location.dimensions.wid",
+          "height": "op.destination_location.dimensions.ht"
+        }
+      },
+      "wait_time": {
+        "wait_type": "op.wait_config.type",
+        "start_location_wait_time": "op.wait_config.source_wait",
+        "end_location_wait_time": "op.wait_config.destination_wait"
+      },
+      "cargos": {
+        "source": "op.cargos",
+        "map": {
+          "cargo_code": "item.code",
+          "cargo_dimension": {
+            "length": "item.dimensions.len",
+            "width": "item.dimensions.wid",
+            "height": "item.dimensions.ht"
+          },
+          "cargo_quantity": "item.quantity",
+          "cargo_weight": "item.weight"
+        }
+      }
+    }
+  }
+}

@@ -1,14 +1,26 @@
+import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 
 export class BatchCancelReq {
-    warehouse_id?: string;
-    batch_job_id: string;
-    reason?: string;
-    timestamp?: string;
+  @IsString()
+  @IsNotEmpty()
+  batch_job_id: string;
+
+  @IsOptional()
+  @IsString()
+  warehouse_id?: string;
+
+  @IsOptional()
+  @IsString()
+  reason?: string;
+
+  @IsOptional()
+  @IsString()
+  timestamp?: string;
 }
 
 export class BatchCancelRes {
-    task_id: string;
-    status: string;
-    cancelled_at: string;
-    message: string;
+  task_id: string;
+  status: string;
+  cancelled_at: string;
+  message: string;
 }
