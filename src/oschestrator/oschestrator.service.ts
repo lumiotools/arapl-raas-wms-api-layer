@@ -41,6 +41,8 @@ export class OschestratorService {
                 where: { status: 'pending' },
             });
             if (pendingBatchJob) {
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate a delay of 1 second
+                // Found a pending batch job, process it
                 this.logger.log(`Found pending batch job: ${pendingBatchJob.batch_job_id}`);
                 const tasks = await this.taskRepository.find({
                     where: { batch_job: { batch_job_id: pendingBatchJob.batch_job_id } },
