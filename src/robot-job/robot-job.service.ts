@@ -544,7 +544,6 @@ export class RobotJobService {
     input: any,
     jsonData: any,
   ): Promise<TaskUpdateReq | { status: string; message: string }> {
-    // Required fields
     const [batchJobIdSuccess, batch_job_id, failedBatchJobIdKey] =
       this.unstructureHelper(input, jsonData['batch_job_id']);
     if (!batchJobIdSuccess) {
@@ -581,7 +580,6 @@ export class RobotJobService {
     for (const op of taskArray) {
       const map = jsonData['updates']['map'];
 
-      // Helper function to safely extract values (returns null for missing optional fields)
       const safeExtract = (path: string, required = false) => {
         const [success, value, failedKey] = this.unstructureHelper(op, path);
         if (!success && required) {
@@ -593,16 +591,13 @@ export class RobotJobService {
       };
 
       try {
-        // Required field
         const task_id = safeExtract(map.task_id, true);
 
-        // Optional fields - these will return null if not present
         const task_dependency = safeExtract(map.task_dependency);
 
-        // Start location - location_id is required, others optional
         const start_location_id = safeExtract(
           map.start_location.location_id,
-          true,
+          false,
         );
         const start_location_length = safeExtract(
           map.start_location.location_dimension?.length,
@@ -614,7 +609,6 @@ export class RobotJobService {
           map.start_location.location_dimension?.height,
         );
 
-        // End location - location_id is required, others optional
         const end_location_id = safeExtract(map.end_location.location_id, true);
         const end_location_length = safeExtract(
           map.end_location.location_dimension?.length,
@@ -626,7 +620,6 @@ export class RobotJobService {
           map.end_location.location_dimension?.height,
         );
 
-        // Wait time - all optional
         const wait_type = safeExtract(map.wait_time?.wait_type);
         const start_location_wait_time = safeExtract(
           map.wait_time?.start_location_wait_time,
@@ -661,10 +654,9 @@ export class RobotJobService {
             start_location_wait_time: start_location_wait_time || 0,
             end_location_wait_time: end_location_wait_time || 0,
           },
-          cargos: [], // Handle cargos separately if needed
+          cargos: [],
         };
 
-        // Handle cargos if present in the mapping
         if (map.cargos) {
           const [cargosSuccess, cargos] = this.unstructureHelper(
             op,
@@ -844,7 +836,6 @@ export class RobotJobService {
   ): Promise<
     TaskCancelReq | BatchCancelReq | { status: string; message: string }
   > {
-    // Helper function to safely extract values
     const safeExtract = (path: string, required = false) => {
       if (!path || path === 'null') return [true, null, null];
 
@@ -855,7 +846,6 @@ export class RobotJobService {
       return [success, value, failedKey];
     };
 
-    // Extract fields - some may be optional depending on your business logic
     const [batchJobIdSuccess, batch_job_id, failedBatchJobIdKey] = safeExtract(
       jsonData['batch_job_id'],
     );
@@ -869,16 +859,12 @@ export class RobotJobService {
       jsonData['timestamp'],
     );
 
-    // Check if we have at least batch_job_id or task_id (one should be required)
     if (!batchJobIdSuccess && !taskIdSuccess) {
       return {
         status: 'error',
         message: `Failed to process cancellation, both 'batch_job_id' and 'task_id' are missing or incorrect.`,
       };
     }
-
-    // Optional fields can fail without causing errors
-    // Only log warnings for missing optional fields if needed
 
     if (batch_job_id && !task_id) {
       return {
