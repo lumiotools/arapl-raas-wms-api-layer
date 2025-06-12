@@ -6,13 +6,16 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { RobotJobService } from './robot-job.service';
+import { Validator } from 'class-validator';
+import { plainToInstance } from 'class-transformer';
 import { CreateRobotJobDto } from './dto/create-robot-job.dto';
 import { UpdateRobotJobDto } from './dto/update-robot-job.dto';
 import {
-  Task,
   TaskGenerationReq,
   TaskGenerationRes,
 } from './dto/Task_Generation.dto';
@@ -23,68 +26,130 @@ import { GetLocationReq, GetLocationRes } from './dto/GetLocation.dto';
 
 @Controller('robot-job')
 export class RobotJobController {
+  private readonly logger = new Logger(RobotJobController.name);
+  private readonly validator = new Validator();
+
   constructor(private readonly robotJobService: RobotJobService) {}
 
-  @Post(':warehouse_id/create_task')
-  async createTask(
+  @Post(':warehouse_id/task')
+  async unifiedCreateTask(
     @Param('warehouse_id') warehouseId: string,
-    @Body() createRobotJobDto: TaskGenerationReq,
+    @Body() body: any,
+    @Query('config_name') configName?: string,
   ): Promise<TaskGenerationRes> {
-    return await this.robotJobService.createTask(
-      warehouseId,
-      createRobotJobDto,
-    );
-  }
+    const structuredDto = plainToInstance(TaskGenerationReq, body);
+    const validationErrors = await this.validator.validate(structuredDto);
 
-  @Post(':warehouse_id/create_raw_task/:config_name')
-  async createUnstructuredTask(
-    @Param('warehouse_id') warehouseId: string,
-    @Param('config_name') configName: string,
-    @Body() createRobotJobDto: any,
-  ): Promise<any> {
-    const result = await this.robotJobService.createUnstructuredTask(
-      warehouseId,
-      configName,
-      createRobotJobDto,
-    );
-
-    if (result.status === 'error') {
-      throw new BadRequestException(result.message);
+    if (validationErrors.length === 0) {
+      return this.robotJobService.createTask(warehouseId, structuredDto);
     }
 
-    return result;
+    if (configName) {
+      const result = await this.robotJobService.createUnstructuredTask(
+        warehouseId,
+        configName,
+        body,
+      );
+      if (result.status === 'error') {
+        throw new BadRequestException(result.message);
+      }
+      return result;
+    }
+
+    throw new BadRequestException(
+      'Request body is not a valid task structure and no `config_name` was provided for transformation.',
+    );
   }
 
-  @Patch(':warehouse_id/update_task')
-  async updateTask(
+  @Patch(':warehouse_id/task')
+  async unifiedUpdateTask(
     @Param('warehouse_id') warehouseId: string,
-    @Body() updateRobotJobDto: TaskUpdateReq,
+    @Body() body: any,
+    @Query('config_name') configName?: string,
   ): Promise<TaskUpdateRes> {
-    return await this.robotJobService.updateTask(
-      warehouseId,
-      updateRobotJobDto,
+    const structuredDto = plainToInstance(TaskUpdateReq, body);
+    const validationErrors = await this.validator.validate(structuredDto);
+
+    if (validationErrors.length === 0) {
+      return this.robotJobService.updateTask(warehouseId, structuredDto);
+    }
+
+    if (configName) {
+      const result = await this.robotJobService.updateUnstructuredTask(
+        warehouseId,
+        configName,
+        body,
+      );
+      if (result.status === 'error') {
+        throw new BadRequestException(result.message);
+      }
+      return result;
+    }
+
+    throw new BadRequestException(
+      'Request body is not a valid update structure and no `config_name` was provided for transformation.',
     );
   }
 
-  @Patch(':warehouse_id/cancel_task')
-  async cancelTask(
+  @Patch(':warehouse_id/task/cancel')
+  async unifiedCancelTask(
     @Param('warehouse_id') warehouseId: string,
-    @Body() updateRobotJobDto: TaskCancelReq | BatchCancelReq,
+    @Body() body: any,
+    @Query('config_name') configName?: string,
   ): Promise<TaskCancelRes | BatchCancelRes> {
-    return await this.robotJobService.cancelTask(
-      warehouseId,
-      updateRobotJobDto,
+    const singleTaskDto = plainToInstance(TaskCancelReq, body);
+    const batchDto = plainToInstance(BatchCancelReq, body);
+
+    const singleErrors = await this.validator.validate(singleTaskDto);
+    const batchErrors = await this.validator.validate(batchDto);
+
+    const isSingleValid = singleErrors.length === 0;
+    const isBatchValid = batchErrors.length === 0;
+
+    if (isSingleValid && !isBatchValid) {
+      return this.robotJobService.cancelTask(warehouseId, singleTaskDto);
+    }
+
+    if (isBatchValid && !isSingleValid) {
+      return this.robotJobService.cancelTask(warehouseId, batchDto);
+    }
+
+    if (configName) {
+      const result = await this.robotJobService.cancelUnstructuredTask(
+        warehouseId,
+        configName,
+        body,
+      );
+      if (result.status === 'error') {
+        throw new BadRequestException(result.message);
+      }
+      return result;
+    }
+
+    this.logger.error('Invalid cancellation request body.');
+    this.logger.debug(
+      'Single Task Validation Errors:',
+      JSON.stringify(singleErrors, null, 2),
+    );
+    this.logger.debug(
+      'Batch Task Validation Errors:',
+      JSON.stringify(batchErrors, null, 2),
+    );
+
+    throw new BadRequestException(
+      'Request body is not a valid cancellation structure (or is ambiguous) and no `config_name` was provided for transformation.',
     );
   }
+
 
   @Post(':warehouse_id/get_empty_locations')
   async getEmptyLocations(
     @Param('warehouse_id') warehouseId: string,
-    @Body() GetLocationReq: GetLocationReq,
+    @Body() getLocationReq: GetLocationReq,
   ): Promise<GetLocationRes> {
     return await this.robotJobService.getEmptyLocations(
       warehouseId,
-      GetLocationReq,
+      getLocationReq,
     );
   }
 

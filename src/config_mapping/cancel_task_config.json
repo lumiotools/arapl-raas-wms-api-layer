@@ -1,0 +1,6 @@
+{
+  "batch_job_id": "input.job_id",
+  "task_id": "input.task_to_cancel_id",
+  "reason": "input.cancellation_reason",
+  "timestamp": "input.cancellation_timestamp"
+}
