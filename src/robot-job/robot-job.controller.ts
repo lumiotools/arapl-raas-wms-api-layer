@@ -48,6 +48,7 @@ export class RobotJobController {
       const result = await this.robotJobService.createUnstructuredTask(
         warehouseId,
         configName,
+        'create_task', // Specify the operation type
         body,
       );
       if (result.status === 'error') {
@@ -78,6 +79,7 @@ export class RobotJobController {
       const result = await this.robotJobService.updateUnstructuredTask(
         warehouseId,
         configName,
+        'update_task', // Specify the operation type
         body,
       );
       if (result.status === 'error') {
@@ -118,6 +120,7 @@ export class RobotJobController {
       const result = await this.robotJobService.cancelUnstructuredTask(
         warehouseId,
         configName,
+        'cancel_task', // Specify the operation type
         body,
       );
       if (result.status === 'error') {
@@ -141,7 +144,6 @@ export class RobotJobController {
     );
   }
 
-
   @Post(':warehouse_id/get_empty_locations')
   async getEmptyLocations(
     @Param('warehouse_id') warehouseId: string,
@@ -164,9 +166,8 @@ export class RobotJobController {
     }
     return await this.robotJobService.getStrpDropLocations(
       warehouseId,
-      location
+      location,
     );
-
   }
 
   @Post()

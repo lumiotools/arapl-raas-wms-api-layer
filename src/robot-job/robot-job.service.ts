@@ -42,42 +42,44 @@ export class RobotJobService {
     warehouseId: string,
     createRobotJobDto: TaskGenerationReq,
   ): Promise<TaskGenerationRes> {
-    
     const Tasks: any[] = createRobotJobDto.tasks;
-    
-    try{
+
+    try {
       for (const task of Tasks) {
-        
         if (task.start_location && task.start_location.location_id) {
-            if (!task.start_location.location_id) {
-              throw new Error('start_location.location_id is null');
-            }
-            const location = await this.LocationRepository.findOne({
-              where: { location_id: task.start_location.location_id },
-            });
-            if (!location) {
-              throw new Error(`Location with id ${task.start_location.location_id} does not exist`);
-            }
-            await this.LocationRepository.update(
-              { location_id: task.start_location.location_id },
-              { isEmpty: false }
+          if (!task.start_location.location_id) {
+            throw new Error('start_location.location_id is null');
+          }
+          const location = await this.LocationRepository.findOne({
+            where: { location_id: task.start_location.location_id },
+          });
+          if (!location) {
+            throw new Error(
+              `Location with id ${task.start_location.location_id} does not exist`,
             );
+          }
+          await this.LocationRepository.update(
+            { location_id: task.start_location.location_id },
+            { isEmpty: false },
+          );
         }
         // Update end_location
         if (task.end_location && task.end_location.location_id) {
-            if (!task.end_location.location_id) {
+          if (!task.end_location.location_id) {
             throw new Error('end_location.location_id is null');
-            }
-            const endLocation = await this.LocationRepository.findOne({
+          }
+          const endLocation = await this.LocationRepository.findOne({
             where: { location_id: task.end_location.location_id },
-            });
-            if (!endLocation) {
-            throw new Error(`Location with id ${task.end_location.location_id} does not exist`);
-            }
-            await this.LocationRepository.update(
-            { location_id: task.end_location.location_id },
-            { isEmpty: false }
+          });
+          if (!endLocation) {
+            throw new Error(
+              `Location with id ${task.end_location.location_id} does not exist`,
             );
+          }
+          await this.LocationRepository.update(
+            { location_id: task.end_location.location_id },
+            { isEmpty: false },
+          );
         }
       }
       const newBatchJob: BatchJob = this.BatchJobRepository.create({
@@ -89,7 +91,7 @@ export class RobotJobService {
         status: 'pending',
       });
       await this.BatchJobRepository.save(newBatchJob);
-      
+
       for (const task of Tasks) {
         const newTask = this.TaskRepository.create({
           task_id: task.task_id,
@@ -109,20 +111,19 @@ export class RobotJobService {
         batch_job_id: createRobotJobDto.batch_job_id,
         status: 'success',
       };
-    }
-    catch(error){
+    } catch (error) {
       if (Tasks && Array.isArray(Tasks)) {
         for (const task of Tasks) {
           if (task.start_location && task.start_location.location_id) {
             await this.LocationRepository.update(
               { location_id: task.start_location.location_id },
-              { isEmpty: true }
+              { isEmpty: true },
             );
           }
           if (task.end_location && task.end_location.location_id) {
             await this.LocationRepository.update(
               { location_id: task.end_location.location_id },
-              { isEmpty: true }
+              { isEmpty: true },
             );
           }
         }
@@ -130,11 +131,9 @@ export class RobotJobService {
       console.error('Error creating task:', error);
       return {
         batch_job_id: createRobotJobDto.batch_job_id,
-        status: 'error'
+        status: 'error',
       };
     }
-      
-    
   }
 
   unstructureHelper(
@@ -219,10 +218,10 @@ export class RobotJobService {
       if (!cargosSuccess) {
         let cargo_code = this.unstructureHelper(op, map['cargo_code']);
         // if (!cargo_code[0]) {
-          // return {
-          //   status: 'error',
-          //   message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_code[2]}' is incorrect and does not exist in the config file.`,
-          // };
+        // return {
+        //   status: 'error',
+        //   message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_code[2]}' is incorrect and does not exist in the config file.`,
+        // };
         // }
         let cargo_type = this.unstructureHelper(op, map['cargo_type']);
         // if (!cargo_type[0]) {
@@ -245,7 +244,7 @@ export class RobotJobService {
 
         let cargo_dimension_width = this.unstructureHelper(
           op,
-          map.cargo_dimension.width,  
+          map.cargo_dimension.width,
         );
         // if (!cargo_dimension_width[0]) {
         //   return {
@@ -264,6 +263,7 @@ export class RobotJobService {
         //     message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_dimension_height[2]}' is incorrect and does not exist in the config file.`,
         //   };
         // }
+
         let cargo_weight = this.unstructureHelper(op, map['cargo_weight']);
         // if (!cargo_weight[0]) {
         //   return {
@@ -286,8 +286,7 @@ export class RobotJobService {
         let cargo_attributes_value = this.unstructureHelper(
           op,
           map.cargo_attributes.attribute_value,
-        );
-        // if (!cargo_attributes_value[0]) {
+        ); // if (!cargo_attributes_value[0]) {
         //   return {
         //     status: 'error',
         //     message: `INFO-Cargo list is not present. Failed to create unstructured task, '${cargo_attributes_value[2]}' is incorrect and does not exist in the config file.`,
@@ -338,23 +337,48 @@ export class RobotJobService {
           // }
 
           CARGOLIST.push({
-            cargo_code: this.unstructureHelper(item, mapCargos['cargo_code'])[1] || null  ,
-            cargo_type: this.unstructureHelper(item, mapCargos['cargo_type'])[1] || null,
+            cargo_code:
+              this.unstructureHelper(item, mapCargos['cargo_code'])[1] || null,
+            cargo_type:
+              this.unstructureHelper(item, mapCargos['cargo_type'])[1] || null,
             cargo_dimension: {
-              length: this.unstructureHelper(item, mapCargos.cargo_dimension.length)[1] || null,
-              width: this.unstructureHelper(item, mapCargos.cargo_dimension.width)[1] || null,
-              height: this.unstructureHelper(item, mapCargos.cargo_dimension.height)[1] || null,
+              length:
+                this.unstructureHelper(
+                  item,
+                  mapCargos.cargo_dimension.length,
+                )[1] || null,
+              width:
+                this.unstructureHelper(
+                  item,
+                  mapCargos.cargo_dimension.width,
+                )[1] || null,
+              height:
+                this.unstructureHelper(
+                  item,
+                  mapCargos.cargo_dimension.height,
+                )[1] || null,
             },
-            cargo_weight: this.unstructureHelper(item, mapCargos['cargo_weight'])[1] || null,
+            cargo_weight:
+              this.unstructureHelper(item, mapCargos['cargo_weight'])[1] ||
+              null,
             cargo_attributes: {
-              attribute_name: this.unstructureHelper(item, mapCargos.cargo_attributes.attribute_name)[1] || null,
-              attribute_value: this.unstructureHelper(item, mapCargos.cargo_attributes.attribute_value)[1] || null,
+              attribute_name:
+                this.unstructureHelper(
+                  item,
+                  mapCargos.cargo_attributes.attribute_name,
+                )[1] || null,
+              attribute_value:
+                this.unstructureHelper(
+                  item,
+                  mapCargos.cargo_attributes.attribute_value,
+                )[1] || null,
             } as Attribute,
           });
         }
       }
+
       const task_id = this.unstructureHelper(op, map['task_id']);
-      if (!task_id){
+      if (!task_id) {
         return {
           status: 'error',
           message: `Failed to create unstructured task, 'task_id' is missing in the input data.`,
@@ -362,44 +386,108 @@ export class RobotJobService {
       }
       const task: TaskReq = {
         task_id: task_id[1],
-        task_pallet_id: this.unstructureHelper(op,map['task_pallet_id'])[1] || null,
-        task_type: this.unstructureHelper(op, map['task_type'])[1] || 'Crossdock',
-        task_dependency: this.unstructureHelper(op,map['task_dependency'])[1] || null,
+        task_pallet_id:
+          this.unstructureHelper(op, map['task_pallet_id'])[1] || null,
+        task_type:
+          this.unstructureHelper(op, map['task_type'])[1] || 'Crossdock',
+        task_dependency:
+          this.unstructureHelper(op, map['task_dependency'])[1] || null,
         start_location: {
-          location_id: this.unstructureHelper(op, map.start_location.location_id)[1] || null,
-          location_zone: this.unstructureHelper(op, map.start_location.location_zone)[1] || null,
-          location_action: this.unstructureHelper(op, map.start_location.location_action)[1] || 'Nop',
+          location_id:
+            this.unstructureHelper(op, map.start_location.location_id)[1] ||
+            null,
+          location_zone:
+            this.unstructureHelper(op, map.start_location.location_zone)[1] ||
+            null,
+          location_action:
+            this.unstructureHelper(op, map.start_location.location_action)[1] ||
+            'Nop',
           location_dimension: {
-            length: this.unstructureHelper(op, map.start_location.location_dimension.length)[1] || 0,
-            width: this.unstructureHelper(op, map.start_location.location_dimension.width)[1] || 0,
-            height: this.unstructureHelper(op, map.start_location.location_dimension.height)[1] || 0,
+            length:
+              this.unstructureHelper(
+                op,
+                map.start_location.location_dimension.length,
+              )[1] || 0,
+            width:
+              this.unstructureHelper(
+                op,
+                map.start_location.location_dimension.width,
+              )[1] || 0,
+            height:
+              this.unstructureHelper(
+                op,
+                map.start_location.location_dimension.height,
+              )[1] || 0,
           },
           location_attribute: {
-            attribute_name: this.unstructureHelper(op, map.start_location.location_attribute.attribute_name)[1] || null,
-            attribute_value: this.unstructureHelper(op, map.start_location.location_attribute.attribute_value)[1] || null,
+            attribute_name:
+              this.unstructureHelper(
+                op,
+                map.start_location.location_attribute.attribute_name,
+              )[1] || null,
+            attribute_value:
+              this.unstructureHelper(
+                op,
+                map.start_location.location_attribute.attribute_value,
+              )[1] || null,
           },
         },
         end_location: {
-          location_id: this.unstructureHelper(op, map.end_location.location_id)[1] || null,
-          location_zone: this.unstructureHelper(op, map.end_location.location_zone)[1] || null,
-          location_action: this.unstructureHelper(op, map.end_location.location_action)[1] || 'Nop',
+          location_id:
+            this.unstructureHelper(op, map.end_location.location_id)[1] || null,
+          location_zone:
+            this.unstructureHelper(op, map.end_location.location_zone)[1] ||
+            null,
+          location_action:
+            this.unstructureHelper(op, map.end_location.location_action)[1] ||
+            'Nop',
           location_dimension: {
-            length: this.unstructureHelper(op, map.end_location.location_dimension.length)[1] || 0,
-            width: this.unstructureHelper(op, map.end_location.location_dimension.width)[1] || 0,
-            height: this.unstructureHelper(op, map.end_location.location_dimension.height)[1] || 0,
+            length:
+              this.unstructureHelper(
+                op,
+                map.end_location.location_dimension.length,
+              )[1] || 0,
+            width:
+              this.unstructureHelper(
+                op,
+                map.end_location.location_dimension.width,
+              )[1] || 0,
+            height:
+              this.unstructureHelper(
+                op,
+                map.end_location.location_dimension.height,
+              )[1] || 0,
           },
           location_attribute: {
-            attribute_name: this.unstructureHelper(op, map.end_location.location_attribute.attribute_name)[1] || null,
-            attribute_value: this.unstructureHelper(op, map.end_location.location_attribute.attribute_value)[1] || null,
+            attribute_name:
+              this.unstructureHelper(
+                op,
+                map.end_location.location_attribute.attribute_name,
+              )[1] || null,
+            attribute_value:
+              this.unstructureHelper(
+                op,
+                map.end_location.location_attribute.attribute_value,
+              )[1] || null,
           },
         },
         cargos: CARGOLIST,
         wait_time: {
-          wait_type: this.unstructureHelper(op, map.wait_time.wait_type)[1] || 'None',
-          start_location_wait_time: this.unstructureHelper(op,map.wait_time.start_location_wait_time)[1] || 0,
-          end_location_wait_time: this.unstructureHelper(op,map.wait_time.end_location_wait_time)[1] || 0,
+          wait_type:
+            this.unstructureHelper(op, map.wait_time.wait_type)[1] || 'None',
+          start_location_wait_time:
+            this.unstructureHelper(
+              op,
+              map.wait_time.start_location_wait_time,
+            )[1] || 0,
+          end_location_wait_time:
+            this.unstructureHelper(
+              op,
+              map.wait_time.end_location_wait_time,
+            )[1] || 0,
         },
       };
+
       Tasks.push(task);
     }
 
@@ -431,14 +519,12 @@ export class RobotJobService {
 
     const [batchFrequencySuccess, batch_frequency, failedBatchFrequencyKey] =
       this.unstructureHelper(input, jsonData['batch_frequency']);
-
     // if (!batchFrequencySuccess) {
     //   return {
     //     status: 'error',
     //     message: `Failed to create unstructured task, '${failedBatchFrequencyKey}' is incorrect and does not exist in the config file.`,
     //   };
     // }
-
     const [warehouseIdSuccess, warehouse_id, failedWarehouseIdKey] =
       this.unstructureHelper(input, jsonData['warehouse_id']);
     // if (!warehouseIdSuccess) {
@@ -461,10 +547,11 @@ export class RobotJobService {
 
   async createUnstructuredTask(
     warehouseId: string,
-    configName: string,
+    configFolderName: string,
+    operationType: string,
     input: any,
   ): Promise<any> {
-    const filePath = `src/config_mapping/${configName}.json`;
+    const filePath = `${configFolderName}/${operationType}.json`;
     try {
       const fileContent = await fs.readFile(filePath, 'utf-8');
       const jsonData = JSON.parse(fileContent);
@@ -486,7 +573,7 @@ export class RobotJobService {
       if (error.code === 'ENOENT') {
         return {
           status: 'error',
-          message: `Configuration file '${configName}.json' not found.`,
+          message: `Configuration file '${operationType}.json' not found in folder '${configFolderName}'.`,
         };
       }
       return {
@@ -563,10 +650,11 @@ export class RobotJobService {
 
   async updateUnstructuredTask(
     warehouseId: string,
-    configName: string,
+    configFolderName: string,
+    operationType: string,
     input: any,
   ): Promise<any> {
-    const filePath = `src/config_mapping/${configName}.json`;
+    const filePath = `${configFolderName}/${operationType}.json`;
     try {
       const fileContent = await fs.readFile(filePath, 'utf-8');
       const jsonData = JSON.parse(fileContent);
@@ -582,7 +670,7 @@ export class RobotJobService {
       if (error.code === 'ENOENT') {
         return {
           status: 'error',
-          message: `Configuration file '${configName}.json' not found.`,
+          message: `Configuration file '${operationType}.json' not found in folder '${configFolderName}'.`,
         };
       }
       return {
@@ -851,10 +939,11 @@ export class RobotJobService {
 
   async cancelUnstructuredTask(
     warehouseId: string,
-    configName: string,
+    configFolderName: string,
+    operationType: string,
     input: any,
   ): Promise<any> {
-    const filePath = `src/config_mapping/${configName}.json`;
+    const filePath = `${configFolderName}/${operationType}.json`;
     try {
       const fileContent = await fs.readFile(filePath, 'utf-8');
       const jsonData = JSON.parse(fileContent);
@@ -872,7 +961,7 @@ export class RobotJobService {
       if (error.code === 'ENOENT') {
         return {
           status: 'error',
-          message: `Configuration file '${configName}.json' not found.`,
+          message: `Configuration file '${operationType}.json' not found in folder '${configFolderName}'.`,
         };
       }
       return {
@@ -973,49 +1062,50 @@ export class RobotJobService {
 
   async getStrpDropLocations(
     warehouseId: string,
-    location: number): Promise<GetLocationRes> {
-      // Find all locations with isEmpty=true and location_action='Drop'
-      const allLocations = await this.LocationRepository.find({
-        where: {
-          isEmpty: true,
-          location_action: LocationAction.Drop,
-        },
-      });
+    location: number,
+  ): Promise<GetLocationRes> {
+    // Find all locations with isEmpty=true and location_action='Drop'
+    const allLocations = await this.LocationRepository.find({
+      where: {
+        isEmpty: true,
+        location_action: LocationAction.Drop,
+      },
+    });
 
-      
-      const zoneMap: Record<string, Location[]> = {};
-      for (const loc of allLocations) {
-        if (!zoneMap[loc.location_zone]) {
-          zoneMap[loc.location_zone] = [];
-        }
-        zoneMap[loc.location_zone].push(loc);
+    const zoneMap: Record<string, Location[]> = {};
+    for (const loc of allLocations) {
+      if (!zoneMap[loc.location_zone]) {
+        zoneMap[loc.location_zone] = [];
       }
+      zoneMap[loc.location_zone].push(loc);
+    }
 
-      // Find a zone with at least 'location' number of available locations
-      let selectedZoneId: string | null = null;
-      let selectedLocations: Location[] = [];
-      for (const [zoneId, locs] of Object.entries(zoneMap)) {
-        if (locs.length >= location) {
-          selectedZoneId = zoneId;
-          selectedLocations = locs;
-          break;
-        }
+    // Find a zone with at least 'location' number of available locations
+    let selectedZoneId: string | null = null;
+    let selectedLocations: Location[] = [];
+    for (const [zoneId, locs] of Object.entries(zoneMap)) {
+      if (locs.length >= location) {
+        selectedZoneId = zoneId;
+        selectedLocations = locs;
+        break;
       }
+    }
 
-      if (!selectedZoneId) {
-        return {
-          zone_id: '',
-          available_location_types: [],
-        };
-      }
-
-      // Sort locations by dropPriority in ascending order before returning
-      selectedLocations.sort((a, b) => (a.dropPriority ?? 0) - (b.dropPriority ?? 0));
+    if (!selectedZoneId) {
       return {
-        zone_id: selectedZoneId,
-        available_location_types: selectedLocations,
+        zone_id: '',
+        available_location_types: [],
       };
+    }
 
+    // Sort locations by dropPriority in ascending order before returning
+    selectedLocations.sort(
+      (a, b) => (a.dropPriority ?? 0) - (b.dropPriority ?? 0),
+    );
+    return {
+      zone_id: selectedZoneId,
+      available_location_types: selectedLocations,
+    };
   }
 
   create(createRobotJobDto: CreateRobotJobDto) {
