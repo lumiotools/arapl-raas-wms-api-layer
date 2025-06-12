@@ -551,7 +551,7 @@ export class RobotJobService {
     operationType: string,
     input: any,
   ): Promise<any> {
-    const filePath = `${configFolderName}/${operationType}.json`;
+    const filePath = `src/config_mapping/${configFolderName}/${operationType}.json`;
     try {
       const fileContent = await fs.readFile(filePath, 'utf-8');
       const jsonData = JSON.parse(fileContent);
