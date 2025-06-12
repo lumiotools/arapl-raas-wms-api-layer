@@ -8,7 +8,7 @@
         "source": "input.tasks",
         "map": {
                 "task_id": "op.task_id",
-                "task_type": "op.task_type",
+                "task_type": "op.type",
                 "task_pallet_id": "op.task_pallet_id",
                 "task_dependency": "null",
 

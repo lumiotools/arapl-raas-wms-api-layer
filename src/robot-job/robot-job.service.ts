@@ -4,6 +4,7 @@ import { UpdateRobotJobDto } from './dto/update-robot-job.dto';
 import {
   Attribute,
   Cargo,
+  LocationAction,
   TaskGenerationReq,
   TaskGenerationRes,
 } from './dto/Task_Generation.dto';
@@ -41,48 +42,99 @@ export class RobotJobService {
     warehouseId: string,
     createRobotJobDto: TaskGenerationReq,
   ): Promise<TaskGenerationRes> {
-    const newBatchJob: BatchJob = this.BatchJobRepository.create({
-      batch_job_id: createRobotJobDto.batch_job_id,
-      warehouse_id: warehouseId,
-      batch_priority: createRobotJobDto.batch_priority,
-      batch_type: createRobotJobDto.batch_type,
-      batch_frequency: createRobotJobDto.batch_frequency,
-    });
-    await this.BatchJobRepository.save(newBatchJob);
-
-    const newTasks: Task[] = [];
+    
     const Tasks: any[] = createRobotJobDto.tasks;
-    for (const task of Tasks) {
-      const newTask = this.TaskRepository.create({
-        task_id: task.task_id,
-        task_pallet_id: task.task_pallet_id,
-        task_type: task.task_type,
-        task_dependency: task.task_dependency,
-        start_location: task.start_location,
-        end_location: task.end_location,
-        wait_time: task.wait_time,
-        cargos: task.cargos,
-        batch_job: newBatchJob,
+    
+    try{
+      for (const task of Tasks) {
+        
+        if (task.start_location && task.start_location.location_id) {
+            if (!task.start_location.location_id) {
+              throw new Error('start_location.location_id is null');
+            }
+            const location = await this.LocationRepository.findOne({
+              where: { location_id: task.start_location.location_id },
+            });
+            if (!location) {
+              throw new Error(`Location with id ${task.start_location.location_id} does not exist`);
+            }
+            await this.LocationRepository.update(
+              { location_id: task.start_location.location_id },
+              { isEmpty: false }
+            );
+        }
+        // Update end_location
+        if (task.end_location && task.end_location.location_id) {
+            if (!task.end_location.location_id) {
+            throw new Error('end_location.location_id is null');
+            }
+            const endLocation = await this.LocationRepository.findOne({
+            where: { location_id: task.end_location.location_id },
+            });
+            if (!endLocation) {
+            throw new Error(`Location with id ${task.end_location.location_id} does not exist`);
+            }
+            await this.LocationRepository.update(
+            { location_id: task.end_location.location_id },
+            { isEmpty: false }
+            );
+        }
+      }
+      const newBatchJob: BatchJob = this.BatchJobRepository.create({
+        batch_job_id: createRobotJobDto.batch_job_id,
+        warehouse_id: warehouseId,
+        batch_priority: createRobotJobDto.batch_priority,
+        batch_type: createRobotJobDto.batch_type,
+        batch_frequency: createRobotJobDto.batch_frequency,
+        status: 'pending',
       });
-
-      await this.TaskRepository.save(newTask);
-      newTasks.push(newTask);
+      await this.BatchJobRepository.save(newBatchJob);
+      
+      for (const task of Tasks) {
+        const newTask = this.TaskRepository.create({
+          task_id: task.task_id,
+          task_pallet_id: task.task_pallet_id,
+          task_type: task.task_type,
+          task_dependency: task.task_dependency,
+          start_location: task.start_location,
+          end_location: task.end_location,
+          wait_time: task.wait_time,
+          cargos: task.cargos,
+          batch_job: newBatchJob,
+          status: 'pending',
+        });
+        await this.TaskRepository.save(newTask);
+      }
+      return {
+        batch_job_id: createRobotJobDto.batch_job_id,
+        status: 'success',
+      };
     }
-
-    const queueElementDto: queueElementDto = {
-      batchJob: {
-        batchJob: newBatchJob,
-        warehouseId: warehouseId,
-      },
-      tasks: newTasks,
-    };
-
-    // await this.oschestratorService.orchestrate(queueElementDto);
-
-    return {
-      batch_job_id: createRobotJobDto.batch_job_id,
-      status: 'success',
-    };
+    catch(error){
+      if (Tasks && Array.isArray(Tasks)) {
+        for (const task of Tasks) {
+          if (task.start_location && task.start_location.location_id) {
+            await this.LocationRepository.update(
+              { location_id: task.start_location.location_id },
+              { isEmpty: true }
+            );
+          }
+          if (task.end_location && task.end_location.location_id) {
+            await this.LocationRepository.update(
+              { location_id: task.end_location.location_id },
+              { isEmpty: true }
+            );
+          }
+        }
+      }
+      console.error('Error creating task:', error);
+      return {
+        batch_job_id: createRobotJobDto.batch_job_id,
+        status: 'error'
+      };
+    }
+      
+    
   }
 
   unstructureHelper(
@@ -917,6 +969,53 @@ export class RobotJobService {
       zone_id: getLocationReq.zone_id,
       available_location_types: locations,
     };
+  }
+
+  async getStrpDropLocations(
+    warehouseId: string,
+    location: number): Promise<GetLocationRes> {
+      // Find all locations with isEmpty=true and location_action='Drop'
+      const allLocations = await this.LocationRepository.find({
+        where: {
+          isEmpty: true,
+          location_action: LocationAction.Drop,
+        },
+      });
+
+      
+      const zoneMap: Record<string, Location[]> = {};
+      for (const loc of allLocations) {
+        if (!zoneMap[loc.location_zone]) {
+          zoneMap[loc.location_zone] = [];
+        }
+        zoneMap[loc.location_zone].push(loc);
+      }
+
+      // Find a zone with at least 'location' number of available locations
+      let selectedZoneId: string | null = null;
+      let selectedLocations: Location[] = [];
+      for (const [zoneId, locs] of Object.entries(zoneMap)) {
+        if (locs.length >= location) {
+          selectedZoneId = zoneId;
+          selectedLocations = locs;
+          break;
+        }
+      }
+
+      if (!selectedZoneId) {
+        return {
+          zone_id: '',
+          available_location_types: [],
+        };
+      }
+
+      // Sort locations by dropPriority in ascending order before returning
+      selectedLocations.sort((a, b) => (a.dropPriority ?? 0) - (b.dropPriority ?? 0));
+      return {
+        zone_id: selectedZoneId,
+        available_location_types: selectedLocations,
+      };
+
   }
 
   create(createRobotJobDto: CreateRobotJobDto) {

@@ -15,9 +15,9 @@
                 "start_location": {
                     "location_id": "op.source_location.id",
                     "location_action": "op.source_location.action",
-                    "location_zone": "null",
+                    "location_zone": "op.source_location.zone",
                     "location_dimension": {
-                        "length": "op.source_location.dimensions.len",
+                        "length": "op.len",
                         "width": "op.source_location.dimensions.wid",
                         "height": "op.source_location.dimensions.ht"
                     },

@@ -45,7 +45,7 @@ export class OschestratorService {
                 // Found a pending batch job, process it
                 this.logger.log(`Found pending batch job: ${pendingBatchJob.batch_job_id}`);
                 const tasks = await this.taskRepository.find({
-                    where: { batch_job: { batch_job_id: pendingBatchJob.batch_job_id } },
+                    where: { batch_job: { batch_job_id: pendingBatchJob.batch_job_id }, status: 'pending' },
                 });
                 for (const task of tasks) {
                     task.status = 'inqueue'; // Update task status to inqueue
