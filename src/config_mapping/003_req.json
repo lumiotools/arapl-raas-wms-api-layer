@@ -26,9 +26,7 @@
       },
       "code": "CARGO-001",
       "cargo_type": "Pallet",
-      "weight": 50,
-
-      "cargo_items":"fake"
+      "weight": 50
       
     },
     {

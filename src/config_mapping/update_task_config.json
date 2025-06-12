@@ -4,22 +4,38 @@
   "updates": {
     "source": "input.tasks_to_update",
     "map": {
+
       "task_id": "op.id",
+      "task_type": "op.type",
+      "task_pallet_id": "null",
       "task_dependency": "op.depends_on",
+
       "start_location": {
         "location_id": "op.source_location.id",
+        "location_action": "op.source_location.action",
+        "location_zone": "null",
         "location_dimension": {
           "length": "op.source_location.dimensions.len",
           "width": "op.source_location.dimensions.wid",
           "height": "op.source_location.dimensions.ht"
+        },
+        "location_attribute": {
+            "attribute_name": "op.source_location.attributes.name",
+            "attribute_value": "op.source_location.attributes.value"
         }
       },
       "end_location": {
         "location_id": "op.destination_location.id",
+        "location_action": "op.destination_location.action",
+        "location_zone": "null",
         "location_dimension": {
           "length": "op.destination_location.dimensions.len",
           "width": "op.destination_location.dimensions.wid",
           "height": "op.destination_location.dimensions.ht"
+        },
+        "location_attribute": {
+            "attribute_name": "null",
+            "attribute_value": "null"
         }
       },
       "wait_time": {
@@ -27,17 +43,35 @@
         "start_location_wait_time": "op.wait_config.source_wait",
         "end_location_wait_time": "op.wait_config.destination_wait"
       },
+
+      "cargo_code": "op.code",
+      "cargo_type": "op.cargo_type",
+      "cargo_dimension": {
+          "length": "op.cargo_dimension.len",
+          "width": "op.cargo_dimension.wid",
+          "height": "op.cargo_dimension.ht"
+      },
+      "cargo_weight": "op.weight",
+      "cargo_attributes": {
+          "attribute_name": "op.attributes.name",
+          "attribute_value": "op.attributes.value"
+      },
+
       "cargos": {
         "source": "op.cargos",
         "map": {
-          "cargo_code": "item.code",
-          "cargo_dimension": {
-            "length": "item.dimensions.len",
-            "width": "item.dimensions.wid",
-            "height": "item.dimensions.ht"
-          },
-          "cargo_quantity": "item.quantity",
-          "cargo_weight": "item.weight"
+            "cargo_code": "item.code",
+            "cargo_type": "item.type",
+            "cargo_dimension": {
+                "length": "item.dimensions.len",
+                "width": "item.dimensions.wid",
+                "height": "item.dimensions.ht"
+            },
+            "cargo_weight": "item.weight",
+            "cargo_attributes":{
+                "attribute_name": "item.attributes.name",
+                "attribute_value": "item.attributes.value"
+            }
         }
       }
     }

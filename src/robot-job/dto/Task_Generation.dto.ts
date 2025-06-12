@@ -11,7 +11,7 @@ export class Dimension {
 
 export class Attribute {
     attribute_name: string;
-    attribute_value: string; 
+    attribute_value: string;
 }
 
 export class Cargo{
