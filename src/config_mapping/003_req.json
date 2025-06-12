@@ -6,11 +6,14 @@
     {
       "id": "TASK-001",
       "type": "Putaway",
+      "len": 100,
       "source_location": {
         "id": "LOC-01-A",
         "action": "Pick",
+        "zone": "MIA",
+        
         "dimensions": {
-          "len": 100,
+          
           "wid": 80,
           "ht": 150
         }
@@ -26,7 +29,12 @@
       },
       "code": "CARGO-001",
       "cargo_type": "Pallet",
-      "weight": 50
+      "weight": 50,
+      "cargo_dimension":{
+        "len": 100,
+        "wid": 80,
+        "ht": 120
+      }
       
     },
     {

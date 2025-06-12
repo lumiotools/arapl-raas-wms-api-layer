@@ -153,6 +153,22 @@ export class RobotJobController {
     );
   }
 
+  @Post(':warehouse_id/get-strp-drop-locations/:requiredLocations')
+  async getStrpDropLocations(
+    @Param('warehouse_id') warehouseId: string,
+    @Param('requiredLocations') requiredLocations: string,
+  ): Promise<GetLocationRes> {
+    const location = Number(requiredLocations);
+    if (isNaN(location) || location <= 0) {
+      throw new BadRequestException('Invalid number of required location.');
+    }
+    return await this.robotJobService.getStrpDropLocations(
+      warehouseId,
+      location
+    );
+
+  }
+
   @Post()
   create(@Body() createRobotJobDto: CreateRobotJobDto) {
     return this.robotJobService.create(createRobotJobDto);
