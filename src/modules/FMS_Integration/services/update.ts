@@ -1,11 +1,14 @@
 
 import {authenticate} from "./authentication";
 import fetch from 'node-fetch';
-
+import { Task } from "src/modules/robot-job/dto/Task_Generation.dto";
+import { TaskUpdateReq, TaskUpdateRes } from "src/modules/robot-job/dto/Task_Update.dto";
+import { TaskCancelReq, TaskCancelRes } from "src/modules/robot-job/dto/Task_Cancel.dto";
+import { BatchCancelReq, BatchCancelRes } from "src/modules/robot-job/dto/Batch_Cancel.dto";
 let UPDATE_TASK_URL = 'https://api.araplraas.com/operator/v1/tasks/';
 
 
-export async function updateTask(payload : any, id : string): Promise<any> {
+export async function updateTask(payload : TaskUpdateReq, id : string): Promise<TaskUpdateRes> {
     try{
         UPDATE_TASK_URL = UPDATE_TASK_URL + id;
         console.log("update task url: ",UPDATE_TASK_URL);
@@ -38,7 +41,7 @@ export async function updateTask(payload : any, id : string): Promise<any> {
 
 
 
-export async function updateBatchAction(payload: any, task_id : string): Promise<any> {
+export async function updateBatchAction(payload: BatchCancelReq, task_id : string): Promise<BatchCancelRes> {
     try {
         const UPDATE_TASK_ACTION_URL = `https://api.araplraas.com/operator/v1/tasks/${task_id}/action`;
         const Token = await authenticate();
@@ -65,7 +68,7 @@ export async function updateBatchAction(payload: any, task_id : string): Promise
     }
 }
 
-export async function updateBatchTaskAction(payload: any, task_id : string , subtask_id: string): Promise<any> {
+export async function updateBatchTaskAction(payload: TaskCancelReq, task_id : string , subtask_id: string): Promise<TaskCancelRes> {
     try {
         const UPDATE_TASK_ACTION_URL = `https://api.araplraas.com/operator/v1/tasks/${task_id}/subtasks/${subtask_id}/action`;
         const Token = await authenticate();
