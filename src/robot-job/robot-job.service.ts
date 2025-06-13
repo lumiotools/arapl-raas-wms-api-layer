@@ -63,6 +63,9 @@ export class RobotJobService {
             { isEmpty: false },
           );
         }
+        else{
+          throw new Error('start_location.location_id is null');
+        }
         // Update end_location
         if (task.end_location && task.end_location.location_id) {
           if (!task.end_location.location_id) {
@@ -81,6 +84,19 @@ export class RobotJobService {
             { isEmpty: false },
           );
         }
+        else{
+          throw new Error('end_location.location_id is null');
+        }
+      }
+      const batch_job_id = createRobotJobDto.batch_job_id;
+      const uniqueness = await this.BatchJobRepository.findOne({
+        where:
+        { batch_job_id: batch_job_id, warehouse_id: warehouseId  },
+      })
+      if (uniqueness){
+        throw new Error(
+          `Batch job with id ${batch_job_id} already exists in warehouse ${warehouseId}. Combination of Batch Job ID and Warehouse ID must be unique.`,
+        )
       }
       const newBatchJob: BatchJob = this.BatchJobRepository.create({
         batch_job_id: createRobotJobDto.batch_job_id,
@@ -105,7 +121,12 @@ export class RobotJobService {
           batch_job: newBatchJob,
           status: 'pending',
         });
-        await this.TaskRepository.save(newTask);
+        const createdTask : Task = await this.TaskRepository.save(newTask);
+        if (!createdTask) {
+          throw new Error(
+            `Failed to create task with ID ${task.task_id} for batch job ${createRobotJobDto.batch_job_id}.`,
+          );
+        }
       }
       return {
         batch_job_id: createRobotJobDto.batch_job_id,

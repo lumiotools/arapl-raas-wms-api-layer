@@ -7,12 +7,17 @@ import {
   PrimaryColumn,
   OneToMany,
   BatchType,
+  Unique,
 } from 'typeorm';
 import { batch_type } from '../dto/Task_Generation.dto';
 
 @Entity('batch_tasks')
 export class BatchJob {
-  @PrimaryColumn()
+
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ type: 'varchar'})
   batch_job_id: string;
 
   @Column({ nullable: true })
