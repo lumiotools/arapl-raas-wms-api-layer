@@ -16,8 +16,6 @@ import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { BatchJob } from './entities/batch_task.entity';
 import { Task } from './entities/task.entity';
-import { OschestratorService } from 'src/oschestrator/oschestrator.service';
-import { queueElementDto } from 'src/oschestrator/dto/queue.dto';
 import { BatchCancelReq, BatchCancelRes } from './dto/Batch_Cancel.dto';
 import { Location } from './entities/locations.entity';
 import { GetLocationReq, GetLocationRes } from './dto/GetLocation.dto';
@@ -34,8 +32,6 @@ export class RobotJobService {
 
     @InjectRepository(Location)
     private readonly LocationRepository: Repository<Location>,
-
-    private readonly oschestratorService: OschestratorService,
   ) {}
 
   async createTask(

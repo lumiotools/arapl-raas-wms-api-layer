@@ -1,6 +1,6 @@
 
-import { BatchJob } from "src/robot-job/entities/batch_task.entity";
-import { Task } from "src/robot-job/entities/task.entity";
+import { BatchJob } from "src/modules/robot-job/entities/batch_task.entity";
+import { Task } from "src/modules/robot-job/entities/task.entity";
 
 class WareHouseBatch{
     batchJob: BatchJob;
