@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { RobotJobModule } from './robot-job/robot-job.module';
+import { RobotJobModule } from './modules/robot-job/robot-job.module';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { OschestratorModule } from './oschestrator/oschestrator.module';
+import { OschestratorModule } from './modules/oschestrator/oschestrator.module';
 import { DBConfig }  from './config/db.config';
 
 @Module({
