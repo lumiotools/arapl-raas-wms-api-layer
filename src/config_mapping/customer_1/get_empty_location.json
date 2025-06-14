@@ -1,6 +1,6 @@
 {
     "endpoint":{
-        "url": "https://api.example.com/locations/:param1/get_locations/:param2/empty_location",
+        "url": "http://localhost:3000/",
         "method": "POST",
         "headers": {
             "Content-Type": "application/json",
@@ -12,10 +12,9 @@
             "object_type": "object",
             "attributes":{
                 "object_type": "object",
-                "type": "input.location_type",
-                "level": "input.level",
-                "dummy": "null or path invalid"
-                
+                "type": {"path":"input.location_type", "object_type": "string"},
+                "level": {"object_type": "number", "path": "input.level"},
+                "dummy": {"object_type": "null", "path": "null"}
             },
             "zone_id": {"object_type": "string", "path": "input.zone_id"}
         },
@@ -35,6 +34,7 @@
                 "object_type": "array",
                 "source": "input.available_locations",
                 "map":{
+                    "object_type": "object",
                     "location_id": "loc.location_id", 
                     "location_dimension": { 
                     "object_type": "object",

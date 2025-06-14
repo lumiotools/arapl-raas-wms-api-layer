@@ -12,7 +12,7 @@ import { TaskUpdateReq, TaskUpdateRes } from './dto/Task_Update.dto';
 import { Task as UpdateTask } from './dto/Task_Update.dto';
 import { Task as TaskReq } from './dto/Task_Generation.dto';
 import { TaskCancelReq, TaskCancelRes } from './dto/Task_Cancel.dto';
-import { Repository } from 'typeorm';
+import { Any, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { BatchJob } from './entities/batch_task.entity';
 import { Task } from './entities/task.entity';
@@ -20,6 +20,7 @@ import { BatchCancelReq, BatchCancelRes } from './dto/Batch_Cancel.dto';
 import { Location } from './entities/locations.entity';
 import { GetLocationReq, GetLocationRes } from './dto/GetLocation.dto';
 import * as fs from 'fs/promises';
+import axios from 'axios';
 
 @Injectable()
 export class RobotJobService {
@@ -1045,36 +1046,78 @@ export class RobotJobService {
     }
   }
 
+  async empty_locationTransform(
+    mapping: any,
+    input: GetLocationReq,
+  ): Promise<any> {
+
+    
+    if (mapping.object_type == "object"){
+      let currObject: Object = {};
+      for (const key in mapping){
+        if (key == 'object_type' || key == 'source' || key == 'map' || key == 'endpoint'){
+          continue;
+        }
+        if (mapping[key].object_type == "number"){
+          currObject[key] = Number(this.unstructureHelper(input, mapping[key].path)[1]) ?? 0;
+        }
+        else if (mapping[key].object_type == "string"){
+          currObject[key] = String(this.unstructureHelper(input, mapping[key].path)[1]) ?? '';
+        }
+        else if (mapping[key].object_type == "array"){
+          currObject[key] = await this.empty_locationTransform(mapping[key], input);
+        }
+        else if (mapping[key].object_type == "object"){
+          currObject[key] = await this.empty_locationTransform(mapping[key], input);
+        }
+      }
+      return currObject;
+    }
+    else{
+      let currObject: Object[] = [];
+      const arrayMap = mapping.map;
+      const currentArray = this.unstructureHelper(input, mapping.source)[1] || [];
+      for (const item of currentArray) {
+        const currentItem: Object = await this.empty_locationTransform(arrayMap, item);
+        currObject.push(currentItem);
+      }
+      return currObject;
+    }
+  }
   async getEmptyLocations(
     warehouseId: string,
     getLocationReq: GetLocationReq,
+    config_name: string,
   ): Promise<GetLocationRes> {
-    const locations = await this.LocationRepository.find({
-      where: {
-        location_zone: getLocationReq.zone_id,
-        location_action: getLocationReq.location_type,
-        isEmpty: true,
-      },
-    });
+    const filePath = `src/config_mapping/${config_name}/get_empty_location.json`;
+    try {
+      const fileContent = await fs.readFile(filePath, 'utf-8');
+      const mapping = JSON.parse(fileContent);
 
-    if (locations.length === 0) {
+      const apiEndpoint = mapping.endpoint.url;
+      const payload: any = await this.empty_locationTransform(mapping.request.body,getLocationReq);
+      console.log('Transformed Payload:', payload);
+      const response = await axios.post(apiEndpoint, getLocationReq, {
+        headers: {
+          'Content-Type': mapping.endpoint.headers['Content-Type'],
+        },
+        data: getLocationReq,
+      });
+
+      const responseData = response.data;
+      const TransformedResponse = await this.empty_locationTransform(
+        mapping.response.body,
+        responseData,
+      )
+
+      return TransformedResponse as GetLocationRes;
+      
+    } catch (error) {
       return {
-        zone_id: getLocationReq.zone_id,
+        zone_id: '',
         available_location_types: [],
       };
     }
-
-    if (getLocationReq.location_type === 'Drop') {
-      locations.sort((a, b) => (a.dropPriority ?? 0) - (b.dropPriority ?? 0));
-    } else if (getLocationReq.location_type === 'Pick') {
-      locations.sort(
-        (a, b) => (a.pickupPriority ?? 0) - (b.pickupPriority ?? 0),
-      );
-    }
-    return {
-      zone_id: getLocationReq.zone_id,
-      available_location_types: locations,
-    };
   }
 
   async getStrpDropLocations(

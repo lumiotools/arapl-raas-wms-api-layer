@@ -23,6 +23,7 @@ import { TaskUpdateReq, TaskUpdateRes } from './dto/Task_Update.dto';
 import { TaskCancelReq, TaskCancelRes } from './dto/Task_Cancel.dto';
 import { BatchCancelReq, BatchCancelRes } from './dto/Batch_Cancel.dto';
 import { GetLocationReq, GetLocationRes } from './dto/GetLocation.dto';
+import { config } from 'process';
 
 @Controller('robot-job')
 export class RobotJobController {
@@ -148,10 +149,12 @@ export class RobotJobController {
   async getEmptyLocations(
     @Param('warehouse_id') warehouseId: string,
     @Body() getLocationReq: GetLocationReq,
+    @Query('config_name') configName: string,
   ): Promise<GetLocationRes> {
     return await this.robotJobService.getEmptyLocations(
       warehouseId,
       getLocationReq,
+      configName,
     );
   }
 
