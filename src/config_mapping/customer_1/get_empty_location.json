@@ -1,0 +1,51 @@
+{
+    "endpoint":{
+        "url": "https://api.example.com/locations/:param1/get_locations/:param2/empty_location",
+        "method": "POST",
+        "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer <token>"
+        }
+    },
+    "request":{
+        "body": {
+            "object_type": "object",
+            "attributes":{
+                "object_type": "object",
+                "type": "input.location_type",
+                "level": "input.level",
+                "dummy": "null or path invalid"
+                
+            },
+            "zone_id": {"object_type": "string", "path": "input.zone_id"}
+        },
+        "query_params": {
+            "param1": "input.variable1",
+            "param2": "null"
+        },
+        "path_params": {
+            "param2": "input.variable2 // null functionality not present"
+        }
+    },
+    "response":{
+        "body": {
+            "object_type": "object",
+            "zone_id": {"object_type": "string", "path": "input.zone_id"}, 
+            "available_locations": {
+                "object_type": "array",
+                "source": "input.available_locations",
+                "map":{
+                    "location_id": "loc.location_id", 
+                    "location_dimension": { 
+                    "object_type": "object",
+                    "length": {"object_type": "number", "path":"loc.location_dimension.length"} , 
+                    "width": { "object_type": "number", "path": "loc.location_dimension.width"}, 
+                    "height": {"object_type": "number", "path": "loc.location_dimension.height"} 
+                    }, 
+                    "location_type": {"object_type": "string", "path": "loc.location_type"}, 
+                    "cargo_quantity": {"object_type": "number", "path": "loc.cargo_quantity"}
+                }
+            }
+        }
+    }
+}

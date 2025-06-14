@@ -41,7 +41,7 @@ export async function updateTask(payload : TaskUpdateReq, id : string): Promise<
 
 
 
-export async function updateBatchAction(payload: BatchCancelReq, task_id : string): Promise<BatchCancelRes> {
+export async function updateBatchAction(payload: BatchCancelReq, task_id : string): Promise<BatchCancelRes> {// action
     try {
         const UPDATE_TASK_ACTION_URL = `https://api.araplraas.com/operator/v1/tasks/${task_id}/action`;
         const Token = await authenticate();
@@ -68,7 +68,7 @@ export async function updateBatchAction(payload: BatchCancelReq, task_id : strin
     }
 }
 
-export async function updateBatchTaskAction(payload: TaskCancelReq, task_id : string , subtask_id: string): Promise<TaskCancelRes> {
+export async function updateBatchTaskAction(payload: TaskCancelReq, task_id : string , subtask_id: string): Promise<TaskCancelRes> { //action
     try {
         const UPDATE_TASK_ACTION_URL = `https://api.araplraas.com/operator/v1/tasks/${task_id}/subtasks/${subtask_id}/action`;
         const Token = await authenticate();
