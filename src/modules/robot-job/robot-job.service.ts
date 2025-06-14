@@ -21,6 +21,7 @@ import { Location } from './entities/locations.entity';
 import { GetLocationReq, GetLocationRes } from './dto/GetLocation.dto';
 import * as fs from 'fs/promises';
 import axios from 'axios';
+import path from 'path';
 
 @Injectable()
 export class RobotJobService {
@@ -1050,39 +1051,50 @@ export class RobotJobService {
     mapping: any,
     input: GetLocationReq,
   ): Promise<any> {
-
+    try{
+        if (mapping.object_type == "object"){
+        let currObject: Object = {};
+        for (const key in mapping){
+          if (key == 'object_type' || key == 'source' || key == 'map' || key == 'endpoint'){
+            continue;
+          }
+          if (mapping[key].object_type == "number"){
+            currObject[key] = Number(this.unstructureHelper(input, mapping[key].path)[1]) ?? 0;
+          }
+          else if (mapping[key].object_type == "string"){
+            currObject[key] = String(this.unstructureHelper(input, mapping[key].path)[1]) ?? '';
+          }
+          else if (mapping[key].object_type == "array"){
+            currObject[key] = await this.empty_locationTransform(mapping[key], input);
+          }
+          else if (mapping[key].object_type == "object"){
+            currObject[key] = await this.empty_locationTransform(mapping[key], input);
+          }
+          else if (mapping[key].object_type == "boolean"){
+            currObject[key] = Boolean(this.unstructureHelper(input, mapping[key].path)[1]) ?? false;
+          }
+          else if (mapping[key].object_type == "null"){
+            continue;
+          }
+        }
+        return currObject;
+      }
+      else{
+        let currObject: Object[] = [];
+        const arrayMap = mapping.map;
+        const currentArray = this.unstructureHelper(input, mapping.source)[1] || [];
+        for (const item of currentArray) {
+          const currentItem: Object = await this.empty_locationTransform(arrayMap, item);
+          currObject.push(currentItem);
+        }
+        return currObject;
+      }
+    }
+    catch (error) {
+      console.error('Error in empty_locationTransform:', error);
+      return {};
+    }
     
-    if (mapping.object_type == "object"){
-      let currObject: Object = {};
-      for (const key in mapping){
-        if (key == 'object_type' || key == 'source' || key == 'map' || key == 'endpoint'){
-          continue;
-        }
-        if (mapping[key].object_type == "number"){
-          currObject[key] = Number(this.unstructureHelper(input, mapping[key].path)[1]) ?? 0;
-        }
-        else if (mapping[key].object_type == "string"){
-          currObject[key] = String(this.unstructureHelper(input, mapping[key].path)[1]) ?? '';
-        }
-        else if (mapping[key].object_type == "array"){
-          currObject[key] = await this.empty_locationTransform(mapping[key], input);
-        }
-        else if (mapping[key].object_type == "object"){
-          currObject[key] = await this.empty_locationTransform(mapping[key], input);
-        }
-      }
-      return currObject;
-    }
-    else{
-      let currObject: Object[] = [];
-      const arrayMap = mapping.map;
-      const currentArray = this.unstructureHelper(input, mapping.source)[1] || [];
-      for (const item of currentArray) {
-        const currentItem: Object = await this.empty_locationTransform(arrayMap, item);
-        currObject.push(currentItem);
-      }
-      return currObject;
-    }
   }
   async getEmptyLocations(
     warehouseId: string,
@@ -1094,7 +1106,34 @@ export class RobotJobService {
       const fileContent = await fs.readFile(filePath, 'utf-8');
       const mapping = JSON.parse(fileContent);
 
-      const apiEndpoint = mapping.endpoint.url;
+      let apiEndpoint = mapping.endpoint.url;
+
+      // incorporting all path parameters
+      const path_params =  mapping.request.path_params;
+      if (!path_params) {
+        throw new Error('Path parameters are not defined in the mapping.');
+      }
+      for (const path_param in path_params) {
+        console.log(`Path Param: ${path_param}, Value: ${path_params[path_param]}`);
+        apiEndpoint = apiEndpoint.replace(
+          `:${path_param}`,
+          encodeURIComponent(this.unstructureHelper(getLocationReq, path_params[path_param])[1] || ''),
+        );
+      }
+
+      // incorporting all query parameters
+      const query_params = mapping.request.query_params;
+      if (!query_params) {
+        throw new Error('Query parameters are not defined in the mapping.');
+      }
+      for (const query_param in query_params) {
+        if (query_params[query_param] === "null") {
+          continue; // Skip if the query parameter value is "null"
+        }
+        apiEndpoint += `?${query_param}=${encodeURIComponent(query_params[query_param])}`;
+      }
+
+
       const payload: any = await this.empty_locationTransform(mapping.request.body,getLocationReq);
       console.log('Transformed Payload:', payload);
       const response = await axios.post(apiEndpoint, getLocationReq, {
@@ -1103,15 +1142,15 @@ export class RobotJobService {
         },
         data: getLocationReq,
       });
-
+      console.log('API Response:', response.data);
       const responseData = response.data;
       const TransformedResponse = await this.empty_locationTransform(
         mapping.response.body,
         responseData,
       )
-
+      console.log('Transformed Response:', JSON.stringify(TransformedResponse, null, 2));
       return TransformedResponse as GetLocationRes;
-      
+
     } catch (error) {
       return {
         zone_id: '',

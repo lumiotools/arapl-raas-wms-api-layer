@@ -1,6 +1,6 @@
 {
     "endpoint":{
-        "url": "http://localhost:3000/",
+        "url": "http://localhost:3000/:param3",
         "method": "POST",
         "headers": {
             "Content-Type": "application/json",
@@ -19,11 +19,11 @@
             "zone_id": {"object_type": "string", "path": "input.zone_id"}
         },
         "query_params": {
-            "param1": "input.variable1",
+            "param1": "input.zone_id",
             "param2": "null"
         },
         "path_params": {
-            "param2": "input.variable2 // null functionality not present"
+            "param3": "input.zone_id"
         }
     },
     "response":{
@@ -37,11 +37,11 @@
                     "object_type": "object",
                     "location_id": "loc.location_id", 
                     "location_dimension": { 
-                    "object_type": "object",
-                    "length": {"object_type": "number", "path":"loc.location_dimension.length"} , 
-                    "width": { "object_type": "number", "path": "loc.location_dimension.width"}, 
-                    "height": {"object_type": "number", "path": "loc.location_dimension.height"} 
-                    }, 
+                        "object_type": "object",
+                        "lenght": {"object_type":"object", "length": {"object_type": "number", "path": "loc.dimension.Len.length"}},
+                        "width": {"object_type":"object", "width": {"object_type": "number", "path": "loc.dimension.Width.width"}},
+                        "height": {"object_type":"object", "height": {"object_type": "number", "path": "loc.dimension.Height.height"}}
+                    },
                     "location_type": {"object_type": "string", "path": "loc.location_type"}, 
                     "cargo_quantity": {"object_type": "number", "path": "loc.cargo_quantity"}
                 }
