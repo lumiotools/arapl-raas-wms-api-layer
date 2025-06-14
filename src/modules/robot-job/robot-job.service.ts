@@ -592,7 +592,7 @@ export class RobotJobService {
       const fileContent = await fs.readFile(filePath, 'utf-8');
       const jsonData = JSON.parse(fileContent);
 
-      const taskrequest = await this.transform(input, jsonData);
+      const taskrequest = await this.empty_locationTransform(jsonData, input);
 
       if (taskrequest.status === 'error') {
         return taskrequest;
@@ -1094,7 +1094,7 @@ export class RobotJobService {
             currObject[key] = Boolean(this.unstructureHelper(input, mapping[key].path)[1]) ?? false;
           }
           else if (mapping[key].object_type == "null"){
-            continue;
+            currObject[key] = null;
           }
         }
         return currObject;
