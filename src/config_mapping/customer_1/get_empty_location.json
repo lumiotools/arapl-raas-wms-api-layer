@@ -12,30 +12,31 @@
             "object_type": "object",
             "attributes":{
                 "object_type": "object",
-                "type": {"path":"input.location_type", "object_type": "string"},
+                "type": {"object_type": "string", "path":"input.location_type"},
                 "level": {"object_type": "number", "path": "input.level"},
                 "dummy": {"object_type": "null", "path": "null"}
             },
-            "zone_id": {"object_type": "string", "path": "input.zone_id"}
+            "zone_id": {"object_type": "string", "path": "input.zones[1].id"}
         },
         "query_params": {
             "param1": "input.zone_id",
             "param2": "null"
         },
         "path_params": {
-            "param3": "input.zone_id"
+            "param3": "input.zones[1].id"
         }
     },
     "response":{
         "body": {
             "object_type": "object",
-            "zone_id": {"object_type": "string", "path": "input.zone_id"}, 
+            "zone_id": {"object_type": "string", "path": "input.zones[1].id"}, 
             "available_locations": {
+                "source_type": "object",
                 "object_type": "array",
                 "source": "input.available_locations",
                 "map":{
                     "object_type": "object",
-                    "location_id": "loc.location_id", 
+                    "location_id": {"object_type": "string", "path": "loc.location_id"}, 
                     "location_dimension": { 
                         "object_type": "object",
                         "lenght": {"object_type":"object", "length": {"object_type": "number", "path": "loc.dimension.Len.length"}},

@@ -166,15 +166,32 @@ export class RobotJobService {
       const keys = expression.split('.').slice(1);
       let current = input;
       for (const key of keys) {
-        if (
-          current === null ||
-          current === undefined ||
-          typeof current !== 'object' ||
-          !(key in current)
-        ) {
+        if (current === null || current === undefined) {
           return [false, null, key];
         }
-        current = current[key];
+        if (typeof current !== 'object') return [false, null, key];
+        if (key.includes('[') && key.includes(']') && !(key in current)) {
+          const match = key.match(/^(\w+)\[(\d+)\]$/);
+          if (match) {
+            const baseKey = match[1];
+            const index = parseInt(match[2], 10);
+            if (Array.isArray(current[baseKey]) && current[baseKey][index] !== undefined) {
+              current = current[baseKey][index];
+            } else {
+              return [false, null, key];
+            }
+          } else {
+            return [false, null, key];
+          }
+        }
+        else{
+          if (!(key in current)) {
+            return [false, null, key];
+          }
+          current = current[key];
+        }
+
+        
       }
       return [true, current, null];
     } catch (e) {
@@ -1052,6 +1069,9 @@ export class RobotJobService {
     input: GetLocationReq,
   ): Promise<any> {
     try{
+        if (input == null || mapping == null) {
+          return {};
+        }
         if (mapping.object_type == "object"){
         let currObject: Object = {};
         for (const key in mapping){
@@ -1083,6 +1103,11 @@ export class RobotJobService {
         let currObject: Object[] = [];
         const arrayMap = mapping.map;
         const currentArray = this.unstructureHelper(input, mapping.source)[1] || [];
+        if (mapping.source_type=='object'){
+          const obj = await this.empty_locationTransform(arrayMap, currentArray);
+          currObject.push(obj);
+          return currObject;
+        }
         for (const item of currentArray) {
           const currentItem: Object = await this.empty_locationTransform(arrayMap, item);
           currObject.push(currentItem);
@@ -1094,7 +1119,6 @@ export class RobotJobService {
       console.error('Error in empty_locationTransform:', error);
       return {};
     }
-    
   }
   async getEmptyLocations(
     warehouseId: string,
