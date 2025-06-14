@@ -1,6 +1,6 @@
 import { Injectable, NestMiddleware, ForbiddenException } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
-import { SECRET_TOKEN } from './token.config';
+import { SECRET_TOKEN } from 'src/config/auth.config';
 
 @Injectable()
 export class AuthenticationMiddleware implements NestMiddleware {

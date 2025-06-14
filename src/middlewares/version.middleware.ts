@@ -5,7 +5,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
-import { REQUIRED_VERSION } from './version.config';
+import { REQUIRED_VERSION } from 'src/config/auth.config';
 
 @Injectable()
 export class VersionMiddleware implements NestMiddleware {
