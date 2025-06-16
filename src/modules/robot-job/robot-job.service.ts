@@ -435,6 +435,14 @@ export class RobotJobService {
           message: `Batch job with ID ${updateRobotJobDto.batch_job_id} is not in pending state and cannot be cancelled.`,
         };
       }
+      for (const task of tasks) {
+        if (task.status !== 'pending') {
+          continue;
+        }
+        this.updateLocation(task.start_location, true);
+        this.updateLocation(task.end_location, true);
+        await this.TaskRepository.remove(task);
+      }
       await this.BatchJobRepository.remove(batchJob);
       return {
         task_id: tasks[0].task_id,
@@ -466,6 +474,8 @@ export class RobotJobService {
         message: `Task with ID ${task_id} is not in pending state and cannot be cancelled.`,
       };
     }
+    this.updateLocation(taskRepo.start_location, true);
+    this.updateLocation(taskRepo.end_location, true);
     await this.TaskRepository.remove(taskRepo);
     return {
       task_id: task_id,
