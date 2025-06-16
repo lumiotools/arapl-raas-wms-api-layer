@@ -80,25 +80,30 @@ export class RobotJobService {
         status: 'pending',
       });
 
-      const ListNewTasks: Task[] = []
-      for (const task of Tasks) {
-        const newTask = this.TaskRepository.create({
-          task_id: task.task_id,
-          task_pallet_id: task.task_pallet_id,
-          task_type: task.task_type,
-          task_dependency: task.task_dependency,
-          start_location: task.start_location,
-          end_location: task.end_location,
-          wait_time: task.wait_time,
-          cargos: task.cargos,
-          batch_job: newBatchJob,
-          status: 'pending',
-        });
-        ListNewTasks.push(newTask);
-        
-      }
-      await this.TaskRepository.save(ListNewTasks);
       await this.BatchJobRepository.save(newBatchJob);
+      for (const task of Tasks) {
+        try{
+            const newTask = this.TaskRepository.create({
+            task_id: task.task_id,
+            task_pallet_id: task.task_pallet_id,
+            task_type: task.task_type,
+            task_dependency: task.task_dependency,
+            start_location: task.start_location,
+            end_location: task.end_location,
+            wait_time: task.wait_time,
+            cargos: task.cargos,
+            batch_job: newBatchJob,
+            status: 'pending'
+          });
+          this.TaskRepository.save(newTask);
+        }
+        catch (error) {
+          console.error('Error creating task:', error);
+        }
+        finally{
+          continue;
+        } 
+      }
       return {
         batch_job_id: createRobotJobDto.batch_job_id,
         status: 'success',
