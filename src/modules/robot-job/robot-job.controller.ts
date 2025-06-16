@@ -32,7 +32,7 @@ export class RobotJobController {
 
   constructor(private readonly robotJobService: RobotJobService) {}
 
-  @Post(':warehouse_id/task')
+  @Post(':warehouse_id/create_task')
   async unifiedCreateTask(
     @Param('warehouse_id') warehouseId: string,
     @Body() body: any,
@@ -63,7 +63,7 @@ export class RobotJobController {
     );
   }
 
-  @Patch(':warehouse_id/task')
+  @Patch(':warehouse_id/update_task')
   async unifiedUpdateTask(
     @Param('warehouse_id') warehouseId: string,
     @Body() body: any,
@@ -94,7 +94,7 @@ export class RobotJobController {
     );
   }
 
-  @Patch(':warehouse_id/task/cancel')
+  @Patch(':warehouse_id/cancel_task')
   async unifiedCancelTask(
     @Param('warehouse_id') warehouseId: string,
     @Body() body: any,
@@ -155,21 +155,6 @@ export class RobotJobController {
       warehouseId,
       getLocationReq,
       configName,
-    );
-  }
-
-  @Post(':warehouse_id/get-strp-drop-locations/:requiredLocations')
-  async getStrpDropLocations(
-    @Param('warehouse_id') warehouseId: string,
-    @Param('requiredLocations') requiredLocations: string,
-  ): Promise<GetLocationRes> {
-    const location = Number(requiredLocations);
-    if (isNaN(location) || location <= 0) {
-      throw new BadRequestException('Invalid number of required location.');
-    }
-    return await this.robotJobService.getStrpDropLocations(
-      warehouseId,
-      location,
     );
   }
 
