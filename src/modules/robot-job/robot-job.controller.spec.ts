@@ -1,7 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RobotJobController } from './robot-job.controller';
 import { RobotJobService } from './robot-job.service';
-import { BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import {
   TaskGenerationReq,
   TaskGenerationRes,
@@ -260,5 +263,42 @@ describe('RobotJobController', () => {
       );
       expect(result).toEqual(successResponse);
     });
+  });
+  it('should return an error response if a location is not empty', async () => {
+    // Arrange: The service catches this error internally and returns an object with status: 'error'.
+    const serviceErrorResponse = {
+      batch_job_id: mockValidStructuredBody.batch_job_id,
+      status: 'error',
+      message: 'Location ST1-4-1-1 is not empty.',
+    };
+    mockRobotJobService.createTask.mockResolvedValue(serviceErrorResponse);
+
+    // Act
+    const result = await controller.unifiedCreateTask(
+      mockWarehouseId,
+      mockValidStructuredBody,
+    );
+
+    // Assert: The controller should return the error object from the service without throwing an exception.
+    expect(service.createTask).toHaveBeenCalledWith(
+      mockWarehouseId,
+      expect.any(Object),
+    );
+    expect(result).toEqual(serviceErrorResponse);
+  });
+
+  // SCENARIO 7: Uniqueness Constraint Failure (e.g., Duplicate Batch ID)
+  it('should throw an exception if the batch ID already exists', async () => {
+    // Arrange: The service throws an unhandled error for this case.
+    const errorMessage = `Batch job with id ${mockValidStructuredBody.batch_job_id} already exists in warehouse ${mockWarehouseId}.`;
+    mockRobotJobService.createTask.mockRejectedValue(new Error(errorMessage));
+
+    await expect(
+      controller.unifiedCreateTask(mockWarehouseId, mockValidStructuredBody),
+    ).rejects.toThrow(Error);
+
+    await expect(
+      controller.unifiedCreateTask(mockWarehouseId, mockValidStructuredBody),
+    ).rejects.toThrow(errorMessage);
   });
 });
