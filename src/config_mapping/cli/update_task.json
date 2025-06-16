@@ -9,7 +9,6 @@
     "path": "input.update_timestamp"
   },
   "updates": {
-    "source_type": "array",
     "object_type": "array",
     "source": "input.tasks_to_update",
     "map": {
@@ -130,7 +129,6 @@
 
       
       "cargos": {
-        "source_type": "array",
         "object_type": "array",
         "source": "op.cargos",
         "map": {

@@ -6,7 +6,6 @@
   "batch_frequency": {"object_type": "null", "path": "input.batch_frequency"},
   "warehouse_id": {"object_type": "null", "path": "input.warehouse_id"},
   "tasks": {
-    "source_type": "array",
     "object_type": "array",
     "source": "input.tasks",
     "map": {
@@ -58,7 +57,6 @@
         "end_location_wait_time": {"object_type": "null", "path": "op.wait_time.end_location_wait_time"}
       },
       "cargos": {
-        "source_type": "array",
         "object_type": "array",
         "source": "op.cargos",
         "map": {

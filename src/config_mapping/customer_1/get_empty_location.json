@@ -31,7 +31,6 @@
             "object_type": "object",
             "zone_id": {"object_type": "string", "path": "input.zones[1].id"}, 
             "available_locations": {
-                "source_type": "object",
                 "object_type": "array",
                 "source": "input.available_locations",
                 "map":{
