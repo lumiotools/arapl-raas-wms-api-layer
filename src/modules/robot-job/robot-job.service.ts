@@ -18,6 +18,7 @@ import { Location } from './entities/locations.entity';
 import { GetLocationReq, GetLocationRes } from './dto/GetLocation.dto';
 import * as fs from 'fs/promises';
 import axios from 'axios';
+import { DEFAULT_FACTORY_CLASS_METHOD_KEY } from '@nestjs/common/module-utils/constants';
 
 @Injectable()
 export class RobotJobService {
@@ -50,6 +51,25 @@ export class RobotJobService {
       throw new Error("Location or location ID doesn't exists.");
     }
   }
+  async checkLocation(location: Location | updateLocation | CreateLocation, valueToCheck: boolean) {
+    if (location && location.location_id) {
+      const loc = await this.LocationRepository.findOne({
+        where: { location_id: location.location_id },
+      });
+      if (!loc) {
+        throw new Error(
+          `Location with id ${location.location_id} does not exist`,
+        );
+      }
+      if  (loc.isEmpty !== valueToCheck) {
+        throw new Error(
+          `Location with id ${location.location_id} is not in the expected state. Expected: ${valueToCheck}, Actual: ${loc.isEmpty}`,
+        );
+      }
+    } else {
+      throw new Error("Location or location ID doesn't exists.");
+    }
+  }
 
   async createTask(
     warehouseId: string,
@@ -59,6 +79,9 @@ export class RobotJobService {
 
     try {
       for (const task of Tasks) {
+        await this.checkLocation(task.start_location,true);
+        await this.checkLocation(task.end_location,true);
+        
         await this.updateLocation(task.start_location, false);
         await this.updateLocation(task.end_location, false);
       }
