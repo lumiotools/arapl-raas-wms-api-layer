@@ -1,40 +1,82 @@
-import { Optional } from "@nestjs/common";
-
-
+import { Type } from "class-transformer";
+import { 
+    IsOptional, 
+    IsString, 
+    IsNumber, 
+    IsEnum, 
+    IsArray, 
+    ValidateNested, 
+    Min, 
+    Max,
+    IsNotEmpty,
+    IsPositive
+} from "class-validator";
 
 export class Dimension {
-    length: number; 
-    width: number; 
-    height: number; 
+    @IsNumber()
+    @IsPositive()
+    length: number;
+
+    @IsNumber()
+    @IsPositive()
+    width: number;
+
+    @IsNumber()
+    @IsPositive()
+    height: number;
 }
 
-
 export class Attribute {
+    @IsString()
+    @IsNotEmpty()
     attribute_name: string;
+
+    @IsString()
+    @IsNotEmpty()
     attribute_value: string;
 }
 
-export class Cargo{
+export class Cargo {
+    @IsString()
+    @IsNotEmpty()
     cargo_code: string;
 
-    @Optional()
-    cargo_type: string; 
+    @IsOptional()
+    @IsString()
+    cargo_type?: string;
 
-    @Optional()
-    cargo_dimension: Dimension;
+    @IsOptional()
+    @ValidateNested()
+    @Type(() => Dimension)
+    cargo_dimension?: Dimension;
 
-    @Optional()
-    cargo_attributes: Attribute;
+    @IsOptional()
+    @ValidateNested()
+    @Type(() => Attribute)
+    cargo_attributes?: Attribute;
 
-    @Optional()
-    cargo_weight: number;
+    @IsOptional()
+    @IsNumber()
+    @IsPositive()
+    cargo_weight?: number;
 }
 
-export class Wait{
+export class Wait {
+    @IsString()
+    @IsNotEmpty()
     wait_type: string;
-    start_location_wait_time: number=0;
-    end_location_wait_time: number=0;
+
+    @IsOptional()
+    @IsNumber()
+    @Min(0)
+    start_location_wait_time: number = 0;
+
+    @IsOptional()
+    @IsNumber()
+    @Min(0)
+    end_location_wait_time: number = 0;
 }
+
 export enum LocationAction {
     Pick = "Pick",
     Drop = "Drop",
@@ -44,49 +86,67 @@ export enum LocationAction {
     Wait = "Wait",
     Destack = "Destack"
 }
+
 export class Location {
+    @IsString()
+    @IsNotEmpty()
     location_id: string;
 
-    @Optional()
-    location_zone: string;
+    @IsOptional()
+    @IsString()
+    location_zone?: string;
 
+    @IsEnum(LocationAction)
     location_action: LocationAction;
 
+    @ValidateNested()
+    @Type(() => Dimension)
     location_dimension: Dimension;
 
-    @Optional()
-    location_attribute: Attribute;
+    @IsOptional()
+    @ValidateNested()
+    @Type(() => Attribute)
+    location_attribute?: Attribute;
 }
 
-export enum TaskType{
+export enum TaskType {
     CrossDocking = "Crossdock",
     Putaway = "Putaway",
     Picking = "Picking",
 }
+
 export class Task {
+    @IsString()
+    @IsNotEmpty()
     task_id: string;
 
-    @Optional()
-    task_pallet_id: string;
+    @IsOptional()
+    @IsString()
+    task_pallet_id?: string;
 
+    @IsEnum(TaskType)
     task_type: TaskType;
 
-    @Optional()
-    task_dependency: string;
+    @IsOptional()
+    @IsString()
+    task_dependency?: string;
 
-    start_location: Location; //**** */
+    @ValidateNested()
+    @Type(() => Location)
+    start_location: Location;
 
+    @ValidateNested()
+    @Type(() => Location)
     end_location: Location;
 
-    // @Optional()
-    // start_location_action: string;
+    @IsOptional()
+    @ValidateNested()
+    @Type(() => Wait)
+    wait_time?: Wait;
 
-    // @Optional()
-    // end_location_action: string;
-
-    @Optional()
-    wait_time: Wait;
-
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => Cargo)
     cargos: Cargo[];
 }
 
@@ -96,24 +156,41 @@ export enum batch_type {
 }
 
 export class TaskGenerationReq {
+    @IsString()
+    @IsNotEmpty()
     batch_job_id: string;
 
-    @Optional()
+    @IsOptional()
+    @IsNumber()
+    @Min(1)
+    @Max(10)
     batch_priority: number = 5;
 
-    @Optional()
+    @IsOptional()
+    @IsEnum(batch_type)
     batch_type: batch_type = batch_type.Discrete;
 
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => Task)
     tasks: Task[];
 
-    @Optional()
-    batch_frequency: number;
+    @IsOptional()
+    @IsNumber()
+    @Min(1)
+    batch_frequency?: number;
 
-    @Optional()
-    warehouse_id: string;
+    @IsOptional()
+    @IsString()
+    warehouse_id?: string;
 }
 
 export class TaskGenerationRes {
+    @IsString()
+    @IsNotEmpty()
     batch_job_id: string;
+
+    @IsString()
+    @IsNotEmpty()
     status: string;
 }
