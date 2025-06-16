@@ -2,11 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { CreateRobotJobDto } from './dto/create-robot-job.dto';
 import { UpdateRobotJobDto } from './dto/update-robot-job.dto';
 import {
-  LocationAction,
+  Location as CreateLocation,
   TaskGenerationReq,
   TaskGenerationRes,
 } from './dto/Task_Generation.dto';
-import { TaskUpdateReq, TaskUpdateRes } from './dto/Task_Update.dto';
+import { TaskUpdateReq, TaskUpdateRes, Location as updateLocation } from './dto/Task_Update.dto';
 import { Task as UpdateTask } from './dto/Task_Update.dto';
 import { TaskCancelReq, TaskCancelRes } from './dto/Task_Cancel.dto';
 import { Any, Repository } from 'typeorm';
@@ -32,6 +32,25 @@ export class RobotJobService {
     private readonly LocationRepository: Repository<Location>,
   ) {}
 
+  async updateLocation(location: Location | updateLocation | CreateLocation  , update:boolean){
+    if (location && location.location_id) {
+      const loc= await this.LocationRepository.findOne({
+        where: { location_id: location.location_id },
+      });
+      if (!loc) {
+        throw new Error(
+          `Location with id ${location.location_id} does not exist`,
+        );
+      }
+      await this.LocationRepository.update(
+        { location_id: location.location_id },
+        { isEmpty: update},
+      );
+    } else {
+      throw new Error("Location or location ID doesn't exists.");
+    }
+  }
+
   async createTask(
     warehouseId: string,
     createRobotJobDto: TaskGenerationReq,
@@ -40,44 +59,8 @@ export class RobotJobService {
 
     try {
       for (const task of Tasks) {
-        if (task.start_location && task.start_location.location_id) {
-          if (!task.start_location.location_id) {
-            throw new Error('start_location.location_id is null');
-          }
-          const location = await this.LocationRepository.findOne({
-            where: { location_id: task.start_location.location_id },
-          });
-          if (!location) {
-            throw new Error(
-              `Location with id ${task.start_location.location_id} does not exist`,
-            );
-          }
-          await this.LocationRepository.update(
-            { location_id: task.start_location.location_id },
-            { isEmpty: false },
-          );
-        } else {
-          throw new Error('start_location.location_id is null');
-        } // Update end_location
-        if (task.end_location && task.end_location.location_id) {
-          if (!task.end_location.location_id) {
-            throw new Error('end_location.location_id is null');
-          }
-          const endLocation = await this.LocationRepository.findOne({
-            where: { location_id: task.end_location.location_id },
-          });
-          if (!endLocation) {
-            throw new Error(
-              `Location with id ${task.end_location.location_id} does not exist`,
-            );
-          }
-          await this.LocationRepository.update(
-            { location_id: task.end_location.location_id },
-            { isEmpty: false },
-          );
-        } else {
-          throw new Error('end_location.location_id is null');
-        }
+        await this.updateLocation(task.start_location, false);
+        await this.updateLocation(task.end_location, false);
       }
       const batch_job_id = createRobotJobDto.batch_job_id;
       const uniqueness = await this.BatchJobRepository.findOne({
@@ -96,8 +79,8 @@ export class RobotJobService {
         batch_frequency: createRobotJobDto.batch_frequency,
         status: 'pending',
       });
-      await this.BatchJobRepository.save(newBatchJob);
 
+      const ListNewTasks: Task[] = []
       for (const task of Tasks) {
         const newTask = this.TaskRepository.create({
           task_id: task.task_id,
@@ -111,13 +94,11 @@ export class RobotJobService {
           batch_job: newBatchJob,
           status: 'pending',
         });
-        const createdTask: Task = await this.TaskRepository.save(newTask);
-        if (!createdTask) {
-          throw new Error(
-            `Failed to create task with ID ${task.task_id} for batch job ${createRobotJobDto.batch_job_id}.`,
-          );
-        }
+        ListNewTasks.push(newTask);
+        
       }
+      await this.TaskRepository.save(ListNewTasks);
+      await this.BatchJobRepository.save(newBatchJob);
       return {
         batch_job_id: createRobotJobDto.batch_job_id,
         status: 'success',
@@ -331,6 +312,8 @@ export class RobotJobService {
       taskRepo.task_dependency =
         task.task_dependency ?? taskRepo.task_dependency;
 
+      await this.updateLocation(task.start_location, true);
+      await this.updateLocation(task.end_location, true);
       taskRepo.start_location.location_id = task.start_location.location_id;
       taskRepo.start_location.location_dimension =
         task.start_location.location_dimension;
@@ -338,6 +321,9 @@ export class RobotJobService {
       taskRepo.end_location.location_id = task.end_location.location_id;
       taskRepo.end_location.location_dimension =
         task.end_location.location_dimension;
+      
+      await this.updateLocation(taskRepo.start_location, false);
+      await this.updateLocation(taskRepo.end_location, false);
 
       taskRepo.wait_time = task.wait_time;
 
@@ -531,77 +517,6 @@ export class RobotJobService {
     }
   }
 
-  async empty_locationTransform(
-    mapping: any,
-    input: GetLocationReq,
-  ): Promise<any> {
-    try {
-      if (input == null || mapping == null) {
-        return {};
-      }
-      if (mapping.object_type == 'object') {
-        let currObject: Object = {};
-        for (const key in mapping) {
-          if (
-            key == 'object_type' ||
-            key == 'source' ||
-            key == 'map' ||
-            key == 'endpoint'
-          ) {
-            continue;
-          }
-          if (mapping[key].object_type == 'number') {
-            currObject[key] =
-              Number(this.unstructureHelper(input, mapping[key].path)[1]) ?? 0;
-          } else if (mapping[key].object_type == 'string') {
-            currObject[key] =
-              String(this.unstructureHelper(input, mapping[key].path)[1]) ?? '';
-          } else if (mapping[key].object_type == 'array') {
-            currObject[key] = await this.empty_locationTransform(
-              mapping[key],
-              input,
-            );
-          } else if (mapping[key].object_type == 'object') {
-            currObject[key] = await this.empty_locationTransform(
-              mapping[key],
-              input,
-            );
-          } else if (mapping[key].object_type == 'boolean') {
-            currObject[key] =
-              Boolean(this.unstructureHelper(input, mapping[key].path)[1]) ??
-              false;
-          } else if (mapping[key].object_type == 'null') {
-            currObject[key] = null;
-          }
-        }
-        return currObject;
-      } else {
-        let currObject: Object[] = [];
-        const arrayMap = mapping.map;
-        const currentArray =
-          this.unstructureHelper(input, mapping.source)[1] || [];
-        if (mapping.source_type == 'object') {
-          const obj = await this.empty_locationTransform(
-            arrayMap,
-            currentArray,
-          );
-          currObject.push(obj);
-          return currObject;
-        }
-        for (const item of currentArray) {
-          const currentItem: Object = await this.empty_locationTransform(
-            arrayMap,
-            item,
-          );
-          currObject.push(currentItem);
-        }
-        return currObject;
-      }
-    } catch (error) {
-      console.error('Error in empty_locationTransform:', error);
-      return {};
-    }
-  }
   async getEmptyLocations(
     warehouseId: string,
     getLocationReq: GetLocationReq,
@@ -646,7 +561,7 @@ export class RobotJobService {
         )}`;
       }
 
-      const payload: any = await this.empty_locationTransform(
+      const payload: any = await this._genericTaskTransformer(
         mapping.request.body,
         getLocationReq,
       );
@@ -659,7 +574,7 @@ export class RobotJobService {
       });
       console.log('API Response:', response.data);
       const responseData = response.data;
-      const TransformedResponse = await this.empty_locationTransform(
+      const TransformedResponse = await this._genericTaskTransformer(
         mapping.response.body,
         responseData,
       );
@@ -674,52 +589,6 @@ export class RobotJobService {
         available_location_types: [],
       };
     }
-  }
-
-  async getStrpDropLocations(
-    warehouseId: string,
-    location: number,
-  ): Promise<GetLocationRes> {
-    // Find all locations with isEmpty=true and location_action='Drop'
-    const allLocations = await this.LocationRepository.find({
-      where: {
-        isEmpty: true,
-        location_action: LocationAction.Drop,
-      },
-    });
-
-    const zoneMap: Record<string, Location[]> = {};
-    for (const loc of allLocations) {
-      if (!zoneMap[loc.location_zone]) {
-        zoneMap[loc.location_zone] = [];
-      }
-      zoneMap[loc.location_zone].push(loc);
-    }
-
-    let selectedZoneId: string | null = null;
-    let selectedLocations: Location[] = [];
-    for (const [zoneId, locs] of Object.entries(zoneMap)) {
-      if (locs.length >= location) {
-        selectedZoneId = zoneId;
-        selectedLocations = locs;
-        break;
-      }
-    }
-
-    if (!selectedZoneId) {
-      return {
-        zone_id: '',
-        available_location_types: [],
-      };
-    }
-
-    selectedLocations.sort(
-      (a, b) => (a.dropPriority ?? 0) - (b.dropPriority ?? 0),
-    );
-    return {
-      zone_id: selectedZoneId,
-      available_location_types: selectedLocations,
-    };
   }
 
   create(createRobotJobDto: CreateRobotJobDto) {
