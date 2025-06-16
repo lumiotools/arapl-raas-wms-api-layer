@@ -312,8 +312,8 @@ export class RobotJobService {
       taskRepo.task_dependency =
         task.task_dependency ?? taskRepo.task_dependency;
 
-      await this.updateLocation(task.start_location, true);
-      await this.updateLocation(task.end_location, true);
+      await this.updateLocation(taskRepo.start_location, true);
+      await this.updateLocation(taskRepo.end_location, true);
       taskRepo.start_location.location_id = task.start_location.location_id;
       taskRepo.start_location.location_dimension =
         task.start_location.location_dimension;
