@@ -105,6 +105,9 @@ describe('RobotJobController', () => {
 
     updateTask: jest.fn(),
     updateUnstructuredTask: jest.fn(),
+
+    cancelTask: jest.fn(),
+    cancelUnstructuredTask: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -409,5 +412,173 @@ describe('RobotJobController', () => {
       );
       expect(result).toEqual(successResponse);
     });
+  });
+
+  describe('cancel_task', () => {
+    it('cancel_task: should cancel a task successfully with a valid structured body', async () => {
+      // Arrange: Mock the service to return a successful response.
+      const successResponse = {
+        task_id: 'task001',
+        status: 'success',
+        cancelled_at: new Date().toISOString(),
+        message: 'Task cancelled successfully',
+      };
+      const mockCancelBody = {
+        task_id: 'task001',
+        warehouse_id: mockWarehouseId,
+        reason: 'No longer needed',
+      };
+      mockRobotJobService.cancelTask.mockResolvedValue(successResponse);
+
+      // Act: Call the controller method with valid structured data.
+      const result = await controller.unifiedCancelTask(
+        mockWarehouseId,
+        mockCancelBody,
+      );
+
+      expect(service.cancelTask).toHaveBeenCalledWith(
+        mockWarehouseId,
+        expect.objectContaining(mockCancelBody),
+      );
+      expect(result).toEqual(successResponse);
+    });
+
+    it('cancel_task: should cancel a batch successfully with a valid structured body', async () => {
+      // Arrange: Mock the service to return a successful response.
+      const successResponse = {
+        task_id: 'batch001',
+        status: 'success',
+        cancelled_at: new Date().toISOString(),
+        message: 'Task cancelled successfully',
+      };
+      const mockCancelBody = {
+        batch_job_id: 'batch001',
+        warehouse_id: mockWarehouseId,
+        reason: 'No longer needed',
+      };
+      mockRobotJobService.cancelTask.mockResolvedValue(successResponse);
+
+      // Act: Call the controller method with valid structured data.
+      const result = await controller.unifiedCancelTask(
+        mockWarehouseId,
+        mockCancelBody,
+      );
+
+      expect(service.cancelTask).toHaveBeenCalledWith(
+        mockWarehouseId,
+        expect.objectContaining(mockCancelBody),
+      );
+      expect(result).toEqual(successResponse);
+    });
+
+    it('cancel_task: should cancel a task successfully with an unstructured body and config_name', async () => {
+      // Arrange
+      const configName = 'cli';
+      const successResponse = {
+        task_id: 'task001',
+        status: 'success',
+        cancelled_at: new Date().toISOString(),
+        message: 'Task cancelled successfully',
+      };
+      const mockUnstructuredCancelBody = {
+        id: 'task001',
+        reason: 'No longer needed',
+      };
+      mockRobotJobService.cancelUnstructuredTask.mockResolvedValue(
+        successResponse,
+      );
+
+      // Act: Call the controller with unstructured data and a config name.
+      const result = await controller.unifiedCancelTask(
+        mockWarehouseId,
+        mockUnstructuredCancelBody,
+        configName,
+      );
+
+      // Assert: Verify the unstructured task cancellation path was taken.
+      expect(service.cancelUnstructuredTask).toHaveBeenCalledWith(
+        mockWarehouseId,
+        configName,
+        'cancel_task',
+        mockUnstructuredCancelBody
+      );
+      expect(service.cancelTask).not.toHaveBeenCalled();
+      expect(result).toEqual(successResponse);
+    });
+
+    it('cancel_task: should throw BadRequestException for an invalid body without a config_name', async () => {
+      // Arrange: An invalid body that will fail DTO validation.
+      const invalidBody = { some: 'invalid-data' };
+
+      // Act & Assert: Expect the method to reject with a specific exception.
+      await expect(
+        controller.unifiedCancelTask(mockWarehouseId, invalidBody),
+      ).rejects.toThrow(BadRequestException);
+
+      await expect(
+        controller.unifiedCancelTask(mockWarehouseId, invalidBody),
+      ).rejects.toThrow(
+        'Request body is not a valid cancellation structure (or is ambiguous) and no `config_name` was provided for transformation.',
+      );
+
+      // Verify that no service methods were called.
+      expect(service.cancelTask).not.toHaveBeenCalled();
+      expect(service.cancelUnstructuredTask).not.toHaveBeenCalled();
+    }); 
+
+    it('cancel_task: should throw BadRequestException if unstructured transformation fails', async () => {
+      // Arrange: Mock the service to return an error status from the transformation.
+      const configName = 'failing_config';
+      const errorResponse = {
+        status: 'error',
+        message: 'Transformation failed due to missing fields',
+      };
+      mockRobotJobService.cancelUnstructuredTask.mockResolvedValue(
+        errorResponse,
+      );
+
+      // Act & Assert: Expect the controller to throw a BadRequestException with the service's error message.
+      await expect(
+        controller.unifiedCancelTask(
+          mockWarehouseId,
+          mockUnstructuredBody,
+          configName,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it ('cancel_task: should correctly pass complex or mixed-type unstructured body to the service', async () => {
+      // Arrange: A body with an object where an array might be expected by some mappings.
+      const complexBody = {
+        jobId: 'BATCH-COMPLEX-001'
+      };
+      const configName = 'cli';
+      const successResponse = {
+        task_id: 'task001',
+        status: 'success',
+        cancelled_at: new Date().toISOString(),
+        message: 'Task cancelled successfully',
+      };
+      mockRobotJobService.cancelUnstructuredTask.mockResolvedValue(
+        successResponse,
+      );
+
+      // Act
+      const result = await controller.unifiedCancelTask(
+        mockWarehouseId,
+        complexBody,
+        configName,
+      );
+
+      // Assert: The controller should not break; it should pass the body to the service,
+      // which is responsible for handling the transformation.
+      expect(service.cancelUnstructuredTask).toHaveBeenCalledWith(
+        mockWarehouseId,
+        configName,
+        'cancel_task',
+        complexBody,
+      );
+      expect(result).toEqual(successResponse);
+    } );
   });
 });

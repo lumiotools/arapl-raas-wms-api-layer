@@ -19,8 +19,19 @@ export class TaskCancelReq {
 }
 
 export class TaskCancelRes {
+  @IsString()
+  @IsNotEmpty()
   task_id: string;
+
+  @IsString()
+  @IsNotEmpty()
   status: string;
+
+  @IsString()
+  @IsNotEmpty()
   cancelled_at: string;
+
+  @IsString()
+  @IsNotEmpty()
   message: string;
 }

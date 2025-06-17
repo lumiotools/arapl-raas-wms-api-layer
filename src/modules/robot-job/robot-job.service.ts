@@ -438,7 +438,7 @@ export class RobotJobService {
       if (!batchJob) {
         return {
           task_id: updateRobotJobDto.batch_job_id,
-          status: 'not_found',
+          status: 'success',
           cancelled_at: new Date().toISOString(),
           message: `Batch job with ID ${updateRobotJobDto.batch_job_id} not found in warehouse ${warehouse_id}.`,
         };
@@ -450,7 +450,7 @@ export class RobotJobService {
       if (tasks.length === 0) {
         return {
           task_id: updateRobotJobDto.batch_job_id,
-          status: 'not_found',
+          status: 'success',
           cancelled_at: new Date().toISOString(),
           message: `No tasks found for batch job with ID ${updateRobotJobDto.batch_job_id}.`,
         };
@@ -458,7 +458,7 @@ export class RobotJobService {
       if (batchJob.status !== 'pending') {
         return {
           task_id: updateRobotJobDto.batch_job_id,
-          status: 'already_completed',
+          status: 'success',
           cancelled_at: new Date().toISOString(),
           message: `Batch job with ID ${updateRobotJobDto.batch_job_id} is not in pending state and cannot be cancelled.`,
         };
@@ -474,7 +474,7 @@ export class RobotJobService {
       await this.BatchJobRepository.remove(batchJob);
       return {
         task_id: tasks[0].task_id,
-        status: 'cancelled',
+        status: 'success',
         cancelled_at: new Date().toISOString(),
         message: `Batch job with ID ${updateRobotJobDto.batch_job_id} and its tasks have been cancelled.`,
       };
@@ -489,7 +489,7 @@ export class RobotJobService {
     if (!taskRepo) {
       return {
         task_id: task_id,
-        status: 'not_found',
+        status: 'success',
         cancelled_at: new Date().toISOString(),
         message: `Task with ID ${task_id} not found in warehouse ${warehouse_id}.`,
       };
@@ -497,7 +497,7 @@ export class RobotJobService {
     if (taskRepo.status !== 'pending') {
       return {
         task_id: task_id,
-        status: 'already_completed',
+        status: 'success',
         cancelled_at: new Date().toISOString(),
         message: `Task with ID ${task_id} is not in pending state and cannot be cancelled.`,
       };
@@ -507,7 +507,7 @@ export class RobotJobService {
     await this.TaskRepository.remove(taskRepo);
     return {
       task_id: task_id,
-      status: 'cancelled',
+      status: 'success',
       cancelled_at: new Date().toISOString(),
       message: `Task with ID ${task_id} has been cancelled.`,
     };

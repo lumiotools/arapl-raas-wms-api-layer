@@ -118,11 +118,19 @@ export class RobotJobController {
     const isBatchValid = batchErrors.length === 0;
 
     if (isSingleValid && !isBatchValid) {
-      return this.robotJobService.cancelTask(warehouseId, singleTaskDto);
+      const result = await this.robotJobService.cancelTask(warehouseId, singleTaskDto);
+      if (result.status !== 'success') {
+        throw new BadRequestException(result.message);
+      }
+      return result;
     }
 
     if (isBatchValid && !isSingleValid) {
-      return this.robotJobService.cancelTask(warehouseId, batchDto);
+      const result = await this.robotJobService.cancelTask(warehouseId, batchDto);
+      if (result.status !== 'success') {
+        throw new BadRequestException(result.message);
+      }
+      return result;
     }
 
     if (configName) {
@@ -132,7 +140,7 @@ export class RobotJobController {
         'cancel_task', // Specify the operation type
         body,
       );
-      if (result.status === 'error') {
+      if (result.status !== 'success') {
         throw new BadRequestException(result.message);
       }
       return result;
