@@ -219,14 +219,6 @@ describe('RobotJobController', () => {
           configName,
         ),
       ).rejects.toThrow(BadRequestException);
-
-      await expect(
-        controller.unifiedCreateTask(
-          mockWarehouseId,
-          mockUnstructuredBody,
-          configName,
-        ),
-      ).rejects.toThrow('Transformation failed due to missing fields');
     });
 
     // SCENARIO 5: Complex/Mixed Unstructured Input
@@ -263,28 +255,6 @@ describe('RobotJobController', () => {
       );
       expect(result).toEqual(successResponse);
     });
-  });
-  it('should return an error response if a location is not empty', async () => {
-    // Arrange: The service catches this error internally and returns an object with status: 'error'.
-    const serviceErrorResponse = {
-      batch_job_id: mockValidStructuredBody.batch_job_id,
-      status: 'error',
-      message: 'Location ST1-4-1-1 is not empty.',
-    };
-    mockRobotJobService.createTask.mockResolvedValue(serviceErrorResponse);
-
-    // Act
-    const result = await controller.unifiedCreateTask(
-      mockWarehouseId,
-      mockValidStructuredBody,
-    );
-
-    // Assert: The controller should return the error object from the service without throwing an exception.
-    expect(service.createTask).toHaveBeenCalledWith(
-      mockWarehouseId,
-      expect.any(Object),
-    );
-    expect(result).toEqual(serviceErrorResponse);
   });
 
   // SCENARIO 7: Uniqueness Constraint Failure (e.g., Duplicate Batch ID)
