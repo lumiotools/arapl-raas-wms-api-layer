@@ -1,4 +1,3 @@
-import { Optional } from '@nestjs/common';
 import { Attribute, Dimension, Wait } from './Task_Generation.dto';
 import {
   IsString,
@@ -6,26 +5,40 @@ import {
   IsOptional,
   IsArray,
   ValidateNested,
+  IsNumber,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class Cargo {
+  @IsString()
+  @IsNotEmpty()
   cargo_code: string;
+
+  @ValidateNested()
+  @Type(() => Dimension)
   cargo_dimension: Dimension;
 
-  @Optional()
-  cargo_quantity: number;
+  @IsOptional()
+  @IsNumber()
+  cargo_quantity?: number;
 
-  @Optional()
-  cargo_weight: number;
+  @IsOptional()
+  @IsNumber()
+  cargo_weight?: number;
 }
 
 export class Location {
+  @IsString()
+  @IsNotEmpty()
   location_id: string;
+
+  @ValidateNested()
+  @Type(() => Dimension)
   location_dimension: Dimension;
 
-  @Optional()
-  cargo_quantity: number;
+  @IsOptional()
+  @IsNumber()
+  cargo_quantity?: number;
 }
 
 export class Task {
@@ -35,7 +48,7 @@ export class Task {
 
   @IsOptional()
   @IsString()
-  task_dependency: string;
+  task_dependency?: string;
 
   @ValidateNested()
   @Type(() => Location)
@@ -48,7 +61,7 @@ export class Task {
   @IsOptional()
   @ValidateNested()
   @Type(() => Wait)
-  wait_time: Wait;
+  wait_time?: Wait;
 
   @IsArray()
   @ValidateNested({ each: true })
@@ -68,12 +81,23 @@ export class TaskUpdateReq {
 
   @IsOptional()
   @IsString()
-  timestamp: string;
+  timestamp?: string;
 }
 
 export class TaskUpdateRes {
+  @IsString()
+  @IsNotEmpty()
   task_id: string;
+
+  @IsString()
+  @IsNotEmpty()
   status: string;
+
+  @IsString()
+  @IsNotEmpty()
   updated_at: string;
+
+  @IsString()
+  @IsNotEmpty()
   message: string;
 }

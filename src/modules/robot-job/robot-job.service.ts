@@ -353,7 +353,7 @@ export class RobotJobService {
       await this.updateLocation(taskRepo.start_location, false);
       await this.updateLocation(taskRepo.end_location, false);
 
-      taskRepo.wait_time = task.wait_time;
+      taskRepo.wait_time = task.wait_time ? task.wait_time : taskRepo.wait_time;
 
       for (const cargo of task.cargos) {
         const existingCargo = taskRepo.cargos.find(

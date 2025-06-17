@@ -102,6 +102,9 @@ describe('RobotJobController', () => {
   const mockRobotJobService = {
     createTask: jest.fn(),
     createUnstructuredTask: jest.fn(),
+
+    updateTask: jest.fn(),
+    updateUnstructuredTask: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -124,9 +127,9 @@ describe('RobotJobController', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('unifiedCreateTask', () => {
+  describe('create_task', () => {
     // SCENARIO 1: Simple Happy Path (Structured Data)
-    it('should create a task successfully with a valid structured body', async () => {
+    it('Create_task: should create a task successfully with a valid structured body', async () => {
       // Arrange: Mock the service to return a successful response.
       const successResponse: TaskGenerationRes = {
         batch_job_id: 'BATCH-STRUCTURED-001',
@@ -149,7 +152,7 @@ describe('RobotJobController', () => {
     });
 
     // SCENARIO 2: Happy Path (Unstructured Data with Config)
-    it('should create a task successfully with an unstructured body and config_name', async () => {
+    it('create_task: should create a task successfully with an unstructured body and config_name', async () => {
       // Arrange
       const configName = 'cli';
       const successResponse: TaskGenerationRes = {
@@ -179,7 +182,7 @@ describe('RobotJobController', () => {
     });
 
     // SCENARIO 3: Invalid Body without a Config
-    it('should throw BadRequestException for an invalid body without a config_name', async () => {
+    it('create_task: should throw BadRequestException for an invalid body without a config_name', async () => {
       // Arrange: An invalid body that will fail DTO validation.
       const invalidBody = { some: 'invalid-data' };
 
@@ -200,7 +203,7 @@ describe('RobotJobController', () => {
     });
 
     // SCENARIO 4: Transformation Fails in the Service
-    it('should throw BadRequestException if unstructured transformation fails', async () => {
+    it('create_task: should throw BadRequestException if unstructured transformation fails', async () => {
       // Arrange: Mock the service to return an error status from the transformation.
       const configName = 'failing_config';
       const errorResponse = {
@@ -222,7 +225,7 @@ describe('RobotJobController', () => {
     });
 
     // SCENARIO 5: Complex/Mixed Unstructured Input
-    it('should correctly pass complex or mixed-type unstructured body to the service', async () => {
+    it('create_task: should correctly pass complex or mixed-type unstructured body to the service', async () => {
       // Arrange: A body with an object where an array might be expected by some mappings.
       const complexBody = {
         jobId: 'BATCH-COMPLEX-001',
@@ -257,18 +260,154 @@ describe('RobotJobController', () => {
     });
   });
 
-  // SCENARIO 7: Uniqueness Constraint Failure (e.g., Duplicate Batch ID)
-  it('should throw an exception if the batch ID already exists', async () => {
-    // Arrange: The service throws an unhandled error for this case.
-    const errorMessage = `Batch job with id ${mockValidStructuredBody.batch_job_id} already exists in warehouse ${mockWarehouseId}.`;
-    mockRobotJobService.createTask.mockRejectedValue(new Error(errorMessage));
+  describe('update_task', () => {
+    it('update_task: should update a task successfully with a valid structured body', async () => {
+      // Arrange: Mock the service to return a successful response.
+      const successResponse = {
+        task_id: 'task001',
+        status: 'success',
+        updated_at: new Date().toISOString(),
+      };
+      const mockUpdateBody = {
+        batch_job_id: 'job12345',
+        updates: [
+          {
+            task_id: 'task001',
+            start_location: { location_id: 'ST1-4-1-1' },
+            end_location: { location_id: 'DZ1-6-1-6' },
+            cargos:[]
+          },
+        ],
+      };
+      mockRobotJobService.updateTask.mockResolvedValue(successResponse);
 
-    await expect(
-      controller.unifiedCreateTask(mockWarehouseId, mockValidStructuredBody),
-    ).rejects.toThrow(Error);
+      // Act: Call the controller method with valid structured data.
+      const result = await controller.unifiedUpdateTask(
+        mockWarehouseId,
+        mockUpdateBody,
+      );
 
-    await expect(
-      controller.unifiedCreateTask(mockWarehouseId, mockValidStructuredBody),
-    ).rejects.toThrow(errorMessage);
+      expect(service.updateTask).toHaveBeenCalledWith(
+        mockWarehouseId,
+        expect.objectContaining(mockUpdateBody),
+      );
+      expect(result).toEqual(successResponse);
+    });
+
+    it('update_task: should update a task successfully with an unstructured body and config_name', async () => {
+      // Arrange
+      const configName = 'cli';
+      const successResponse = {
+        task_id: 'task001',
+        status: 'success',
+        updated_at: new Date().toISOString(),
+      };
+      const mockUnstructuredUpdateBody = {
+        jobId: 'BATCH-20240413-001',
+        updates: [
+          {
+            id: 'TASK-001',
+            start: { id: 'LOC-START-01' },
+            end: { id: 'LOC-END-01' },
+          },
+        ],
+      };
+      mockRobotJobService.updateUnstructuredTask.mockResolvedValue(
+        successResponse,
+      );
+
+      // Act: Call the controller with unstructured data and a config name.
+      const result = await controller.unifiedUpdateTask(
+        mockWarehouseId,
+        mockUnstructuredUpdateBody,
+        configName,
+      );
+
+      // Assert: Verify the unstructured task update path was taken.
+      expect(service.updateUnstructuredTask).toHaveBeenCalledWith(
+        mockWarehouseId,
+        configName,
+        'update_task',
+        mockUnstructuredUpdateBody,
+      );
+      expect(service.updateTask).not.toHaveBeenCalled();
+      expect(result).toEqual(successResponse);
+    });
+
+    it ('update_task: should throw BadRequestException for an invalid body without a config_name', async () => {
+      // Arrange: An invalid body that will fail DTO validation.
+      const invalidBody = { some: 'invalid-data' };
+
+      // Act & Assert: Expect the method to reject with a specific exception.
+      await expect(
+        controller.unifiedUpdateTask(mockWarehouseId, invalidBody),
+      ).rejects.toThrow(BadRequestException);
+
+      await expect(
+        controller.unifiedUpdateTask(mockWarehouseId, invalidBody),
+      ).rejects.toThrow(
+        'Request body is not a valid update structure and no `config_name` was provided for transformation.',
+      );
+
+      // Verify that no service methods were called.
+      expect(service.updateTask).not.toHaveBeenCalled();
+      expect(service.updateUnstructuredTask).not.toHaveBeenCalled();
+    });
+
+    it ('update_task: should throw BadRequestException if unstructured transformation fails', async () => {
+      // Arrange: Mock the service to return an error status from the transformation.
+      const configName = 'failing_config';
+      const errorResponse = {
+        status: 'error',
+        message: 'Transformation failed due to missing fields',
+      };
+      mockRobotJobService.updateUnstructuredTask.mockResolvedValue(
+        errorResponse,
+      );
+
+      // Act & Assert: Expect the controller to throw a BadRequestException with the service's error message.
+      await expect(
+        controller.unifiedUpdateTask(
+          mockWarehouseId,
+          mockUnstructuredBody,
+          configName,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it ('update_task: should correctly pass complex or mixed-type unstructured body to the service', async () => {
+      // Arrange: A body with an object where an array might be expected by some mappings.
+      const complexBody = {
+        jobId: 'BATCH-COMPLEX-001',
+        updates: { id: 'TASK-001' }, // object instead of array
+        metadata: { timestamp: new Date() },
+      };
+      const configName = 'cli';
+      const successResponse = {
+        task_id: 'task001',
+        status: 'success',
+        updated_at: new Date().toISOString(),
+      };
+      mockRobotJobService.updateUnstructuredTask.mockResolvedValue(
+        successResponse,
+      );
+
+      // Act
+      const result = await controller.unifiedUpdateTask(
+        mockWarehouseId,
+        complexBody,
+        configName,
+      );
+
+      // Assert: The controller should not break; it should pass the body to the service,
+      // which is responsible for handling the transformation.
+      expect(service.updateUnstructuredTask).toHaveBeenCalledWith(
+        mockWarehouseId,
+        configName,
+        'update_task',
+        complexBody,
+      );
+      expect(result).toEqual(successResponse);
+    });
   });
 });

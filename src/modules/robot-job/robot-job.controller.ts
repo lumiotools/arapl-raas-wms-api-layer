@@ -77,7 +77,11 @@ export class RobotJobController {
     const validationErrors = await this.validator.validate(structuredDto);
 
     if (validationErrors.length === 0) {
-      return this.robotJobService.updateTask(warehouseId, structuredDto);
+      const result = await this.robotJobService.updateTask(warehouseId, structuredDto);
+      if (result.status !== 'success') {
+        throw new BadRequestException(result.message);
+      }
+      return result;
     }
 
     if (configName) {
@@ -87,7 +91,7 @@ export class RobotJobController {
         'update_task', // Specify the operation type
         body,
       );
-      if (result.status === 'error') {
+      if (result.status !== 'success') {
         throw new BadRequestException(result.message);
       }
       return result;
