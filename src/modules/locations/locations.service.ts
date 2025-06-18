@@ -17,7 +17,7 @@ export class LocationsService {
   ): Promise<GetLocationRes> {
     const locations = await this.LocationRepository.find({
       where: {
-        location_zone: getLocationReq.zone_id,
+        location_id: getLocationReq.zone_id,
         location_action: getLocationReq.location_type,
         isEmpty: true,
       },
@@ -56,10 +56,10 @@ export class LocationsService {
   
       const zoneMap: Record<string, Location[]> = {};
       for (const loc of allLocations) {
-        if (!zoneMap[loc.location_zone]) {
-          zoneMap[loc.location_zone] = [];
+        if (!zoneMap[loc.location_id]) {
+          zoneMap[loc.location_id] = [];
         }
-        zoneMap[loc.location_zone].push(loc);
+        zoneMap[loc.location_id].push(loc);
       }
   
       // Find a zone with at least 'location' number of available locations

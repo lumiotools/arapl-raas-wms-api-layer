@@ -108,7 +108,6 @@ export class RobotJobService {
         try{
             const newTask = this.TaskRepository.create({
             task_id: task.task_id,
-            task_pallet_id: task.task_pallet_id,
             task_type: task.task_type,
             task_dependency: task.task_dependency,
             start_location: task.start_location,
@@ -128,7 +127,7 @@ export class RobotJobService {
         } 
       }
       return {
-        batch_job_id: createRobotJobDto.batch_job_id,
+        batch_id: createRobotJobDto.batch_job_id,
         status: 'success',
       };
     } catch (error) {
@@ -150,7 +149,7 @@ export class RobotJobService {
       }
       console.error('Error creating task:', error);
       return {
-        batch_job_id: createRobotJobDto.batch_job_id,
+        batch_id: createRobotJobDto.batch_job_id,
         status: `error: ${error.message}`,
       };
     }
@@ -299,7 +298,7 @@ export class RobotJobService {
           response.status === 'success'
             ? 'Unstructured task created successfully'
             : 'Failed to create unstructured task',
-        batch_job_id: response.batch_job_id,
+        batch_job_id: response.batch_id,
       };
     } catch (error) {
       if (error.code === 'ENOENT') {

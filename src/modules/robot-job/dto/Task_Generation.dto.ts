@@ -9,20 +9,24 @@ import {
     Min, 
     Max,
     IsNotEmpty,
-    IsPositive
+    IsPositive,
+    IsBoolean
 } from "class-validator";
 
 export class Dimension {
     @IsNumber()
     @IsPositive()
+    @IsNotEmpty()
     length: number;
 
     @IsNumber()
     @IsPositive()
+    @IsNotEmpty()
     width: number;
 
     @IsNumber()
     @IsPositive()
+    @IsNotEmpty()
     height: number;
 }
 
@@ -43,28 +47,53 @@ export class Cargo {
 
     @IsOptional()
     @IsString()
-    cargo_type?: string;
+    cargo_type: string;
 
     @IsOptional()
     @ValidateNested()
     @Type(() => Dimension)
-    cargo_dimension?: Dimension;
+    cargo_dimension: Dimension;
 
     @IsOptional()
     @ValidateNested()
     @Type(() => Attribute)
-    cargo_attributes?: Attribute;
+    cargo_attributes: Attribute;
 
     @IsOptional()
     @IsNumber()
     @IsPositive()
-    cargo_weight?: number;
+    cargo_weight: number;
+}
+
+export enum WaitType {
+    Trigger = "Trigger",
+    Conditional = "Conditional"
+}
+
+export enum WaitCondition {
+    Time = "Time",
+    LocationAvailable = "LocationAvailable"
+}
+export enum WaitStatus{
+    NotStarted = "Not Started",
+    StartWait =  "Start Wait",
+    EndWait = "End Wait"
+}
+export enum FallbackAction {
+    Retry = "Retry",
+    Reroute = "Reroute",
+    Error = "Error"
+    
 }
 
 export class Wait {
-    @IsString()
+    @IsEnum(WaitType)
     @IsNotEmpty()
-    wait_type: string;
+    wait_type: WaitType;
+
+    @IsEnum(WaitCondition)
+    @IsNotEmpty()
+    wait_condition: WaitCondition;
 
     @IsOptional()
     @IsNumber()
@@ -75,6 +104,26 @@ export class Wait {
     @IsNumber()
     @Min(0)
     end_location_wait_time: number = 0;
+
+    @IsOptional()
+    @IsBoolean()
+    start_location_available_wait : boolean = false;
+
+    @IsOptional()
+    @IsBoolean()
+    end_location_available_wait : boolean = false;
+
+    @IsOptional()
+    @IsEnum(WaitStatus)
+    wait_status : WaitStatus = WaitStatus.NotStarted;
+
+    @IsOptional()
+    @IsNumber()
+    timeout: number = 1800;
+
+    @IsOptional()
+    @IsEnum(FallbackAction)
+    fallback_action: FallbackAction = FallbackAction.Error;
 }
 
 export enum LocationAction {
@@ -86,19 +135,28 @@ export enum LocationAction {
     Wait = "Wait",
     Destack = "Destack"
 }
+export enum LocationType {
+    Zone = "Zone",
+    Aisle = "Aisle",
+    Bay = "Bay",
+    Pallet = "Pallet",
+    Transient = "Transient"
+}
 
 export class Location {
     @IsString()
     @IsNotEmpty()
     location_id: string;
 
-    @IsOptional()
-    @IsString()
-    location_zone?: string;
+    @IsEnum(LocationType)
+    @IsNotEmpty()
+    location_type: LocationType;
 
     @IsEnum(LocationAction)
+    @IsNotEmpty()
     location_action: LocationAction;
 
+    @IsNotEmpty()
     @ValidateNested()
     @Type(() => Dimension)
     location_dimension: Dimension;
@@ -106,13 +164,14 @@ export class Location {
     @IsOptional()
     @ValidateNested()
     @Type(() => Attribute)
-    location_attribute?: Attribute;
+    location_attribute: Attribute;
 }
 
 export enum TaskType {
     CrossDocking = "Crossdock",
     Putaway = "Putaway",
     Picking = "Picking",
+    GoodsToPerson = "GoodsToPerson",
 }
 
 export class Task {
@@ -120,16 +179,13 @@ export class Task {
     @IsNotEmpty()
     task_id: string;
 
-    @IsOptional()
-    @IsString()
-    task_pallet_id?: string;
-
     @IsEnum(TaskType)
+    @IsNotEmpty()
     task_type: TaskType;
 
     @IsOptional()
     @IsString()
-    task_dependency?: string;
+    task_dependency: string;
 
     @ValidateNested()
     @Type(() => Location)
@@ -142,7 +198,7 @@ export class Task {
     @IsOptional()
     @ValidateNested()
     @Type(() => Wait)
-    wait_time?: Wait;
+    wait : Wait;
 
     @IsArray()
     @ValidateNested({ each: true })
@@ -157,12 +213,12 @@ export enum batch_type {
 
 export class TaskGenerationReq {
     @IsString()
-    @IsNotEmpty()
+    @IsOptional()
     batch_job_id: string;
 
     @IsOptional()
     @IsNumber()
-    @Min(1)
+    @Min(0)
     @Max(10)
     batch_priority: number = 5;
 
@@ -178,17 +234,13 @@ export class TaskGenerationReq {
     @IsOptional()
     @IsNumber()
     @Min(1)
-    batch_frequency?: number;
-
-    @IsOptional()
-    @IsString()
-    warehouse_id?: string;
+    batch_frequency: number;
 }
 
 export class TaskGenerationRes {
     @IsString()
     @IsNotEmpty()
-    batch_job_id: string;
+    batch_id: string;
 
     @IsString()
     @IsNotEmpty()
