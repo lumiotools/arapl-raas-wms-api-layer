@@ -369,6 +369,83 @@ describe('RobotJobService', () => {
     
   });
 
+  describe('createUnstructuredTask', () => {
+    it('createUnstructuredTask: config file not found - throw an error', async () => {
+      jest.spyOn(fs, 'readFile').mockRejectedValueOnce(new Error('File not found'));
+      const expectedResponse = {
+        "status": "error",
+        "message": `Configuration file create_task.json' not found.`
+      }
+      try {
+        await service.createUnstructuredTask('test-warehouse', 'test-batch-job','create_task', {});
+      } catch (error) {
+        expect(error.message).toBe('File not found');
+      }
+    });
+
+    it('createUnstructuredTask: Output of transformer is null', async () => {
+      const mockConfig = {
+          "object_type": "null",
+          "batch_job_id": {"object_type": "null", "path": "input.batch_job_id"},
+          "batch_priority": {"object_type": "null", "path": "input.batch_priority"},
+          "batch_type": {"object_type": "null", "path": "input.batch_type"},
+          "batch_frequency": {"object_type": "null", "path": "input.batch_frequency"},
+          "warehouse_id": {"object_type": "null", "path": "input.warehouse_id"},
+          "tasks": {
+            "object_type": "null",
+            "source": "input.tasks"
+            // other fields...
+          }
+        }
+        const mockInput = {
+          "batch_job_id": "BATCH-001",
+          "batch_priority": 1,
+          "batch_type": "Discrete",
+          "batch_frequency": null,
+          "warehouse_id": null,
+          "tasks": []
+        }
+      jest.spyOn(fs, 'readFile').mockResolvedValueOnce(JSON.stringify(mockConfig));
+      jest.spyOn(service, '_genericTaskTransformer').mockResolvedValueOnce(null);
+      const result = await service.createUnstructuredTask('test-warehouse', 'test-batch-job', 'create_task', mockInput);
+
+      expect(result).toEqual({
+        status: 'error',
+        message: 'Transformation failed to produce a valid batch_job_id.'
+      });
+    });
+    it ('createUnstructuredTask: transformers output has batch_job_id as null', async () => {
+      const mockConfig = {
+          "object_type": "object",
+          "batch_job_id": {"object_type": "string", "path": "input.batch_job_id"},
+          "batch_priority": {"object_type": "number", "path": "input.batch_priority"},
+          "batch_type": {"object_type": "string", "path": "input.batch_type"},
+          "batch_frequency": {"object_type": "null", "path": "input.batch_frequency"},
+          "warehouse_id": {"object_type": "null", "path": "input.warehouse_id"},
+          "tasks": {
+            "object_type": "array",
+            // other fields...
+          }
+        }
+        const mockInput = {
+          "batch_job_id": null,
+          "batch_priority": 1,
+          "batch_type": "Discrete",
+          "batch_frequency": null,
+          "warehouse_id": null,
+          "tasks": []
+        }
+      jest.spyOn(fs, 'readFile').mockResolvedValueOnce(JSON.stringify(mockConfig));
+      jest.spyOn(service, '_genericTaskTransformer').mockResolvedValueOnce(null);
+      const result = await service.createUnstructuredTask('test-warehouse', 'test-batch-job', 'create_task', mockInput);
+
+      expect(result).toEqual({
+        status: 'error',
+        message: 'Transformation failed to produce a valid batch_job_id.'
+      });
+    });
+  });
+
   describe('transformer',()=>{
     it('transformer: all object_types are null, response should be null', async () => {
       const mapping = {
@@ -683,6 +760,7 @@ describe('RobotJobService', () => {
       expect(transformed).toEqual(expectedResponse);
 
     });
+
 
     it('transformer: extract batch_job_id from a list of batch_jobs', async ()=>{
       const mapping = {
