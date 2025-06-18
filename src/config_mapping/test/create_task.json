@@ -1,0 +1,82 @@
+{
+  "object_type": "object",
+  "batch_job_id": {"object_type": "string", "path":"input.batch_job_id"}, 
+  "batch_priority": {"object_type": "number", "path": "input.batch_priority"},
+  "batch_type": {"object_type": "string", "path": "input.batch_type"},
+  "batch_frequency": {"object_type": "null", "path": "input.batch_frequency"},
+  "warehouse_id": {"object_type": "null", "path": "input.warehouse_id"},
+  "tasks": {
+    "object_type": "array",
+    "source": "input.tasks",
+    "map": {
+      "object_type": "object",
+      "task_id": {"object_type":"string", "path": "op.task_id"},
+      "task_type": {"object_type":"string", "path": "op.type"},
+      "task_pallet_id": {"object_type":"string", "path": "op.task_pallet_id"},
+      "task_dependency": {"object_type":"null", "path": "op.task_dependency"},
+
+      "start_location": {
+        "object_type": "object",
+        "location_id": {"object_type": "string", "path": "op.start_location.location_id"},
+        "location_action": {"object_type": "string", "path": "op.start_location.location_action"},
+        "location_zone": {"object_type": "string", "path": "op.start_location.location_zone"},
+        "location_dimension": {
+          "object_type": "object",
+          "length": {"object_type": "null", "path": "op.start_location.location_dimension.length"},
+          "width": {"object_type": "null", "path": "op.start_location.location_dimension.width"},
+          "height": {"object_type": "null", "path": "op.start_location.location_dimension.height"}
+        },
+        "location_attribute": {
+          "object_type": "object",
+          "attribute_name": {"object_type": "string", "path": "op.start_location.location_attribute.attribute_name"},
+          "attribute_value": {"object_type": "string", "path": "op.start_location.location_attribute.attribute_value"}
+        }
+      },
+
+      "end_location": {
+        "object_type": "object",
+        "location_id": {"object_type": "string", "path": "op.end_location.location_id"},
+        "location_action": {"object_type": "string", "path": "op.end_location.location_action"},
+        "location_zone": {"object_type": "string", "path": "op.end_location.location_zone"},
+        "location_dimension": {
+          "object_type": "object",
+          "length": {"object_type": "number", "path": "op.end_location.location_dimension.length"},
+          "width": {"object_type": "number", "path": "op.end_location.location_dimension.width"},
+          "height": {"object_type": "number", "path": "op.end_location.location_dimension.height"}
+        },
+        "location_attribute": {
+          "object_type": "object",
+          "attribute_name": {"object_type": "string", "path": "op.end_location.location_attribute.attribute_name"},
+          "attribute_value": {"object_type": "string", "path": "op.end_location.location_attribute.attribute_value"}
+        }
+      },
+      "wait_time": {
+        "object_type": "object",
+        "wait_type": {"object_type": "null", "path": "op.wait_time.wait_type"},
+        "start_location_wait_time": {"object_type": "null", "path": "op.wait_time.start_location_wait_time"},
+        "end_location_wait_time": {"object_type": "null", "path": "op.wait_time.end_location_wait_time"}
+      },
+      "cargos": {
+        "object_type": "array",
+        "source": "op.cargos",
+        "map": {
+          "object_type": "object",
+          "cargo_code": {"object_type": "string", "path": "item.cargo_code"},
+          "cargo_type": {"object_type": "string", "path": "item.cargo_type"},
+          "cargo_dimension": {
+            "object_type": "object",
+            "length": {"object_type": "null", "path": "item.cargo_dimension.length"},
+            "width": {"object_type": "null", "path": "item.cargo_dimension.width"},
+            "height": {"object_type": "null", "path": "item.cargo_dimension.height"}
+          },
+          "cargo_weight": {"object_type": "number", "path": "item.cargo_weight"},
+          "cargo_attributes": {
+            "object_type": "object",
+            "attribute_name": {"object_type": "null", "path": "item.cargo_attributes.attribute_name"},
+            "attribute_value": {"object_type": "null", "path": "item.cargo_attributes.attribute_value"}
+          }
+        }
+      }
+    }
+  }
+}

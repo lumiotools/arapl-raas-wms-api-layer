@@ -200,7 +200,7 @@ export class RobotJobService {
     }
   }
 
-  private async _genericTaskTransformer(
+  async _genericTaskTransformer(
     mapping: any,
     input: any,
   ): Promise<any> {
