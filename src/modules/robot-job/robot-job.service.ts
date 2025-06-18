@@ -188,7 +188,7 @@ export class RobotJobService {
       // }
       console.error('Error creating task:', error);
       return {
-        batch_id: createRobotJobDto.batch_job_id,
+        batch_id: createRobotJobDto.batch_job_id || '',
         status: `error: ${error.message}`,
       };
     }
