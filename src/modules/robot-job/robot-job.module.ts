@@ -9,13 +9,14 @@ import { queueElementDto } from 'src/modules/oschestrator/dto/queue.dto';
 import { Location } from './entities/locations.entity';
 import { AuthenticationMiddleware } from '../../middlewares/authentication.middleware';
 import { VersionMiddleware } from '../../middlewares/version.middleware';
+import { Validator } from 'class-validator';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([BatchJob, Task, queueElementDto, Location]),
+    TypeOrmModule.forFeature([BatchJob, Task, queueElementDto, Location])
   ],
   controllers: [RobotJobController],
-  providers: [RobotJobService, OschestratorService],
+  providers: [RobotJobService, OschestratorService, Validator],
   exports: [RobotJobService, TypeOrmModule],
 })
 export class RobotJobModule implements NestModule {

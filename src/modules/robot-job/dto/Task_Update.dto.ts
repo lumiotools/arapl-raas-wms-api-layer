@@ -38,7 +38,7 @@ export class Location {
 
   @IsOptional()
   @IsNumber()
-  cargo_quantity: number;
+  cargo_quantity?: number;
 }
 
 export class Task {
@@ -48,7 +48,7 @@ export class Task {
 
   @IsOptional()
   @IsString()
-  task_dependency: string;
+  task_dependency?: string;
 
   @ValidateNested()
   @Type(() => Location)
@@ -61,7 +61,7 @@ export class Task {
   @IsOptional()
   @ValidateNested()
   @Type(() => Wait)
-  wait_time : Wait;
+  wait_time ?: Wait;
 
   @IsArray()
   @ValidateNested({ each: true })

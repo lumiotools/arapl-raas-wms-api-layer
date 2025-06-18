@@ -133,7 +133,10 @@ export class RobotJobService {
 
       // check if batch_job_id exists
       if (!createRobotJobDto.batch_job_id) {
-        createRobotJobDto.batch_job_id = `batch-${Date.now()}`;
+        const now = new Date();
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}${now.getMilliseconds()}`;
+        createRobotJobDto.batch_job_id = `Batch-${timestamp}`;
       }
 
       if (createRobotJobDto.tasks.length === 0) {
@@ -173,7 +176,7 @@ export class RobotJobService {
             if (!wait.wait_condition){
               throw new Error(`Wait condition is required for conditional wait type in task ${task.task_id}.`);
             }
-            if (wait.wait_condition == WaitCondition.Time && (!wait.start_location_wait_time && !wait.end_location_wait_time)) {
+            if (wait.wait_condition == WaitCondition.Time && (wait.start_location_wait_time==0 && wait.end_location_wait_time==0)) {
               throw new Error(`Start and end location wait times are required for time-based wait condition in task ${task.task_id}.`);
             }
             if (wait.wait_condition == WaitCondition.LocationAvailable && (!wait.start_location_available_wait && !wait.end_location_available_wait)) {
@@ -391,7 +394,7 @@ export class RobotJobService {
           if (!wait.wait_condition){
             throw new Error(`Wait condition is required for conditional wait type in task ${task.task_id}.`);
           }
-          if (wait.wait_condition == WaitCondition.Time && (!wait.start_location_wait_time && !wait.end_location_wait_time)) {
+          if (wait.wait_condition == WaitCondition.Time && (wait.start_location_wait_time==0 && wait.end_location_wait_time==0)) {
             throw new Error(`Start and end location wait times are required for time-based wait condition in task ${task.task_id}.`);
           }
           if (wait.wait_condition == WaitCondition.LocationAvailable && (!wait.start_location_available_wait && !wait.end_location_available_wait)) {

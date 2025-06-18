@@ -51,10 +51,8 @@ export class RobotJobController {
 
     return { tasks: tasksForResponse };
   }
-  @Post(':warehouse_id/tasks')
   
-
-  @Post(':warehouse_id/create_task')
+  @Post(':warehouse_id/tasks')
   async unifiedCreateTask(
     @Param('warehouse_id') warehouseId: string,
     @Body() body: any,
