@@ -128,7 +128,6 @@ export class OschestratorService {
             "timestamp": new Date().toISOString(),
             "tasks_status": tasks.map(task => ({
                 "task_id": task.task_id,
-                "task_pallet_id": task.task_pallet_id,
                 "status": task.status,
                 "robot_id": "ROBOT-001", // Placeholder for robot ID
                 "start_location": task.start_location, // Assuming start_location_id is a Location object

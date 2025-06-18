@@ -9,9 +9,6 @@ export class Task {
     @Column({'type': 'varchar'})
     task_id: string;
 
-    @Column({ nullable: true })
-    task_pallet_id: string;
-
     @Column({ type: 'enum', enum: TaskType, default: TaskType.CrossDocking })
     task_type: TaskType;
 

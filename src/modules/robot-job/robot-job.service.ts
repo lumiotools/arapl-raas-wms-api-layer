@@ -108,7 +108,6 @@ export class RobotJobService {
         try{
             const newTask = this.TaskRepository.create({
             task_id: task.task_id,
-            task_pallet_id: task.task_pallet_id,
             task_type: task.task_type,
             task_dependency: task.task_dependency,
             start_location: task.start_location,
@@ -128,7 +127,7 @@ export class RobotJobService {
         } 
       }
       return {
-        batch_job_id: createRobotJobDto.batch_job_id,
+        batch_id: createRobotJobDto.batch_job_id,
         status: 'success',
       };
     } catch (error) {
@@ -150,8 +149,8 @@ export class RobotJobService {
       }
       console.error('Error creating task:', error);
       return {
-        batch_job_id: createRobotJobDto.batch_job_id,
-        status: 'error',
+        batch_id: createRobotJobDto.batch_job_id,
+        status: `error: ${error.message}`,
       };
     }
   }
@@ -200,7 +199,7 @@ export class RobotJobService {
     }
   }
 
-  private async _genericTaskTransformer(
+  async _genericTaskTransformer(
     mapping: any,
     input: any,
   ): Promise<any> {
@@ -299,7 +298,7 @@ export class RobotJobService {
           response.status === 'success'
             ? 'Unstructured task created successfully'
             : 'Failed to create unstructured task',
-        batch_job_id: response.batch_job_id,
+        batch_job_id: response.batch_id,
       };
     } catch (error) {
       if (error.code === 'ENOENT') {
@@ -353,7 +352,7 @@ export class RobotJobService {
       await this.updateLocation(taskRepo.start_location, false);
       await this.updateLocation(taskRepo.end_location, false);
 
-      taskRepo.wait_time = task.wait_time;
+      taskRepo.wait_time = task.wait_time ? task.wait_time : taskRepo.wait_time;
 
       for (const cargo of task.cargos) {
         const existingCargo = taskRepo.cargos.find(
@@ -438,7 +437,7 @@ export class RobotJobService {
       if (!batchJob) {
         return {
           task_id: updateRobotJobDto.batch_job_id,
-          status: 'not_found',
+          status: 'success',
           cancelled_at: new Date().toISOString(),
           message: `Batch job with ID ${updateRobotJobDto.batch_job_id} not found in warehouse ${warehouse_id}.`,
         };
@@ -450,7 +449,7 @@ export class RobotJobService {
       if (tasks.length === 0) {
         return {
           task_id: updateRobotJobDto.batch_job_id,
-          status: 'not_found',
+          status: 'success',
           cancelled_at: new Date().toISOString(),
           message: `No tasks found for batch job with ID ${updateRobotJobDto.batch_job_id}.`,
         };
@@ -458,7 +457,7 @@ export class RobotJobService {
       if (batchJob.status !== 'pending') {
         return {
           task_id: updateRobotJobDto.batch_job_id,
-          status: 'already_completed',
+          status: 'success',
           cancelled_at: new Date().toISOString(),
           message: `Batch job with ID ${updateRobotJobDto.batch_job_id} is not in pending state and cannot be cancelled.`,
         };
@@ -474,7 +473,7 @@ export class RobotJobService {
       await this.BatchJobRepository.remove(batchJob);
       return {
         task_id: tasks[0].task_id,
-        status: 'cancelled',
+        status: 'success',
         cancelled_at: new Date().toISOString(),
         message: `Batch job with ID ${updateRobotJobDto.batch_job_id} and its tasks have been cancelled.`,
       };
@@ -489,7 +488,7 @@ export class RobotJobService {
     if (!taskRepo) {
       return {
         task_id: task_id,
-        status: 'not_found',
+        status: 'success',
         cancelled_at: new Date().toISOString(),
         message: `Task with ID ${task_id} not found in warehouse ${warehouse_id}.`,
       };
@@ -497,7 +496,7 @@ export class RobotJobService {
     if (taskRepo.status !== 'pending') {
       return {
         task_id: task_id,
-        status: 'already_completed',
+        status: 'success',
         cancelled_at: new Date().toISOString(),
         message: `Task with ID ${task_id} is not in pending state and cannot be cancelled.`,
       };
@@ -507,7 +506,7 @@ export class RobotJobService {
     await this.TaskRepository.remove(taskRepo);
     return {
       task_id: task_id,
-      status: 'cancelled',
+      status: 'success',
       cancelled_at: new Date().toISOString(),
       message: `Task with ID ${task_id} has been cancelled.`,
     };

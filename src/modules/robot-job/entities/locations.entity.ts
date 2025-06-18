@@ -1,13 +1,13 @@
 import { Entity, Column, PrimaryGeneratedColumn, PrimaryColumn } from 'typeorm';
-import { Attribute, Dimension, LocationAction } from '../dto/Task_Generation.dto';
+import { Attribute, Dimension, LocationAction, LocationType } from '../dto/Task_Generation.dto';
 
 @Entity('locations')
 export class Location {
     @PrimaryColumn()
     location_id: string;
 
-    @Column({ nullable: true })
-    location_zone: string;
+    @Column({ type: 'enum', enum: LocationType, default: LocationType.Pallet })
+    location_type:  LocationType;
 
     @Column({ type: 'enum', enum: LocationAction})
     location_action: LocationAction;
