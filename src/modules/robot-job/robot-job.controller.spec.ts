@@ -11,6 +11,11 @@ import {
   TaskType,
   LocationAction,
   batch_type,
+  LocationType,
+  WaitType,
+  WaitCondition,
+  WaitStatus,
+  FallbackAction,
 } from './dto/Task_Generation.dto';
 
 const mockValidStructuredBody: TaskGenerationReq = {
@@ -18,16 +23,14 @@ const mockValidStructuredBody: TaskGenerationReq = {
   batch_priority: 5,
   batch_type: batch_type.Discrete,
   batch_frequency: 1,
-  warehouse_id: '123',
   tasks: [
     {
       task_id: 'task001',
-      task_pallet_id: 'pallet001',
       task_type: TaskType.CrossDocking,
       task_dependency: 'abc',
       start_location: {
         location_id: 'ST1-4-1-1',
-        location_zone: 'zoneA',
+        location_type: LocationType.Zone,
         location_action: LocationAction.Pick,
         location_dimension: {
           length: 10,
@@ -41,7 +44,7 @@ const mockValidStructuredBody: TaskGenerationReq = {
       },
       end_location: {
         location_id: 'DZ1-6-1-6',
-        location_zone: 'zoneB',
+        location_type: LocationType.Zone,
         location_action: LocationAction.Drop,
         location_dimension: {
           length: 8,
@@ -53,10 +56,16 @@ const mockValidStructuredBody: TaskGenerationReq = {
           attribute_value: 'high',
         },
       },
-      wait_time: {
-        wait_type: 'WaitDrop',
+      wait: {
+        wait_type: WaitType.Trigger,
+        wait_condition: WaitCondition.Time,
         start_location_wait_time: 10,
         end_location_wait_time: 5,
+        wait_status: WaitStatus.NotStarted,
+        fallback_action: FallbackAction.Error,
+        timeout: 1800,
+        start_location_available_wait: false,
+        end_location_available_wait: false,
       },
       cargos: [
         {
@@ -135,7 +144,7 @@ describe('RobotJobController', () => {
     it('Create_task: should create a task successfully with a valid structured body', async () => {
       // Arrange: Mock the service to return a successful response.
       const successResponse: TaskGenerationRes = {
-        batch_job_id: 'BATCH-STRUCTURED-001',
+        batch_id: 'BATCH-STRUCTURED-001',
         status: 'success',
       };
       mockRobotJobService.createTask.mockResolvedValue(successResponse);
@@ -159,7 +168,7 @@ describe('RobotJobController', () => {
       // Arrange
       const configName = 'cli';
       const successResponse: TaskGenerationRes = {
-        batch_job_id: 'BATCH-20240413-001',
+        batch_id: 'BATCH-20240413-001',
         status: 'success',
       };
       mockRobotJobService.createUnstructuredTask.mockResolvedValue(
@@ -237,7 +246,7 @@ describe('RobotJobController', () => {
       };
       const configName = 'cli';
       const successResponse: TaskGenerationRes = {
-        batch_job_id: 'BATCH-COMPLEX-001',
+        batch_id: 'BATCH-COMPLEX-001',
         status: 'success',
       };
       mockRobotJobService.createUnstructuredTask.mockResolvedValue(
@@ -278,7 +287,7 @@ describe('RobotJobController', () => {
             task_id: 'task001',
             start_location: { location_id: 'ST1-4-1-1' },
             end_location: { location_id: 'DZ1-6-1-6' },
-            cargos:[]
+            cargos: [],
           },
         ],
       };
@@ -337,7 +346,7 @@ describe('RobotJobController', () => {
       expect(result).toEqual(successResponse);
     });
 
-    it ('update_task: should throw BadRequestException for an invalid body without a config_name', async () => {
+    it('update_task: should throw BadRequestException for an invalid body without a config_name', async () => {
       // Arrange: An invalid body that will fail DTO validation.
       const invalidBody = { some: 'invalid-data' };
 
@@ -357,7 +366,7 @@ describe('RobotJobController', () => {
       expect(service.updateUnstructuredTask).not.toHaveBeenCalled();
     });
 
-    it ('update_task: should throw BadRequestException if unstructured transformation fails', async () => {
+    it('update_task: should throw BadRequestException if unstructured transformation fails', async () => {
       // Arrange: Mock the service to return an error status from the transformation.
       const configName = 'failing_config';
       const errorResponse = {
@@ -378,7 +387,7 @@ describe('RobotJobController', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it ('update_task: should correctly pass complex or mixed-type unstructured body to the service', async () => {
+    it('update_task: should correctly pass complex or mixed-type unstructured body to the service', async () => {
       // Arrange: A body with an object where an array might be expected by some mappings.
       const complexBody = {
         jobId: 'BATCH-COMPLEX-001',
@@ -500,7 +509,7 @@ describe('RobotJobController', () => {
         mockWarehouseId,
         configName,
         'cancel_task',
-        mockUnstructuredCancelBody
+        mockUnstructuredCancelBody,
       );
       expect(service.cancelTask).not.toHaveBeenCalled();
       expect(result).toEqual(successResponse);
@@ -524,7 +533,7 @@ describe('RobotJobController', () => {
       // Verify that no service methods were called.
       expect(service.cancelTask).not.toHaveBeenCalled();
       expect(service.cancelUnstructuredTask).not.toHaveBeenCalled();
-    }); 
+    });
 
     it('cancel_task: should throw BadRequestException if unstructured transformation fails', async () => {
       // Arrange: Mock the service to return an error status from the transformation.
@@ -547,10 +556,10 @@ describe('RobotJobController', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it ('cancel_task: should correctly pass complex or mixed-type unstructured body to the service', async () => {
+    it('cancel_task: should correctly pass complex or mixed-type unstructured body to the service', async () => {
       // Arrange: A body with an object where an array might be expected by some mappings.
       const complexBody = {
-        jobId: 'BATCH-COMPLEX-001'
+        jobId: 'BATCH-COMPLEX-001',
       };
       const configName = 'cli';
       const successResponse = {
@@ -579,6 +588,6 @@ describe('RobotJobController', () => {
         complexBody,
       );
       expect(result).toEqual(successResponse);
-    } );
+    });
   });
 });

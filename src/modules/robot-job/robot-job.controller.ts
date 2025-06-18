@@ -24,6 +24,7 @@ import { TaskCancelReq, TaskCancelRes } from './dto/Task_Cancel.dto';
 import { BatchCancelReq, BatchCancelRes } from './dto/Batch_Cancel.dto';
 import { GetLocationReq, GetLocationRes } from './dto/GetLocation.dto';
 import { config } from 'process';
+import { GetTasksParamsDto, GetTasksResponseDto } from './dto/GetTasks.dto';
 
 @Controller('robot-job')
 export class RobotJobController {
@@ -32,7 +33,28 @@ export class RobotJobController {
 
   constructor(private readonly robotJobService: RobotJobService) {}
 
+  @Get(':warehouse_id/tasks/:batch_id')
+  async getTasks(
+    @Param() params: GetTasksParamsDto,
+  ): Promise<GetTasksResponseDto> {
+    const taskEntities = await this.robotJobService.getTasksByBatchId(
+      params.warehouse_id,
+      params.batch_id,
+    );
+
+    const tasksForResponse = taskEntities.map((entity) => {
+      return {
+        ...entity,
+        wait: entity.wait_time,
+      };
+    });
+
+    return { tasks: tasksForResponse };
+  }
   @Post(':warehouse_id/tasks')
+  
+
+  @Post(':warehouse_id/create_task')
   async unifiedCreateTask(
     @Param('warehouse_id') warehouseId: string,
     @Body() body: any,
@@ -42,7 +64,10 @@ export class RobotJobController {
     const validationErrors = await this.validator.validate(structuredDto);
 
     if (validationErrors.length === 0) {
-      const result = await this.robotJobService.createTask(warehouseId, structuredDto);
+      const result = await this.robotJobService.createTask(
+        warehouseId,
+        structuredDto,
+      );
       if (result.status !== 'success') {
         throw new BadRequestException(result.status);
       }
@@ -77,7 +102,10 @@ export class RobotJobController {
     const validationErrors = await this.validator.validate(structuredDto);
 
     if (validationErrors.length === 0) {
-      const result = await this.robotJobService.updateTask(warehouseId, structuredDto);
+      const result = await this.robotJobService.updateTask(
+        warehouseId,
+        structuredDto,
+      );
       if (result.status !== 'success') {
         throw new BadRequestException(result.message);
       }
@@ -118,7 +146,10 @@ export class RobotJobController {
     const isBatchValid = batchErrors.length === 0;
 
     if (isSingleValid && !isBatchValid) {
-      const result = await this.robotJobService.cancelTask(warehouseId, singleTaskDto);
+      const result = await this.robotJobService.cancelTask(
+        warehouseId,
+        singleTaskDto,
+      );
       if (result.status !== 'success') {
         throw new BadRequestException(result.message);
       }
@@ -126,7 +157,10 @@ export class RobotJobController {
     }
 
     if (isBatchValid && !isSingleValid) {
-      const result = await this.robotJobService.cancelTask(warehouseId, batchDto);
+      const result = await this.robotJobService.cancelTask(
+        warehouseId,
+        batchDto,
+      );
       if (result.status !== 'success') {
         throw new BadRequestException(result.message);
       }
