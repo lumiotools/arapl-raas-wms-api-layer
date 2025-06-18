@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateRobotJobDto } from './dto/create-robot-job.dto';
 import { UpdateRobotJobDto } from './dto/update-robot-job.dto';
 import {
@@ -19,6 +19,7 @@ import { GetLocationReq, GetLocationRes } from './dto/GetLocation.dto';
 import * as fs from 'fs/promises';
 import axios from 'axios';
 import { DEFAULT_FACTORY_CLASS_METHOD_KEY } from '@nestjs/common/module-utils/constants';
+import {Task as TaskEntity} from './entities/task.entity';
 
 @Injectable()
 export class RobotJobService {
@@ -33,25 +34,36 @@ export class RobotJobService {
     private readonly LocationRepository: Repository<Location>,
   ) {}
 
-  async updateLocation(location: Location | updateLocation | CreateLocation  , update:boolean){
-    if (location && location.location_id) {
-      const loc= await this.LocationRepository.findOne({
-        where: { location_id: location.location_id },
-      });
-      if (!loc) {
-        throw new Error(
-          `Location with id ${location.location_id} does not exist`,
-        );
-      }
-      await this.LocationRepository.update(
-        { location_id: location.location_id },
-        { isEmpty: update},
+  async getTasksByBatchId(
+    warehouseId: string,
+    batchId: string,
+  ): Promise<TaskEntity[]> {
+    const batchJob = await this.BatchJobRepository.findOne({
+      where: {
+        batch_job_id: batchId,
+        warehouse_id: warehouseId,
+      },
+    });
+
+    if (!batchJob) {
+      throw new NotFoundException(
+        `Batch job with ID '${batchId}' not found in warehouse '${warehouseId}'.`,
       );
-    } else {
-      throw new Error("Location or location ID doesn't exists.");
     }
+
+    const tasks = await this.TaskRepository.find({
+      where: {
+        batch_job_id: batchJob.id,
+      },
+    });
+
+    return tasks;
   }
-  async checkLocation(location: Location | updateLocation | CreateLocation, valueToCheck: boolean) {
+
+  async updateLocation(
+    location: Location | updateLocation | CreateLocation,
+    update: boolean,
+  ) {
     if (location && location.location_id) {
       const loc = await this.LocationRepository.findOne({
         where: { location_id: location.location_id },
@@ -61,7 +73,28 @@ export class RobotJobService {
           `Location with id ${location.location_id} does not exist`,
         );
       }
-      if  (loc.isEmpty !== valueToCheck) {
+      await this.LocationRepository.update(
+        { location_id: location.location_id },
+        { isEmpty: update },
+      );
+    } else {
+      throw new Error("Location or location ID doesn't exists.");
+    }
+  }
+  async checkLocation(
+    location: Location | updateLocation | CreateLocation,
+    valueToCheck: boolean,
+  ) {
+    if (location && location.location_id) {
+      const loc = await this.LocationRepository.findOne({
+        where: { location_id: location.location_id },
+      });
+      if (!loc) {
+        throw new Error(
+          `Location with id ${location.location_id} does not exist`,
+        );
+      }
+      if (loc.isEmpty !== valueToCheck) {
         throw new Error(
           `Location with id ${location.location_id} is not in the expected state. Expected: ${valueToCheck}, Actual: ${loc.isEmpty}`,
         );
@@ -79,9 +112,9 @@ export class RobotJobService {
 
     try {
       for (const task of Tasks) {
-        await this.checkLocation(task.start_location,true);
-        await this.checkLocation(task.end_location,true);
-        
+        await this.checkLocation(task.start_location, true);
+        await this.checkLocation(task.end_location, true);
+
         await this.updateLocation(task.start_location, false);
         await this.updateLocation(task.end_location, false);
       }
@@ -105,8 +138,8 @@ export class RobotJobService {
 
       await this.BatchJobRepository.save(newBatchJob);
       for (const task of Tasks) {
-        try{
-            const newTask = this.TaskRepository.create({
+        try {
+          const newTask = this.TaskRepository.create({
             task_id: task.task_id,
             task_type: task.task_type,
             task_dependency: task.task_dependency,
@@ -115,16 +148,14 @@ export class RobotJobService {
             wait_time: task.wait_time,
             cargos: task.cargos,
             batch_job: newBatchJob,
-            status: 'pending'
+            status: 'pending',
           });
           this.TaskRepository.save(newTask);
-        }
-        catch (error) {
+        } catch (error) {
           console.error('Error creating task:', error);
-        }
-        finally{
+        } finally {
           continue;
-        } 
+        }
       }
       return {
         batch_id: createRobotJobDto.batch_job_id,
@@ -199,10 +230,7 @@ export class RobotJobService {
     }
   }
 
-  async _genericTaskTransformer(
-    mapping: any,
-    input: any,
-  ): Promise<any> {
+  async _genericTaskTransformer(mapping: any, input: any): Promise<any> {
     if (!input || !mapping) {
       return null;
     }
@@ -348,7 +376,7 @@ export class RobotJobService {
       taskRepo.end_location.location_id = task.end_location.location_id;
       taskRepo.end_location.location_dimension =
         task.end_location.location_dimension;
-      
+
       await this.updateLocation(taskRepo.start_location, false);
       await this.updateLocation(taskRepo.end_location, false);
 
