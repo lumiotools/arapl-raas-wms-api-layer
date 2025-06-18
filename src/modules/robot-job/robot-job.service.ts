@@ -1,10 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateRobotJobDto } from './dto/create-robot-job.dto';
 import { UpdateRobotJobDto } from './dto/update-robot-job.dto';
 import {
+  batch_type,
   Location as CreateLocation,
   TaskGenerationReq,
   TaskGenerationRes,
+  Wait,
+  WaitCondition,
+  WaitType,
 } from './dto/Task_Generation.dto';
 import { TaskUpdateReq, TaskUpdateRes, Location as updateLocation } from './dto/Task_Update.dto';
 import { Task as UpdateTask } from './dto/Task_Update.dto';
@@ -19,6 +23,9 @@ import { GetLocationReq, GetLocationRes } from './dto/GetLocation.dto';
 import * as fs from 'fs/promises';
 import axios from 'axios';
 import { DEFAULT_FACTORY_CLASS_METHOD_KEY } from '@nestjs/common/module-utils/constants';
+import { create } from 'domain';
+import { Validator } from 'class-validator';
+import { plainToInstance } from 'class-transformer';
 
 @Injectable()
 export class RobotJobService {
@@ -31,6 +38,9 @@ export class RobotJobService {
 
     @InjectRepository(Location)
     private readonly LocationRepository: Repository<Location>,
+
+    private readonly validator: Validator = new Validator(),
+    
   ) {}
 
   async updateLocation(location: Location | updateLocation | CreateLocation  , update:boolean){
@@ -78,13 +88,25 @@ export class RobotJobService {
     const Tasks: any[] = createRobotJobDto.tasks;
 
     try {
-      for (const task of Tasks) {
-        await this.checkLocation(task.start_location,true);
-        await this.checkLocation(task.end_location,true);
+      // for (const task of Tasks) {
+      //   await this.checkLocation(task.start_location,true);
+      //   await this.checkLocation(task.end_location,true);
         
-        await this.updateLocation(task.start_location, false);
-        await this.updateLocation(task.end_location, false);
+      //   await this.updateLocation(task.start_location, false);
+      //   await this.updateLocation(task.end_location, false);
+      // }
+
+      // check if batch_job_id exists
+      if (!createRobotJobDto.batch_job_id) {
+        createRobotJobDto.batch_job_id = `batch-${Date.now()}`;
       }
+
+      if (createRobotJobDto.tasks.length === 0) {
+        throw new Error(
+          `No tasks provided for batch job in warehouse ${warehouseId}. At least one task is required.`,
+        );
+      }
+
       const batch_job_id = createRobotJobDto.batch_job_id;
       const uniqueness = await this.BatchJobRepository.findOne({
         where: { batch_job_id: batch_job_id, warehouse_id: warehouseId },
@@ -92,6 +114,11 @@ export class RobotJobService {
       if (uniqueness) {
         throw new Error(
           `Batch job with id ${batch_job_id} already exists in warehouse ${warehouseId}. Combination of Batch Job ID and Warehouse ID must be unique.`,
+        );
+      }
+      if (createRobotJobDto.batch_type == batch_type.Continuous && !createRobotJobDto.batch_frequency) {
+        throw new Error(
+          `Batch frequency is required for continuous batch type in warehouse ${warehouseId}.`,
         );
       }
       const newBatchJob: BatchJob = this.BatchJobRepository.create({
@@ -106,7 +133,19 @@ export class RobotJobService {
       await this.BatchJobRepository.save(newBatchJob);
       for (const task of Tasks) {
         try{
-            const newTask = this.TaskRepository.create({
+          if (task.wait && task.wait.wait_type == WaitType.Conditional){
+            const wait = task.wait;
+            if (!wait.wait_condition){
+              throw new Error(`Wait condition is required for conditional wait type in task ${task.task_id}.`);
+            }
+            if (wait.wait_condition == WaitCondition.Time && (!wait.start_location_wait_time && !wait.end_location_wait_time)) {
+              throw new Error(`Start and end location wait times are required for time-based wait condition in task ${task.task_id}.`);
+            }
+            if (wait.wait_condition == WaitCondition.LocationAvailable && (!wait.start_location_available_wait && !wait.end_location_available_wait)) {
+              throw new Error(`Start and end location available wait times are required for location available wait condition in task ${task.task_id}.`);
+            }
+          }
+          const newTask = this.TaskRepository.create({
             task_id: task.task_id,
             task_type: task.task_type,
             task_dependency: task.task_dependency,
@@ -131,22 +170,22 @@ export class RobotJobService {
         status: 'success',
       };
     } catch (error) {
-      if (Tasks && Array.isArray(Tasks)) {
-        for (const task of Tasks) {
-          if (task.start_location && task.start_location.location_id) {
-            await this.LocationRepository.update(
-              { location_id: task.start_location.location_id },
-              { isEmpty: true },
-            );
-          }
-          if (task.end_location && task.end_location.location_id) {
-            await this.LocationRepository.update(
-              { location_id: task.end_location.location_id },
-              { isEmpty: true },
-            );
-          }
-        }
-      }
+      // if (Tasks && Array.isArray(Tasks)) {
+      //   for (const task of Tasks) {
+      //     if (task.start_location && task.start_location.location_id) {
+      //       await this.LocationRepository.update(
+      //         { location_id: task.start_location.location_id },
+      //         { isEmpty: true },
+      //       );
+      //     }
+      //     if (task.end_location && task.end_location.location_id) {
+      //       await this.LocationRepository.update(
+      //         { location_id: task.end_location.location_id },
+      //         { isEmpty: true },
+      //       );
+      //     }
+      //   }
+      // }
       console.error('Error creating task:', error);
       return {
         batch_id: createRobotJobDto.batch_job_id,
@@ -272,7 +311,7 @@ export class RobotJobService {
     configFolderName: string,
     operationType: string,
     input: any,
-  ): Promise<any> {
+  ): Promise<TaskGenerationRes> {
     const filePath = `src/config_mapping/${configFolderName}/${operationType}.json`;
     try {
       const fileContent = await fs.readFile(filePath, 'utf-8');
@@ -280,36 +319,32 @@ export class RobotJobService {
 
       const taskRequest = await this._genericTaskTransformer(jsonData, input);
 
-      if (!taskRequest || !taskRequest.batch_job_id) {
-        return {
-          status: 'error',
-          message: 'Transformation failed to produce a valid batch_job_id.',
-        };
+      const structuredDto = plainToInstance(TaskGenerationReq, taskRequest);
+      const validationErrors = await this.validator.validate(structuredDto);
+  
+      if (validationErrors.length === 0) {
+        const result = await this.createTask(warehouseId, structuredDto);
+        if (result.status !== 'success') {
+          throw new BadRequestException(result.status);
+        }
+        return result;
       }
-
-      taskRequest.batch_priority = taskRequest.batch_priority ?? 5;
-      taskRequest.batch_type = taskRequest.batch_type ?? 'Discrete';
-      taskRequest.warehouse_id = warehouseId;
-
-      const response = await this.createTask(warehouseId, taskRequest);
-      return {
-        status: response.status,
-        message:
-          response.status === 'success'
-            ? 'Unstructured task created successfully'
-            : 'Failed to create unstructured task',
-        batch_job_id: response.batch_id,
-      };
+      else{
+        throw new BadRequestException(
+          'Transformer failed to produce a valid task structure.',
+        );
+      }
+      
     } catch (error) {
       if (error.code === 'ENOENT') {
         return {
-          status: 'error',
-          message: `Configuration file '${operationType}.json' not found.`,
+          status: `error: ${error.message}`,
+          batch_id: '',
         };
       }
       return {
-        status: 'error',
-        message: `Failed to process unstructured task: ${error.message}`,
+        status: `error: ${error.message}`,
+        batch_id: '',
       };
     }
   }
@@ -320,56 +355,77 @@ export class RobotJobService {
   ): Promise<TaskUpdateRes> {
     const tasks: UpdateTask[] = updateRobotJobDto.updates;
     for (const task of tasks) {
-      const taskRepo: Task | null = await this.TaskRepository.findOne({
-        where: {
-          task_id: task.task_id,
-          batch_job: {
-            batch_job_id: updateRobotJobDto.batch_job_id,
-            warehouse_id: warehouse_id,
+      try{
+          if (task.wait_time && task.wait_time.wait_type == WaitType.Conditional){
+          const wait = task.wait_time;
+          if (!wait.wait_condition){
+            throw new Error(`Wait condition is required for conditional wait type in task ${task.task_id}.`);
+          }
+          if (wait.wait_condition == WaitCondition.Time && (!wait.start_location_wait_time && !wait.end_location_wait_time)) {
+            throw new Error(`Start and end location wait times are required for time-based wait condition in task ${task.task_id}.`);
+          }
+          if (wait.wait_condition == WaitCondition.LocationAvailable && (!wait.start_location_available_wait && !wait.end_location_available_wait)) {
+            throw new Error(`Start and end location available wait times are required for location available wait condition in task ${task.task_id}.`);
+          }
+        }
+        const taskRepo: Task | null = await this.TaskRepository.findOne({
+          where: {
+            task_id: task.task_id,
+            batch_job: {
+              batch_job_id: updateRobotJobDto.batch_job_id,
+              warehouse_id: warehouse_id,
+            },
           },
-        },
-        relations: ['batch_job'],
-      });
-      if (!taskRepo) {
-        console.log(
-          `Task with ID ${task.task_id} not found in warehouse ${warehouse_id}.`,
-        );
+          relations: ['batch_job'],
+        });
+        if (!taskRepo) {
+          console.log(
+            `Task with ID ${task.task_id} not found in warehouse ${warehouse_id}.`,
+          );
+          continue;
+        }
+        taskRepo.task_dependency =
+          task.task_dependency ?? taskRepo.task_dependency;
+
+        // await this.updateLocation(taskRepo.start_location, true);
+        // await this.updateLocation(taskRepo.end_location, true);
+        taskRepo.start_location.location_id = task.start_location.location_id;
+        taskRepo.start_location.location_dimension =
+          task.start_location.location_dimension;
+
+        taskRepo.end_location.location_id = task.end_location.location_id;
+        taskRepo.end_location.location_dimension =
+          task.end_location.location_dimension;
+        
+        // await this.updateLocation(taskRepo.start_location, false);
+        // await this.updateLocation(taskRepo.end_location, false);
+
+        taskRepo.wait_time = task.wait_time ? task.wait_time : taskRepo.wait_time;
+
+        for (const cargo of task.cargos) {
+          const existingCargo = taskRepo.cargos.find(
+            (c) => c.cargo_code === cargo.cargo_code,
+          );
+          if (existingCargo) {
+            existingCargo.cargo_dimension = cargo.cargo_dimension;
+            existingCargo.cargo_weight =
+              cargo.cargo_weight ?? existingCargo.cargo_weight;
+          }
+        }
+        await this.TaskRepository.save(taskRepo);
+      }
+      catch (error) {
+        console.error('Error updating task:', error);
+      }
+      finally{
         continue;
       }
-      taskRepo.task_dependency =
-        task.task_dependency ?? taskRepo.task_dependency;
-
-      await this.updateLocation(taskRepo.start_location, true);
-      await this.updateLocation(taskRepo.end_location, true);
-      taskRepo.start_location.location_id = task.start_location.location_id;
-      taskRepo.start_location.location_dimension =
-        task.start_location.location_dimension;
-
-      taskRepo.end_location.location_id = task.end_location.location_id;
-      taskRepo.end_location.location_dimension =
-        task.end_location.location_dimension;
       
-      await this.updateLocation(taskRepo.start_location, false);
-      await this.updateLocation(taskRepo.end_location, false);
-
-      taskRepo.wait_time = task.wait_time ? task.wait_time : taskRepo.wait_time;
-
-      for (const cargo of task.cargos) {
-        const existingCargo = taskRepo.cargos.find(
-          (c) => c.cargo_code === cargo.cargo_code,
-        );
-        if (existingCargo) {
-          existingCargo.cargo_dimension = cargo.cargo_dimension;
-          existingCargo.cargo_weight =
-            cargo.cargo_weight ?? existingCargo.cargo_weight;
-        }
-      }
-      await this.TaskRepository.save(taskRepo);
     }
 
     if (tasks.length === 0) {
       return {
-        task_id: '',
+        batch_id: '',
         status: 'no_updates',
         updated_at: new Date().toISOString(),
         message: 'No tasks to update.',
@@ -377,7 +433,7 @@ export class RobotJobService {
     }
 
     return {
-      task_id: tasks[0].task_id,
+      batch_id: updateRobotJobDto.batch_job_id,
       status: 'success',
       updated_at: new Date().toISOString(),
       message: 'Tasks updated successfully',
@@ -389,7 +445,7 @@ export class RobotJobService {
     configFolderName: string,
     operationType: string,
     input: any,
-  ): Promise<any> {
+  ): Promise<TaskUpdateRes> {
     const filePath = `src/config_mapping/${configFolderName}/${operationType}.json`;
     try {
       const fileContent = await fs.readFile(filePath, 'utf-8');
@@ -397,26 +453,37 @@ export class RobotJobService {
 
       const updateRequest = await this._genericTaskTransformer(jsonData, input);
 
-      if (!updateRequest || !updateRequest.batch_job_id) {
-        return {
-          status: 'error',
-          message:
-            'Transformation failed to produce a valid batch_job_id for update.',
-        };
+      const structuredDto = plainToInstance(TaskUpdateReq, updateRequest);
+      const validationErrors = await this.validator.validate(structuredDto);
+  
+      if (validationErrors.length === 0) {
+        const result = await this.updateTask(warehouseId, structuredDto);
+        if (result.status !== 'success') {
+          throw new BadRequestException(result.status);
+        }
+        return result;
       }
-
-      return await this.updateTask(warehouseId, updateRequest as TaskUpdateReq);
+      else{
+        throw new BadRequestException(
+          'Transformer failed to produce a valid task structure.',
+        );
+      }
     } catch (error) {
       if (error.code === 'ENOENT') {
         return {
-          status: 'error',
-          message: `Configuration file '${operationType}.json' not found.`,
+          batch_id: '',
+          updated_at: new Date().toISOString(),
+          message: `error: Configuration file '${operationType}.json' not found.`,
+          status: `error`,
         };
       }
       return {
-        status: 'error',
-        message: `Failed to process unstructured task update: ${error.message}`,
+        batch_id: '',
+        updated_at: new Date().toISOString(),
+        message: `error: Failed to process unstructured task update: ${error.message}`,
+        status: `error`,
       };
+
     }
   }
 

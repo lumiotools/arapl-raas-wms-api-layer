@@ -92,7 +92,7 @@ export class Wait {
     wait_type: WaitType;
 
     @IsEnum(WaitCondition)
-    @IsNotEmpty()
+    @IsOptional()
     wait_condition: WaitCondition;
 
     @IsOptional()

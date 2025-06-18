@@ -32,7 +32,7 @@ export class RobotJobController {
 
   constructor(private readonly robotJobService: RobotJobService) {}
 
-  @Post(':warehouse_id/create_task')
+  @Post(':warehouse_id/tasks')
   async unifiedCreateTask(
     @Param('warehouse_id') warehouseId: string,
     @Body() body: any,
@@ -67,7 +67,7 @@ export class RobotJobController {
     );
   }
 
-  @Patch(':warehouse_id/update_task')
+  @Patch(':warehouse_id/tasks')
   async unifiedUpdateTask(
     @Param('warehouse_id') warehouseId: string,
     @Body() body: any,
