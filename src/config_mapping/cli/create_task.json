@@ -4,7 +4,6 @@
   "batch_priority": {"object_type": "number", "path": "input.batch_priority"},
   "batch_type": {"object_type": "string", "path": "input.batch_type"},
   "batch_frequency": {"object_type": "null", "path": "input.batch_frequency"},
-  "warehouse_id": {"object_type": "null", "path": "input.warehouse_id"},
   "tasks": {
     "object_type": "array",
     "source": "input.tasks",
@@ -12,14 +11,13 @@
       "object_type": "object",
       "task_id": {"object_type":"string", "path": "op.task_id"},
       "task_type": {"object_type":"string", "path": "op.type"},
-      "task_pallet_id": {"object_type":"string", "path": "op.task_pallet_id"},
       "task_dependency": {"object_type":"null", "path": "op.task_dependency"},
 
       "start_location": {
         "object_type": "object",
         "location_id": {"object_type": "string", "path": "op.start_location.location_id"},
         "location_action": {"object_type": "string", "path": "op.start_location.location_action"},
-        "location_zone": {"object_type": "string", "path": "op.start_location.location_zone"},
+        "location_type": {"object_type": "string", "path": "op.start_location.location_type"},
         "location_dimension": {
           "object_type": "object",
           "length": {"object_type": "null", "path": "op.start_location.location_dimension.length"},
@@ -37,7 +35,7 @@
         "object_type": "object",
         "location_id": {"object_type": "string", "path": "op.end_location.location_id"},
         "location_action": {"object_type": "string", "path": "op.end_location.location_action"},
-        "location_zone": {"object_type": "string", "path": "op.end_location.location_zone"},
+        "location_type": {"object_type": "string", "path": "op.end_location.location_type"},
         "location_dimension": {
           "object_type": "object",
           "length": {"object_type": "number", "path": "op.end_location.location_dimension.length"},
@@ -50,11 +48,17 @@
           "attribute_value": {"object_type": "string", "path": "op.end_location.location_attribute.attribute_value"}
         }
       },
-      "wait_time": {
+      "wait": {
         "object_type": "object",
-        "wait_type": {"object_type": "null", "path": "op.wait_time.wait_type"},
-        "start_location_wait_time": {"object_type": "null", "path": "op.wait_time.start_location_wait_time"},
-        "end_location_wait_time": {"object_type": "null", "path": "op.wait_time.end_location_wait_time"}
+        "wait_type": {"object_type": "string", "path": "op.wait_time.wait_type"},
+        "wait_condition": {"object_type": "string", "path": "op.wait_time.wait_condition"},
+        "start_location_wait_time": {"object_type": "number", "path": "op.wait_time.start_location_wait_time"},
+        "end_location_wait_time": {"object_type": "number", "path": "op.wait_time.end_location_wait_time"},
+        "start_location_available_wait": {"object_type": "boolean", "path": "op.wait_time.start_location_available_wait"},
+        "end_location_available_wait": {"object_type": "boolean", "path": "op.wait_time.end_location_available_wait"},
+        "wait_status": {"object_type": "string", "path": "op.wait_time.wait_status"},
+        "timeout": {"object_type": "number", "path": "op.wait_time.timeout"},
+        "fallback_action": {"object_type": "string", "path": "op.wait_time.fallback_action"}
       },
       "cargos": {
         "object_type": "array",
