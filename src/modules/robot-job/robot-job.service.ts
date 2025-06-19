@@ -1,7 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { NotFoundException } from '@nestjs/common';
-import { CreateRobotJobDto } from './dto/create-robot-job.dto';
-import { UpdateRobotJobDto } from './dto/update-robot-job.dto';
 import {
   batch_type,
   Location as CreateLocation,
@@ -13,12 +11,11 @@ import {
 } from './dto/Task_Generation.dto';
 import { TaskUpdateReq, TaskUpdateRes, Location as updateLocation } from './dto/Task_Update.dto';
 import { Task as UpdateTask } from './dto/Task_Update.dto';
-import { TaskCancelReq, TaskCancelRes } from './dto/Task_Cancel.dto';
 import { Any, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { BatchJob } from './entities/batch_task.entity';
 import { Task } from './entities/task.entity';
-import { CancelReq, BatchCancelRes } from './dto/Cancel.dto';
+import { CancelReq, BatchCancelRes, TaskCancelRes } from './dto/Cancel.dto';
 import { Location } from './entities/locations.entity';
 import { GetLocationReq, GetLocationRes } from './dto/GetLocation.dto';
 import * as fs from 'fs/promises';
@@ -281,7 +278,8 @@ export class RobotJobService {
 
     if (mapping.path) {
       const [success, value] = this.unstructureHelper(input, mapping.path);
-      if (!success) return null;
+      if (!success)
+        return mapping.default === undefined ? null : mapping.default;
 
       switch (mapping.object_type) {
         case 'string':
@@ -356,7 +354,7 @@ export class RobotJobService {
       const validationErrors = await this.validator.validate(structuredDto);
   
       if (validationErrors.length === 0) {
-        const result = await this.createTask(warehouseId, taskRequest);
+        const result = await this.createTask(warehouseId, structuredDto);
         if (result.status !== 'success') {
           throw new BadRequestException(result.status);
         }
@@ -490,7 +488,7 @@ export class RobotJobService {
       const validationErrors = await this.validator.validate(structuredDto);
   
       if (validationErrors.length === 0) {
-        const result = await this.updateTask(warehouseId, updateRequest);
+        const result = await this.updateTask(warehouseId, structuredDto);
         if (result.status !== 'success') {
           throw new BadRequestException(result.status);
         }
@@ -598,6 +596,7 @@ export class RobotJobService {
 
   async cancelUnstructuredBatch(
     warehouseId: string,
+    batchId: string,
     configFolderName: string,
     operationType: string,
     input: any,
@@ -619,8 +618,8 @@ export class RobotJobService {
 
       return await this.cancelBatch(
         warehouseId,
-        cancelRequest.batch_job_id,
-        cancelRequest as CancelReq,
+        batchId,
+        structuredDto,
       );
     } catch (error) {
       if (error.code === 'ENOENT') {
@@ -655,7 +654,7 @@ export class RobotJobService {
 
       const cancelRequest = await this._genericTaskTransformer(jsonData, input);
 
-      const structuredDto = plainToInstance(TaskCancelReq, cancelRequest);
+      const structuredDto = plainToInstance(CancelReq, cancelRequest);
       const validationErrors = await this.validator.validate(structuredDto);
       if (validationErrors.length > 0) {
         throw new BadRequestException(
@@ -667,7 +666,7 @@ export class RobotJobService {
         warehouseId,
         batchId,
         taskId,
-        cancelRequest
+        structuredDto
       );
     } catch (error) {
       if (error.code === 'ENOENT') {
@@ -687,7 +686,7 @@ export class RobotJobService {
     }
   }
   
-  async getEmptyLocations(
+  async getLocations(
     warehouseId: string,
     getLocationReq: GetLocationReq,
     config_name: string,
@@ -759,25 +758,5 @@ export class RobotJobService {
         available_location_types: [],
       };
     }
-  }
-
-  create(createRobotJobDto: CreateRobotJobDto) {
-    return 'This action adds a new robotJob';
-  }
-
-  findAll() {
-    return `This action returns all robotJob`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} robotJob`;
-  }
-
-  update(id: number, updateRobotJobDto: UpdateRobotJobDto) {
-    return `This action updates a #${id} robotJob`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} robotJob`;
   }
 }

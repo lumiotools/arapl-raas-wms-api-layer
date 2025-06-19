@@ -50,12 +50,12 @@ export class Cargo {
     cargo_type?: string;
 
     @IsOptional()
-    @ValidateNested()
+    @ValidateNested({each: true })
     @Type(() => Dimension)
     cargo_dimension?: Dimension;
 
     @IsOptional()
-    @ValidateNested()
+    @ValidateNested({each: true })
     @Type(() => Attribute)
     cargo_attributes?: Attribute;
 
@@ -157,12 +157,12 @@ export class Location {
     location_action: LocationAction;
 
     @IsNotEmpty()
-    @ValidateNested()
+    @ValidateNested({each: true})
     @Type(() => Dimension)
     location_dimension: Dimension;
 
     @IsOptional()
-    @ValidateNested()
+    @ValidateNested({each:true})
     @Type(() => Attribute)
     location_attribute?: Attribute;
 }
@@ -187,16 +187,16 @@ export class Task {
     @IsString()
     task_dependency?: string;
 
-    @ValidateNested()
+    @ValidateNested({each: true})
     @Type(() => Location)
     start_location: Location;
 
-    @ValidateNested()
+    @ValidateNested({each: true})
     @Type(() => Location)
     end_location: Location;
 
     @IsOptional()
-    @ValidateNested()
+    @ValidateNested({each: true})
     @Type(() => Wait)
     wait ?: Wait;
 

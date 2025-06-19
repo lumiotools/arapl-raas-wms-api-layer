@@ -10,13 +10,11 @@
     "request":{
         "body": {
             "object_type": "object",
-            "attributes":{
-                "object_type": "object",
-                "type": {"object_type": "string", "path":"input.location_type"},
-                "level": {"object_type": "number", "path": "input.level"},
-                "dummy": {"object_type": "null", "path": "null"}
-            },
-            "zone_id": {"object_type": "string", "path": "input.zones[1].id"}
+            "location_status": {"object_type": "string", "path": "input.location_status", "default":"All"},
+            "location_zone": {"object_type": "string", "path": "input.location_zone"},
+            "location_type": {"object_type": "string", "path": "input.location_type"},
+            "location_level": {"object_type": "string", "path": "input.location_level", "default":"All"},
+            "location_limit": {"object_type": "number", "path": "input.location_limit"}
         },
         "query_params": {
             "param1": "input.zone_id",

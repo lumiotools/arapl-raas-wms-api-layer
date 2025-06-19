@@ -13,15 +13,12 @@ import {
 import { RobotJobService } from './robot-job.service';
 import { Validator } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
-import { CreateRobotJobDto } from './dto/create-robot-job.dto';
-import { UpdateRobotJobDto } from './dto/update-robot-job.dto';
 import {
   TaskGenerationReq,
   TaskGenerationRes,
 } from './dto/Task_Generation.dto';
 import { TaskUpdateReq, TaskUpdateRes } from './dto/Task_Update.dto';
-import { TaskCancelReq, TaskCancelRes } from './dto/Task_Cancel.dto';
-import { BatchCancelRes, CancelReq } from './dto/Cancel.dto';
+import { BatchCancelRes, CancelReq, TaskCancelRes } from './dto/Cancel.dto';
 import { GetLocationReq, GetLocationRes } from './dto/GetLocation.dto';
 import { config } from 'process';
 import { GetTasksParamsDto, GetTasksResponseDto } from './dto/GetTasks.dto';
@@ -135,27 +132,27 @@ export class RobotJobController {
     @Body() body: CancelReq,
     @Query('config_name') configName?: string
   ): Promise<BatchCancelRes> {
-    const batchDto = plainToInstance(CancelReq, body);
-    const validationErrors = await this.validator.validate(batchDto);
-
-    if (validationErrors.length === 0) {
-      const result = await this.robotJobService.cancelBatch(
+    if (configName) {
+      const result = await this.robotJobService.cancelUnstructuredBatch(
         warehouseId,
         batchId,
-        batchDto,
+        configName,
+        'cancel_task', // Specify the operation type
+        body,
       );
       if (result.status !== 'success') {
         throw new BadRequestException(result.message);
       }
       return result;
     }
-
-    if (configName) {
-      const result = await this.robotJobService.cancelUnstructuredBatch(
+    const batchDto = plainToInstance(CancelReq, body);
+    const validationErrors = await this.validator.validate(batchDto);
+    console.log('structuredDto: ', batchDto);
+    if (validationErrors.length === 0) {
+      const result = await this.robotJobService.cancelBatch(
         warehouseId,
-        configName,
-        'cancel_batch', // Specify the operation type
-        body,
+        batchId,
+        batchDto,
       );
       if (result.status !== 'success') {
         throw new BadRequestException(result.message);
@@ -176,22 +173,6 @@ export class RobotJobController {
     @Body() body: CancelReq,
     @Query('config_name') configName?: string
   ): Promise<TaskCancelRes> {
-    const singleTaskDto = plainToInstance(TaskCancelReq, body);
-    const validationErrors = await this.validator.validate(singleTaskDto);
-
-    if (validationErrors.length === 0) {
-      const result = await this.robotJobService.cancelTask(
-        warehouseId,
-        batchId,
-        taskId,
-        singleTaskDto,
-      );
-      if (result.status !== 'success') {
-        throw new BadRequestException(result.message);
-      }
-      return result;
-    }
-
     if (configName) {
       const result = await this.robotJobService.cancelUnstructuredTask(
         warehouseId,
@@ -206,50 +187,44 @@ export class RobotJobController {
       }
       return result;
     }
+    const singleTaskDto = plainToInstance(CancelReq, body);
+    const validationErrors = await this.validator.validate(singleTaskDto);
 
+    if (validationErrors.length === 0) {
+      const result = await this.robotJobService.cancelTask(
+        warehouseId,
+        batchId,
+        taskId,
+        singleTaskDto,
+      );
+      if (result.status !== 'success') {
+        throw new BadRequestException(result.message);
+      }
+      return result;
+    }
     throw new BadRequestException(
       'Request body is not a valid cancellation structure and no `config_name` was provided for transformation.',
     );
   }
 
-  @Post(':warehouse_id/get_empty_locations')
+  @Get(':warehouse_id/locations')
   async getEmptyLocations(
     @Param('warehouse_id') warehouseId: string,
     @Body() getLocationReq: GetLocationReq,
     @Query('config_name') configName: string,
   ): Promise<GetLocationRes> {
-    return await this.robotJobService.getEmptyLocations(
-      warehouseId,
-      getLocationReq,
-      configName,
-    );
+    if (configName) {
+      return await this.robotJobService.getLocations(
+        warehouseId,
+        getLocationReq,
+        configName,
+      );
+    } else {
+      // Handle the case when configName is provided, or throw an error if not supported
+      throw new BadRequestException(
+        '`config_name` parameter is not supported for this endpoint.'
+      );
+    }
   }
 
-  @Post()
-  create(@Body() createRobotJobDto: CreateRobotJobDto) {
-    return this.robotJobService.create(createRobotJobDto);
-  }
-
-  @Get()
-  findAll() {
-    return this.robotJobService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.robotJobService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateRobotJobDto: UpdateRobotJobDto,
-  ) {
-    return this.robotJobService.update(+id, updateRobotJobDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.robotJobService.remove(+id);
-  }
 }

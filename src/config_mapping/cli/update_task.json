@@ -21,10 +21,6 @@
         "object_type": "string",
         "path": "op.type"
       },
-      "task_pallet_id": {
-        "object_type": "null",
-        "path": "op.task_pallet_id"
-      },
       "task_dependency": {
         "object_type": "string",
         "path": "op.depends_on"
@@ -57,17 +53,6 @@
             "object_type": "number",
             "path": "op.source_location.dimensions.ht"
           }
-        },
-        "location_attribute": {
-          "object_type": "object",
-          "attribute_name": {
-            "object_type": "string",
-            "path": "op.source_location.attributes.name"
-          },
-          "attribute_value": {
-            "object_type": "string",
-            "path": "op.source_location.attributes.value"
-          }
         }
       },
       "end_location": {
@@ -98,21 +83,10 @@
             "object_type": "number",
             "path": "op.destination_location.dimensions.ht"
           }
-        },
-        "location_attribute": {
-          "object_type": "object",
-          "attribute_name": {
-            "object_type": "null",
-            "path": "op.destination_location.attributes.name"
-          },
-          "attribute_value": {
-            "object_type": "null",
-            "path": "op.destination_location.attributes.value"
-          }
         }
       },
       "wait_time": {
-        "object_type": "object",
+        "object_type": "null",
         "wait_type": {
           "object_type": "string",
           "path": "op.wait_config.type"
@@ -159,17 +133,6 @@
           "cargo_weight": {
             "object_type": "number",
             "path": "item.weight"
-          },
-          "cargo_attributes": {
-            "object_type": "object",
-            "attribute_name": {
-              "object_type": "string",
-              "path": "item.attributes.name"
-            },
-            "attribute_value": {
-              "object_type": "string",
-              "path": "item.attributes.value"
-            }
           }
         }
       }
