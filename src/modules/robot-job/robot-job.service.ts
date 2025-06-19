@@ -18,7 +18,7 @@ import { Any, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { BatchJob } from './entities/batch_task.entity';
 import { Task } from './entities/task.entity';
-import { BatchCancelReq, BatchCancelRes } from './dto/Batch_Cancel.dto';
+import { CancelReq, BatchCancelRes } from './dto/Cancel.dto';
 import { Location } from './entities/locations.entity';
 import { GetLocationReq, GetLocationRes } from './dto/GetLocation.dto';
 import * as fs from 'fs/promises';
@@ -356,7 +356,7 @@ export class RobotJobService {
       const validationErrors = await this.validator.validate(structuredDto);
   
       if (validationErrors.length === 0) {
-        const result = await this.createTask(warehouseId, structuredDto);
+        const result = await this.createTask(warehouseId, taskRequest);
         if (result.status !== 'success') {
           throw new BadRequestException(result.status);
         }
@@ -490,7 +490,7 @@ export class RobotJobService {
       const validationErrors = await this.validator.validate(structuredDto);
   
       if (validationErrors.length === 0) {
-        const result = await this.updateTask(warehouseId, structuredDto);
+        const result = await this.updateTask(warehouseId, updateRequest);
         if (result.status !== 'success') {
           throw new BadRequestException(result.status);
         }
@@ -520,71 +520,55 @@ export class RobotJobService {
     }
   }
 
-  async cancelTask(
-    warehouse_id: string,
-    updateRobotJobDto: TaskCancelReq | BatchCancelReq,
-  ): Promise<TaskCancelRes | BatchCancelRes> {
-    if (
-      'batch_job_id' in updateRobotJobDto &&
-      !('task_id' in updateRobotJobDto)
-    ) {
-      const batchJob = await this.BatchJobRepository.findOne({
-        where: {
-          batch_job_id: updateRobotJobDto.batch_job_id,
-          warehouse_id: warehouse_id,
-        },
-      });
-      if (!batchJob) {
-        return {
-          task_id: updateRobotJobDto.batch_job_id,
-          status: 'success',
-          cancelled_at: new Date().toISOString(),
-          message: `Batch job with ID ${updateRobotJobDto.batch_job_id} not found in warehouse ${warehouse_id}.`,
-        };
-      }
-      const tasks = await this.TaskRepository.find({
-        where: { batch_job: { batch_job_id: updateRobotJobDto.batch_job_id } },
-      });
+  async cancelBatch(warehouse_id: string, batch_id: string, cancel_req: CancelReq){
+    const batchJob = await this.BatchJobRepository.findOne({
+      where: {
+        batch_job_id: batch_id,
+        warehouse_id: warehouse_id,
+      },
+    });
 
-      if (tasks.length === 0) {
-        return {
-          task_id: updateRobotJobDto.batch_job_id,
-          status: 'success',
-          cancelled_at: new Date().toISOString(),
-          message: `No tasks found for batch job with ID ${updateRobotJobDto.batch_job_id}.`,
-        };
-      }
-      if (batchJob.status !== 'pending') {
-        return {
-          task_id: updateRobotJobDto.batch_job_id,
-          status: 'success',
-          cancelled_at: new Date().toISOString(),
-          message: `Batch job with ID ${updateRobotJobDto.batch_job_id} is not in pending state and cannot be cancelled.`,
-        };
-      }
-      for (const task of tasks) {
-        if (task.status !== 'pending') {
-          continue;
-        }
-        this.updateLocation(task.start_location, true);
-        this.updateLocation(task.end_location, true);
-        await this.TaskRepository.remove(task);
-      }
-      await this.BatchJobRepository.remove(batchJob);
+    if (!batchJob) {
       return {
-        task_id: tasks[0].task_id,
+        task_id: batch_id,
         status: 'success',
         cancelled_at: new Date().toISOString(),
-        message: `Batch job with ID ${updateRobotJobDto.batch_job_id} and its tasks have been cancelled.`,
+        message: `Batch job with ID ${batch_id} not found in warehouse ${warehouse_id}.`,
       };
     }
-    const task_id = (updateRobotJobDto as TaskCancelReq).task_id;
+
+    if (batchJob.status !== 'pending') {
+      return {
+        task_id: batch_id,
+        status: 'success',
+        cancelled_at: new Date().toISOString(),
+        message: `Batch job with ID ${batch_id} is not in pending state and cannot be cancelled.`,
+      };
+    }
+
+    await this.BatchJobRepository.remove(batchJob);
+
+    return {
+      task_id: batchJob.batch_job_id,
+      status: 'success',
+      cancelled_at: new Date().toISOString(),
+      message: `Batch job with ID ${batchJob.batch_job_id} and its tasks have been cancelled.`,
+    };
+  }
+
+  async cancelTask(
+    warehouse_id: string,
+    batch_id: string,
+    task_id: string,
+    cancel_req: CancelReq,
+  ): Promise<TaskCancelRes> {
     const taskRepo: Task | null = await this.TaskRepository.findOne({
       where: {
         task_id: task_id,
         batch_job: { warehouse_id: warehouse_id },
       },
     });
+
     if (!taskRepo) {
       return {
         task_id: task_id,
@@ -593,6 +577,7 @@ export class RobotJobService {
         message: `Task with ID ${task_id} not found in warehouse ${warehouse_id}.`,
       };
     }
+
     if (taskRepo.status !== 'pending') {
       return {
         task_id: task_id,
@@ -601,23 +586,22 @@ export class RobotJobService {
         message: `Task with ID ${task_id} is not in pending state and cannot be cancelled.`,
       };
     }
-    this.updateLocation(taskRepo.start_location, true);
-    this.updateLocation(taskRepo.end_location, true);
     await this.TaskRepository.remove(taskRepo);
+
     return {
-      task_id: task_id,
+      task_id: taskRepo.task_id,
       status: 'success',
       cancelled_at: new Date().toISOString(),
-      message: `Task with ID ${task_id} has been cancelled.`,
+      message: `Task with ID ${taskRepo.task_id} has been cancelled.`,
     };
   }
 
-  async cancelUnstructuredTask(
+  async cancelUnstructuredBatch(
     warehouseId: string,
     configFolderName: string,
     operationType: string,
     input: any,
-  ): Promise<any> {
+  ): Promise<BatchCancelRes> {
     const filePath = `src/config_mapping/${configFolderName}/${operationType}.json`;
     try {
       const fileContent = await fs.readFile(filePath, 'utf-8');
@@ -625,35 +609,84 @@ export class RobotJobService {
 
       const cancelRequest = await this._genericTaskTransformer(jsonData, input);
 
-      if (
-        !cancelRequest ||
-        (!cancelRequest.batch_job_id && !cancelRequest.task_id)
-      ) {
-        return {
-          status: 'error',
-          message:
-            'Transformation failed. Input must produce a batch_job_id or a task_id.',
-        };
+      const structuredDto = plainToInstance(CancelReq, cancelRequest);
+      const validationErrors = await this.validator.validate(structuredDto);
+      if (validationErrors.length > 0) {
+        throw new BadRequestException(
+          'Transformer failed to produce a valid cancel request structure.',
+        );
       }
 
-      return await this.cancelTask(
+      return await this.cancelBatch(
         warehouseId,
-        cancelRequest as TaskCancelReq | BatchCancelReq,
+        cancelRequest.batch_job_id,
+        cancelRequest as CancelReq,
       );
     } catch (error) {
       if (error.code === 'ENOENT') {
         return {
+          task_id: '',
           status: 'error',
+          cancelled_at: new Date().toISOString(),
           message: `Configuration file '${operationType}.json' not found.`,
         };
       }
       return {
+        task_id: '',
         status: 'error',
-        message: `Failed to process unstructured task cancellation: ${error.message}`,
+        cancelled_at: new Date().toISOString(),
+        message: `Failed to process unstructured batch cancellation: ${error.message}`,
       };
     }
   }
 
+  async cancelUnstructuredTask(
+    warehouseId: string,
+    batchId: string,
+    taskId: string,
+    configFolderName: string,
+    operationType: string,
+    input: any,
+  ): Promise<TaskCancelRes> {
+    const filePath = `src/config_mapping/${configFolderName}/${operationType}.json`;
+    try {
+      const fileContent = await fs.readFile(filePath, 'utf-8');
+      const jsonData = JSON.parse(fileContent);
+
+      const cancelRequest = await this._genericTaskTransformer(jsonData, input);
+
+      const structuredDto = plainToInstance(TaskCancelReq, cancelRequest);
+      const validationErrors = await this.validator.validate(structuredDto);
+      if (validationErrors.length > 0) {
+        throw new BadRequestException(
+          'Transformer failed to produce a valid cancel request structure.',
+        );
+      }
+
+      return await this.cancelTask(
+        warehouseId,
+        batchId,
+        taskId,
+        cancelRequest
+      );
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        return {
+          task_id: '',
+          status: 'error',
+          cancelled_at: new Date().toISOString(),
+          message: `Configuration file '${operationType}.json' not found.`,
+        };
+      }
+      return {
+        task_id: '',
+        status: 'error',
+        cancelled_at: new Date().toISOString(),
+        message: `Failed to process unstructured task cancellation: ${error.message}`,
+      };
+    }
+  }
+  
   async getEmptyLocations(
     warehouseId: string,
     getLocationReq: GetLocationReq,

@@ -1,7 +1,5 @@
 {
   "object_type": "object",
-  "batch_job_id": {"object_type": "string", "path":"input.job_id"},
-  "task_id": {"object_type": "string", "path": "input.task_to_cancel_id"},
   "reason": {"object_type": "string", "path": "input.cancellation_reason"},
   "timestamp": {"object_type": "string", "path": "input.cancellation_timestamp"}
 }

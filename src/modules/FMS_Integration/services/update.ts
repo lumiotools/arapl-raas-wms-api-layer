@@ -4,7 +4,8 @@ import fetch from 'node-fetch';
 import { Task } from "src/modules/robot-job/dto/Task_Generation.dto";
 import { TaskUpdateReq, TaskUpdateRes } from "src/modules/robot-job/dto/Task_Update.dto";
 import { TaskCancelReq, TaskCancelRes } from "src/modules/robot-job/dto/Task_Cancel.dto";
-import { BatchCancelReq, BatchCancelRes } from "src/modules/robot-job/dto/Batch_Cancel.dto";
+import { CancelReq, BatchCancelRes } from "src/modules/robot-job/dto/Cancel.dto";
+import { Cancel } from "axios";
 let UPDATE_TASK_URL = 'https://api.araplraas.com/operator/v1/tasks/';
 
 
@@ -41,7 +42,7 @@ export async function updateTask(payload : TaskUpdateReq, id : string): Promise<
 
 
 
-export async function updateBatchAction(payload: BatchCancelReq, task_id : string): Promise<BatchCancelRes> {// action
+export async function updateBatchAction(payload: CancelReq, task_id : string): Promise<BatchCancelRes> {// action
     try {
         const UPDATE_TASK_ACTION_URL = `https://api.araplraas.com/operator/v1/tasks/${task_id}/action`;
         const Token = await authenticate();

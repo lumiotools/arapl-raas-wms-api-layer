@@ -21,7 +21,7 @@ import {
 } from './dto/Task_Generation.dto';
 import { TaskUpdateReq, TaskUpdateRes } from './dto/Task_Update.dto';
 import { TaskCancelReq, TaskCancelRes } from './dto/Task_Cancel.dto';
-import { BatchCancelReq, BatchCancelRes } from './dto/Batch_Cancel.dto';
+import { BatchCancelRes, CancelReq } from './dto/Cancel.dto';
 import { GetLocationReq, GetLocationRes } from './dto/GetLocation.dto';
 import { config } from 'process';
 import { GetTasksParamsDto, GetTasksResponseDto } from './dto/GetTasks.dto';
@@ -128,25 +128,21 @@ export class RobotJobController {
     );
   }
 
-  @Patch(':warehouse_id/cancel_task')
-  async unifiedCancelTask(
+  @Patch(':warehouse_id/tasks/:batch_id/cancel')
+  async cancelBatch(
     @Param('warehouse_id') warehouseId: string,
-    @Body() body: any,
-    @Query('config_name') configName?: string,
-  ): Promise<TaskCancelRes | BatchCancelRes> {
-    const singleTaskDto = plainToInstance(TaskCancelReq, body);
-    const batchDto = plainToInstance(BatchCancelReq, body);
+    @Param('batch_id') batchId: string,
+    @Body() body: CancelReq,
+    @Query('config_name') configName?: string
+  ): Promise<BatchCancelRes> {
+    const batchDto = plainToInstance(CancelReq, body);
+    const validationErrors = await this.validator.validate(batchDto);
 
-    const singleErrors = await this.validator.validate(singleTaskDto);
-    const batchErrors = await this.validator.validate(batchDto);
-
-    const isSingleValid = singleErrors.length === 0;
-    const isBatchValid = batchErrors.length === 0;
-
-    if (isSingleValid && !isBatchValid) {
-      const result = await this.robotJobService.cancelTask(
+    if (validationErrors.length === 0) {
+      const result = await this.robotJobService.cancelBatch(
         warehouseId,
-        singleTaskDto,
+        batchId,
+        batchDto,
       );
       if (result.status !== 'success') {
         throw new BadRequestException(result.message);
@@ -154,10 +150,41 @@ export class RobotJobController {
       return result;
     }
 
-    if (isBatchValid && !isSingleValid) {
+    if (configName) {
+      const result = await this.robotJobService.cancelUnstructuredBatch(
+        warehouseId,
+        configName,
+        'cancel_batch', // Specify the operation type
+        body,
+      );
+      if (result.status !== 'success') {
+        throw new BadRequestException(result.message);
+      }
+      return result;
+    }
+
+    throw new BadRequestException(
+      'Request body is not a valid cancellation structure and no `config_name` was provided for transformation.',
+    );
+  }
+
+  @Patch(':warehouse_id/tasks/:batch_id/:task_id/cancel')
+  async cancelTask(
+    @Param('warehouse_id') warehouseId: string,
+    @Param('batch_id') batchId: string,
+    @Param('task_id') taskId: string,
+    @Body() body: CancelReq,
+    @Query('config_name') configName?: string
+  ): Promise<TaskCancelRes> {
+    const singleTaskDto = plainToInstance(TaskCancelReq, body);
+    const validationErrors = await this.validator.validate(singleTaskDto);
+
+    if (validationErrors.length === 0) {
       const result = await this.robotJobService.cancelTask(
         warehouseId,
-        batchDto,
+        batchId,
+        taskId,
+        singleTaskDto,
       );
       if (result.status !== 'success') {
         throw new BadRequestException(result.message);
@@ -168,6 +195,8 @@ export class RobotJobController {
     if (configName) {
       const result = await this.robotJobService.cancelUnstructuredTask(
         warehouseId,
+        batchId,
+        taskId,
         configName,
         'cancel_task', // Specify the operation type
         body,
@@ -178,18 +207,8 @@ export class RobotJobController {
       return result;
     }
 
-    this.logger.error('Invalid cancellation request body.');
-    this.logger.debug(
-      'Single Task Validation Errors:',
-      JSON.stringify(singleErrors, null, 2),
-    );
-    this.logger.debug(
-      'Batch Task Validation Errors:',
-      JSON.stringify(batchErrors, null, 2),
-    );
-
     throw new BadRequestException(
-      'Request body is not a valid cancellation structure (or is ambiguous) and no `config_name` was provided for transformation.',
+      'Request body is not a valid cancellation structure and no `config_name` was provided for transformation.',
     );
   }
 
