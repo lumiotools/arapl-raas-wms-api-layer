@@ -10,7 +10,7 @@ async function bootstrap() {
     .setTitle('My API')
     .setDescription('API documentation for my application')
     .setVersion('1.0')
-    .addTag('robot-job')
+   
     .addApiKey(
     {
       type: 'apiKey',
