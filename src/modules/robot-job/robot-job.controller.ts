@@ -19,7 +19,7 @@ import {
 } from './dto/Task_Generation.dto';
 import { TaskUpdateReq, TaskUpdateRes } from './dto/Task_Update.dto';
 import { BatchCancelRes, CancelReq, TaskCancelRes } from './dto/Cancel.dto';
-import { GetLocationReq, GetLocationRes } from './dto/GetLocation.dto';
+import { GetLocationReq, GetLocationRes, LocationStatus, LocationType } from './dto/GetLocation.dto';
 
 import { NotFoundDto } from './dto/NotFound.dto';
 import { BadRequestDto } from './dto/BadRequest.dto';
@@ -727,9 +727,42 @@ async cancelTask(
   example: 'putaway_config_v1',
 })
 
-@ApiBody({
-  type: GetLocationReq,
-  description: 'Request body with optional filters for retrieving available locations',
+@ApiQuery({
+  name: 'location_status',
+  required: false,
+  type: String,
+  description: 'Filter locations by status (e.g. Empty, Occupied)',
+  example: 'Empty',
+})
+
+@ApiQuery({
+  name: 'location_zone',
+  required: false,
+  type: String,
+  description: 'Filter locations by zone ID',
+  example: 'ZONE_A1',
+})
+
+@ApiQuery({
+  name: 'location_type',
+  required: false,
+  type: String,
+  description: 'Filter locations by type (e.g. Rack, Floor, Bin)',
+  example: 'Rack',
+})
+@ApiQuery({
+  name: 'location_level',
+  required: false,
+  type: String,
+  description: 'Filter locations by level (e.g. 1, 2, 3)',
+  example: '1',
+})
+@ApiQuery({
+  name: 'location_limit',
+  required: false,
+  type: Number,
+  description: 'Limit the number of locations returned',
+  example: 10,
 })
 
 @ApiResponse({
@@ -758,7 +791,7 @@ async cancelTask(
 
 @ApiResponse({
   status: 404,
-  description: 'Warehouse not found or invalid reference in filters',
+  description: 'Warehouse or configuration file not found or invalid reference in filters',
   type: NotFoundDto,
 })
 
@@ -771,10 +804,21 @@ async cancelTask(
 @Get(':warehouse_id/locations')
 async getEmptyLocations(
   @Param('warehouse_id') warehouseId: string,
-  @Body() getLocationReq: GetLocationReq,
   @Query('config_name') configName: string,
+  @Query('location_status') locationStatus?: LocationStatus,
+  @Query('location_zone') locationZone?: string,
+  @Query('location_type') locationType?: LocationType,
+  @Query('location_level') locationLevel?: string,
+  @Query('location_limit') locationLimit?: number
 ): Promise<GetLocationRes> {
   if (configName) {
+    const getLocationReq: GetLocationReq = {
+      location_status: locationStatus as LocationStatus.All,
+      location_zone: locationZone || '',
+      location_type: locationType as LocationType.Pallet,
+      location_level: locationLevel || 'All',
+      location_limit: locationLimit || 0,
+    }
     return await this.robotJobService.getLocations(
       warehouseId,
       getLocationReq,
