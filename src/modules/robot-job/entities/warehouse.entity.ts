@@ -12,9 +12,6 @@ export class Warehouse {
     @Column({type: 'varchar'})
     api_key: string;
 
-    @Column({type: 'varchar'})
-    url : string;
-
     @Column({type: 'boolean'})
-    customer_managed: boolean;
+    locations_customer_managed: boolean;
 }

@@ -217,10 +217,9 @@ export class RobotJobController {
       return await this.robotJobService.getLocations(
         warehouseId,
         getLocationReq,
-        configName,
+        configName
       );
     } else {
-      // Handle the case when configName is provided, or throw an error if not supported
       throw new BadRequestException(
         '`config_name` parameter is not supported for this endpoint.'
       );
