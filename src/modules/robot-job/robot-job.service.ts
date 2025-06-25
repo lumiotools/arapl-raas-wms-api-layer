@@ -988,8 +988,8 @@ async createTask(
     getLocationReq: GetLocationReq,
     config_name: string | null = null,
   ): Promise<GetLocationRes> {
-    const filePath = `src/config_mapping/${config_name}/get_empty_location.json`;
-    try {
+    try{
+      const filePath = `src/config_mapping/${config_name}/get_empty_location.json`;
       const warehouse = await this.WarehouseRepository.findOne({
         where: { warehouse_id: warehouseId },
       });
@@ -999,6 +999,9 @@ async createTask(
         );
       }
       const fileContent = await fs.readFile(filePath, 'utf-8');
+      if (!fileContent) {
+        throw new NotFoundException(`Configuration file '${filePath}' not found.`);
+      }
       if (!fileContent) {
         throw new Error(`Configuration file '${filePath}' not found.`);
       }
@@ -1080,11 +1083,17 @@ async createTask(
         JSON.stringify(TransformedResponse, null, 2),
       );
       return TransformedResponse as GetLocationRes;
-    } catch (error) {
-      return {
-        zone_id: '',
-        available_location_types: [],
-      };
+    }
+    catch (error) {
+      if (error.response) {
+        throw new BadRequestException(
+          `API request failed with status ${error.response.status}: ${error.response.data}`,
+        );
+      } else if (error.code === 'ENOENT') {
+        throw new NotFoundException(`Configuration file not found`);
+      } else {
+        throw new BadRequestException(`Error processing request: ${error.message}`);
+      }
     }
   }
 }

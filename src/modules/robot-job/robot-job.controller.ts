@@ -19,7 +19,7 @@ import {
 } from './dto/Task_Generation.dto';
 import { TaskUpdateReq, TaskUpdateRes } from './dto/Task_Update.dto';
 import { BatchCancelRes, CancelReq, TaskCancelRes } from './dto/Cancel.dto';
-import { GetLocationReq, GetLocationRes } from './dto/GetLocation.dto';
+import { GetLocationReq, GetLocationRes, LocationStatus, LocationType } from './dto/GetLocation.dto';
 
 import { NotFoundDto } from './dto/NotFound.dto';
 import { BadRequestDto } from './dto/BadRequest.dto';
@@ -167,7 +167,7 @@ export class RobotJobController {
   // }
 
 
-@ApiOperation({ summary: 'Create a structured or unstructured task' })
+@ApiOperation({ summary: 'Create a batch task' })
 
 @ApiParam({
   name: 'warehouse_id',
@@ -179,7 +179,7 @@ export class RobotJobController {
 
 @ApiBody({
   type: TaskGenerationReq,
-  description: 'Structured task request body (used when config_name is not provided)',
+  description: 'Task request body',
 })
 
 @ApiResponse({
@@ -190,13 +190,13 @@ export class RobotJobController {
 
 @ApiResponse({
   status: 400,
-  description: 'Invalid structured task or missing request body for unstructured task',
+  description: 'Invalid task request body',
   type: BadRequestDto,
 })
 
 @ApiResponse({
   status: 401,
-  description: 'Unauthorized request due to missing/invalid credentials',
+  description: 'Unauthorized request due to missing/invalid API key',
   type: UnauthorizedDto,
 })
 
@@ -216,7 +216,7 @@ export class RobotJobController {
 async unifiedCreateTask(
   @Param('warehouse_id') warehouseId: string,
   @Body() body: any,
-  // @Query('config_name') configName?: string,
+  @Query('config_name') configName?: string,
 ): Promise<TaskGenerationRes> {
   const structuredDto = plainToInstance(TaskGenerationReq, body);
   const validationErrors = await this.validator.validate(structuredDto);
@@ -225,14 +225,14 @@ async unifiedCreateTask(
     return this.robotJobService.createTask(warehouseId, structuredDto);
   }
 
-  // if (configName) {
-  //   return this.robotJobService.createUnstructuredTask(
-  //     warehouseId,
-  //     configName,
-  //     'create_task',
-  //     body,
-  //   );
-  // }
+  if (configName) {
+    return this.robotJobService.createUnstructuredTask(
+      warehouseId,
+      configName,
+      'create_task',
+      body,
+    );
+  }
 
   throw new BadRequestException(
     'Request body is not a valid .',
@@ -277,7 +277,7 @@ async unifiedCreateTask(
   //   );
   // }
 
-@ApiOperation({ summary: 'Update a structured or unstructured task' })
+@ApiOperation({ summary: 'Update a batch task' })
 
 @ApiParam({
   name: 'warehouse_id',
@@ -286,17 +286,17 @@ async unifiedCreateTask(
   example: 'WH_001',
 })
 
-@ApiQuery({
-  name: 'config_name',
-  required: false,
-  type: String,
-  description: 'Optional config name used for unstructured task update',
-  example: 'robot_sorting_config',
-})
+// @ApiQuery({
+//   name: 'config_name',
+//   required: false,
+//   type: String,
+//   description: 'Optional config name used for unstructured task update',
+//   example: 'robot_sorting_config',
+// })
 
 @ApiBody({
   type: TaskUpdateReq,
-  description: 'Structured task update body (used when config_name is not provided)',
+  description: 'Task update body',
 })
 
 @ApiResponse({
@@ -307,21 +307,21 @@ async unifiedCreateTask(
 
 @ApiResponse({
   status: 400,
-  description: 'Invalid task update body or missing transformation config',
+  description: 'Invalid task update body',
   type: BadRequestDto,
 })
 
 @ApiResponse({
   status: 401,
-  description: 'Unauthorized request due to missing/invalid credentials',
+  description: 'Unauthorized request due to missing/invalid API key',
   type: UnauthorizedDto,
 })
 
-@ApiResponse({
-  status: 403,
-  description: 'User does not have permission to update tasks in this warehouse',
-  type: ForbiddenDto,
-})
+// @ApiResponse({
+//   status: 403,
+//   description: 'User does not have permission to update tasks in this warehouse',
+//   type: ForbiddenDto,
+// })
 
 @ApiResponse({
   status: 404,
@@ -331,7 +331,7 @@ async unifiedCreateTask(
 
 @ApiResponse({
   status: 409,
-  description: 'Conflict — task is in a non-updatable state',
+  description: 'Task cannot be updated',
   type: ConflictDto,
 })
 
@@ -418,7 +418,7 @@ async unifiedUpdateTask(
   //   );
   // }
 
-@ApiOperation({ summary: 'Cancel a batch of tasks (structured or unstructured)' })
+@ApiOperation({ summary: 'Cancel a batch task' })
 
 @ApiParam({
   name: 'warehouse_id',
@@ -443,7 +443,7 @@ async unifiedUpdateTask(
 
 @ApiBody({
   type: CancelReq,
-  description: 'Structured cancellation request body (used when config_name is not provided)',
+  description: 'Cancellation request body',
 })
 
 @ApiResponse({
@@ -454,20 +454,14 @@ async unifiedUpdateTask(
 
 @ApiResponse({
   status: 400,
-  description: 'Invalid cancel request body or transformation error',
+  description: 'Invalid cancel request body',
   type: BadRequestDto,
 })
 
 @ApiResponse({
   status: 401,
-  description: 'Unauthorized — invalid or missing token',
+  description: 'Unauthorized — invalid or missing API key',
   type: UnauthorizedDto,
-})
-
-@ApiResponse({
-  status: 403,
-  description: 'Forbidden — user not allowed to cancel this batch',
-  type: ForbiddenDto,
 })
 
 @ApiResponse({
@@ -478,13 +472,13 @@ async unifiedUpdateTask(
 
 @ApiResponse({
   status: 409,
-  description: 'Batch is not in a cancellable state',
+  description: 'Unable to cancel the batch',
   type: ConflictDto,
 })
 
 @ApiResponse({
   status: 500,
-  description: 'Unexpected internal server error during cancellation',
+  description: 'Unexpected internal server error during batch cancellation',
   type: InternalServerErrorDto,
 })
 
@@ -493,21 +487,21 @@ async cancelBatch(
   @Param('warehouse_id') warehouseId: string,
   @Param('batch_id') batchId: string,
   @Body() body: CancelReq,
-  // @Query('config_name') configName?: string,
+  @Query('config_name') configName?: string,
 ): Promise<BatchCancelRes> {
-  // if (configName) {
-  //   const result = await this.robotJobService.cancelUnstructuredBatch(
-  //     warehouseId,
-  //     batchId,
-  //     configName,
-  //     'cancel_task',
-  //     body,
-  //   );
-  //   if (result.status !== 'success') {
-  //     throw new BadRequestException(result.message);
-  //   }
-  //   return result;
-  // }
+  if (configName) {
+    const result = await this.robotJobService.cancelUnstructuredBatch(
+      warehouseId,
+      batchId,
+      configName,
+      'cancel_task',
+      body,
+    );
+    if (result.status !== 'success') {
+      throw new BadRequestException(result.message);
+    }
+    return result;
+  }
 
   const batchDto = plainToInstance(CancelReq, body);
   const validationErrors = await this.validator.validate(batchDto);
@@ -574,7 +568,7 @@ async cancelBatch(
   //   );
   // }
 
-@ApiOperation({ summary: 'Cancel a specific task (structured or unstructured)' })
+@ApiOperation({ summary: 'Cancel a task' })
 
 @ApiParam({
   name: 'warehouse_id',
@@ -605,7 +599,7 @@ async cancelBatch(
 
 @ApiBody({
   type: CancelReq,
-  description: 'Structured task cancellation request body (used if config_name is not provided)',
+  description: 'Task cancellation request body',
 })
 
 @ApiResponse({
@@ -615,19 +609,19 @@ async cancelBatch(
 })
 @ApiResponse({
   status: 400,
-  description: 'Invalid request body or missing transformation config',
+  description: 'Invalid request body',
   type: BadRequestDto,
 })
 @ApiResponse({
   status: 401,
-  description: 'Unauthorized request due to invalid or missing credentials',
+  description: 'Unauthorized request due to invalid or missing API key',
   type: UnauthorizedDto,
 })
-@ApiResponse({
-  status: 403,
-  description: 'Forbidden — user lacks permission to cancel this task',
-  type: ForbiddenDto,
-})
+// @ApiResponse({
+//   status: 403,
+//   description: 'Forbidden — user lacks permission to cancel this task',
+//   type: ForbiddenDto,
+// })
 @ApiResponse({
   status: 404,
   description: 'Batch or task not found in the given warehouse',
@@ -635,7 +629,7 @@ async cancelBatch(
 })
 @ApiResponse({
   status: 409,
-  description: 'Conflict — task is not in a cancellable state',
+  description: 'Unable to cancel a task',
   type: ConflictDto,
 })
 @ApiResponse({
@@ -649,22 +643,22 @@ async cancelTask(
   @Param('batch_id') batchId: string,
   @Param('task_id') taskId: string,
   @Body() body: CancelReq,
-  // @Query('config_name') configName?: string,
+  @Query('config_name') configName?: string,
 ): Promise<TaskCancelRes> {
-  // if (configName) {
-  //   const result = await this.robotJobService.cancelUnstructuredTask(
-  //     warehouseId,
-  //     batchId,
-  //     taskId,
-  //     configName,
-  //     'cancel_task',
-  //     body,
-  //   );
-  //   if (result.status !== 'success') {
-  //     throw new BadRequestException(result.message);
-  //   }
-  //   return result;
-  // }
+  if (configName) {
+    const result = await this.robotJobService.cancelUnstructuredTask(
+      warehouseId,
+      batchId,
+      taskId,
+      configName,
+      'cancel_task',
+      body,
+    );
+    if (result.status !== 'success') {
+      throw new BadRequestException(result.message);
+    }
+    return result;
+  }
 
   const singleTaskDto = plainToInstance(CancelReq, body);
   const validationErrors = await this.validator.validate(singleTaskDto);
@@ -727,9 +721,42 @@ async cancelTask(
   example: 'putaway_config_v1',
 })
 
-@ApiBody({
-  type: GetLocationReq,
-  description: 'Request body with optional filters for retrieving available locations',
+@ApiQuery({
+  name: 'location_status',
+  required: false,
+  type: String,
+  description: 'Filter locations by status (e.g. Empty, Occupied)',
+  example: 'Empty',
+})
+
+@ApiQuery({
+  name: 'location_zone',
+  required: false,
+  type: String,
+  description: 'Filter locations by zone ID',
+  example: 'ZONE_A1',
+})
+
+@ApiQuery({
+  name: 'location_type',
+  required: false,
+  type: String,
+  description: 'Filter locations by type (e.g. Zone, Aisle, Bay, Palette)',
+  example: 'Zone',
+})
+@ApiQuery({
+  name: 'location_level',
+  required: false,
+  type: String,
+  description: 'Filter locations by level (e.g. Ground, First, Second, Third)',
+  example: 'All',
+})
+@ApiQuery({
+  name: 'location_limit',
+  required: false,
+  type: Number,
+  description: 'Limit the number of locations returned',
+  example: 10,
 })
 
 @ApiResponse({
@@ -740,21 +767,21 @@ async cancelTask(
 
 @ApiResponse({
   status: 400,
-  description: 'Bad request — config_name missing or invalid body structure',
+  description: 'Bad request - invalid body structure',
   type: BadRequestDto,
 })
 
 @ApiResponse({
   status: 401,
-  description: 'Unauthorized — invalid or missing token',
+  description: 'Unauthorized - invalid or missing API key',
   type: UnauthorizedDto,
 })
 
-@ApiResponse({
-  status: 403,
-  description: 'Forbidden — user does not have access to this warehouse',
-  type: ForbiddenDto,
-})
+// @ApiResponse({
+//   status: 403,
+//   description: 'Forbidden - user does not have access to this warehouse',
+//   type: ForbiddenDto,
+// })
 
 @ApiResponse({
   status: 404,
@@ -771,10 +798,21 @@ async cancelTask(
 @Get(':warehouse_id/locations')
 async getEmptyLocations(
   @Param('warehouse_id') warehouseId: string,
-  @Body() getLocationReq: GetLocationReq,
   @Query('config_name') configName: string,
+  @Query('location_status') locationStatus?: LocationStatus,
+  @Query('location_zone') locationZone?: string,
+  @Query('location_type') locationType?: LocationType,
+  @Query('location_level') locationLevel?: string,
+  @Query('location_limit') locationLimit?: number
 ): Promise<GetLocationRes> {
   if (configName) {
+    const getLocationReq: GetLocationReq = {
+      location_status: locationStatus as LocationStatus.All,
+      location_zone: locationZone || '',
+      location_type: locationType as LocationType.Pallet,
+      location_level: locationLevel || 'All',
+      location_limit: locationLimit || 0,
+    }
     return await this.robotJobService.getLocations(
       warehouseId,
       getLocationReq,
