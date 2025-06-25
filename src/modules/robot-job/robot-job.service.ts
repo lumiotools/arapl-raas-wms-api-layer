@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException,Injectable ,HttpException } from '@nestjs/common';
 import { NotFoundException } from '@nestjs/common';
 import {
   batch_type,
@@ -113,120 +113,230 @@ export class RobotJobService {
     }
   }
 
-  async createTask(
-    warehouseId: string,
-    createRobotJobDto: TaskGenerationReq,
-  ): Promise<TaskGenerationRes> {
-    const Tasks: any[] = createRobotJobDto.tasks;
+  // async createTask(
+  //   warehouseId: string,
+  //   createRobotJobDto: TaskGenerationReq,
+  // ): Promise<TaskGenerationRes> {
+  //   const Tasks: any[] = createRobotJobDto.tasks;
 
-    try {
-      // for (const task of Tasks) {
-      //   await this.checkLocation(task.start_location,true);
-      //   await this.checkLocation(task.end_location,true);
+  //   try {
+  //     // for (const task of Tasks) {
+  //     //   await this.checkLocation(task.start_location,true);
+  //     //   await this.checkLocation(task.end_location,true);
         
-      //   await this.updateLocation(task.start_location, false);
-      //   await this.updateLocation(task.end_location, false);
-      // }
+  //     //   await this.updateLocation(task.start_location, false);
+  //     //   await this.updateLocation(task.end_location, false);
+  //     // }
 
-      // check if batch_job_id exists
-      if (!createRobotJobDto.batch_job_id) {
-        const now = new Date();
-        const pad = (n: number) => n.toString().padStart(2, '0');
-        const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}${now.getMilliseconds()}`;
-        createRobotJobDto.batch_job_id = `Batch-${timestamp}`;
+  //     // check if batch_job_id exists
+  //     if (!createRobotJobDto.batch_job_id) {
+  //       const now = new Date();
+  //       const pad = (n: number) => n.toString().padStart(2, '0');
+  //       const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}${now.getMilliseconds()}`;
+  //       createRobotJobDto.batch_job_id = `Batch-${timestamp}`;
+  //     }
+
+  //     if (createRobotJobDto.tasks.length === 0) {
+  //       throw new Error(
+  //         `No tasks provided for batch job in warehouse ${warehouseId}. At least one task is required.`,
+  //       );
+  //     }
+
+  //     const batch_job_id = createRobotJobDto.batch_job_id;
+  //     const uniqueness = await this.BatchJobRepository.findOne({
+  //       where: { batch_job_id: batch_job_id, warehouse_id: warehouseId },
+  //     });
+  //     if (uniqueness) {
+  //       throw new Error(
+  //         `Batch job with id ${batch_job_id} already exists in warehouse ${warehouseId}. Combination of Batch Job ID and Warehouse ID must be unique.`,
+  //       );
+  //     }
+  //     if (createRobotJobDto.batch_type == batch_type.Continuous && !createRobotJobDto.batch_frequency) {
+  //       throw new Error(
+  //         `Batch frequency is required for continuous batch type in warehouse ${warehouseId}.`,
+  //       );
+  //     }
+  //     const newBatchJob: BatchJob = this.BatchJobRepository.create({
+  //       batch_job_id: createRobotJobDto.batch_job_id,
+  //       warehouse_id: warehouseId,
+  //       batch_priority: createRobotJobDto.batch_priority,
+  //       batch_type: createRobotJobDto.batch_type,
+  //       batch_frequency: createRobotJobDto.batch_frequency,
+  //       status: 'pending',
+  //     });
+
+  //     await this.BatchJobRepository.save(newBatchJob);
+  //     for (const task of Tasks) {
+  //       try{
+  //         if (task.wait && task.wait.wait_type == WaitType.Conditional){
+  //           const wait = task.wait;
+  //           if (!wait.wait_condition){
+  //             throw new Error(`Wait condition is required for conditional wait type in task ${task.task_id}.`);
+  //           }
+  //           if (wait.wait_condition == WaitCondition.Time && (wait.start_location_wait_time==0 && wait.end_location_wait_time==0)) {
+  //             throw new Error(`Start and end location wait times are required for time-based wait condition in task ${task.task_id}.`);
+  //           }
+  //           if (wait.wait_condition == WaitCondition.LocationAvailable && (!wait.start_location_available_wait && !wait.end_location_available_wait)) {
+  //             throw new Error(`Start and end location available wait times are required for location available wait condition in task ${task.task_id}.`);
+  //           }
+  //         }
+  //         const newTask = this.TaskRepository.create({
+  //           task_id: task.task_id,
+  //           task_type: task.task_type,
+  //           task_dependency: task.task_dependency,
+  //           start_location: task.start_location,
+  //           end_location: task.end_location,
+  //           wait_time: task.wait_time,
+  //           cargos: task.cargos,
+  //           batch_job: newBatchJob,
+  //           status: 'pending',
+  //         });
+  //         this.TaskRepository.save(newTask);
+  //       } catch (error) {
+  //         console.error('Error creating task:', error);
+  //       } finally {
+  //         continue;
+  //       }
+  //     }
+  //     return {
+  //       batch_id: createRobotJobDto.batch_job_id,
+  //       status: 'success',
+  //     };
+  //   } catch (error) {
+  //     // if (Tasks && Array.isArray(Tasks)) {
+  //     //   for (const task of Tasks) {
+  //     //     if (task.start_location && task.start_location.location_id) {
+  //     //       await this.LocationRepository.update(
+  //     //         { location_id: task.start_location.location_id },
+  //     //         { isEmpty: true },
+  //     //       );
+  //     //     }
+  //     //     if (task.end_location && task.end_location.location_id) {
+  //     //       await this.LocationRepository.update(
+  //     //         { location_id: task.end_location.location_id },
+  //     //         { isEmpty: true },
+  //     //       );
+  //     //     }
+  //     //   }
+  //     // }
+  //     console.error('Error creating task:', error);
+  //     return {
+  //       batch_id: createRobotJobDto.batch_job_id || '',
+  //       status: `error: ${error.message}`,
+  //     };
+  //   }
+  // }
+
+
+async createTask(
+  warehouseId: string,
+  createRobotJobDto: TaskGenerationReq,
+): Promise<TaskGenerationRes> {
+  const Tasks: any[] = createRobotJobDto.tasks;
+
+  if (!createRobotJobDto.batch_job_id) {
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}${now.getMilliseconds()}`;
+    createRobotJobDto.batch_job_id = `Batch-${timestamp}`;
+  }
+
+  if (Tasks.length === 0) {
+    throw new BadRequestException(
+      `No tasks provided. At least one task is required.`,
+    );
+  }
+
+  const batch_job_id = createRobotJobDto.batch_job_id;
+  const uniqueness = await this.BatchJobRepository.findOne({
+    where: { batch_job_id: batch_job_id, warehouse_id: warehouseId },
+  });
+
+  if (uniqueness) {
+    throw new ConflictException(
+      `Batch job with id ${batch_job_id} already exists in warehouse ${warehouseId}.`,
+    );
+  }
+
+  if (
+    createRobotJobDto.batch_type === batch_type.Continuous &&
+    !createRobotJobDto.batch_frequency
+  ) {
+    throw new BadRequestException(
+      `Batch frequency is required for continuous batch type.`,
+    );
+  }
+
+  const newBatchJob = this.BatchJobRepository.create({
+    batch_job_id,
+    warehouse_id: warehouseId,
+    batch_priority: createRobotJobDto.batch_priority,
+    batch_type: createRobotJobDto.batch_type,
+    batch_frequency: createRobotJobDto.batch_frequency,
+    status: 'pending',
+  });
+
+  await this.BatchJobRepository.save(newBatchJob);
+
+  for (const task of Tasks) {
+    try {
+      if (task.wait && task.wait.wait_type === WaitType.Conditional) {
+        const wait = task.wait;
+        if (!wait.wait_condition) {
+          throw new BadRequestException(
+            `Wait condition is required for conditional wait in task ${task.task_id}.`,
+          );
+        }
+
+        if (
+          wait.wait_condition === WaitCondition.Time &&
+          wait.start_location_wait_time === 0 &&
+          wait.end_location_wait_time === 0
+        ) {
+          throw new BadRequestException(
+            `Wait times are required for time-based wait condition in task ${task.task_id}.`,
+          );
+        }
+
+        if (
+          wait.wait_condition === WaitCondition.LocationAvailable &&
+          !wait.start_location_available_wait &&
+          !wait.end_location_available_wait
+        ) {
+          throw new BadRequestException(
+            `Location availability flags are required for location-based wait in task ${task.task_id}.`,
+          );
+        }
       }
 
-      if (createRobotJobDto.tasks.length === 0) {
-        throw new Error(
-          `No tasks provided for batch job in warehouse ${warehouseId}. At least one task is required.`,
-        );
-      }
-
-      const batch_job_id = createRobotJobDto.batch_job_id;
-      const uniqueness = await this.BatchJobRepository.findOne({
-        where: { batch_job_id: batch_job_id, warehouse_id: warehouseId },
-      });
-      if (uniqueness) {
-        throw new Error(
-          `Batch job with id ${batch_job_id} already exists in warehouse ${warehouseId}. Combination of Batch Job ID and Warehouse ID must be unique.`,
-        );
-      }
-      if (createRobotJobDto.batch_type == batch_type.Continuous && !createRobotJobDto.batch_frequency) {
-        throw new Error(
-          `Batch frequency is required for continuous batch type in warehouse ${warehouseId}.`,
-        );
-      }
-      const newBatchJob: BatchJob = this.BatchJobRepository.create({
-        batch_job_id: createRobotJobDto.batch_job_id,
-        warehouse_id: warehouseId,
-        batch_priority: createRobotJobDto.batch_priority,
-        batch_type: createRobotJobDto.batch_type,
-        batch_frequency: createRobotJobDto.batch_frequency,
+      const newTask = this.TaskRepository.create({
+        task_id: task.task_id,
+        task_type: task.task_type,
+        task_dependency: task.task_dependency,
+        start_location: task.start_location,
+        end_location: task.end_location,
+        wait_time: task.wait_time,
+        cargos: task.cargos,
+        batch_job: newBatchJob,
         status: 'pending',
       });
 
-      await this.BatchJobRepository.save(newBatchJob);
-      for (const task of Tasks) {
-        try{
-          if (task.wait && task.wait.wait_type == WaitType.Conditional){
-            const wait = task.wait;
-            if (!wait.wait_condition){
-              throw new Error(`Wait condition is required for conditional wait type in task ${task.task_id}.`);
-            }
-            if (wait.wait_condition == WaitCondition.Time && (wait.start_location_wait_time==0 && wait.end_location_wait_time==0)) {
-              throw new Error(`Start and end location wait times are required for time-based wait condition in task ${task.task_id}.`);
-            }
-            if (wait.wait_condition == WaitCondition.LocationAvailable && (!wait.start_location_available_wait && !wait.end_location_available_wait)) {
-              throw new Error(`Start and end location available wait times are required for location available wait condition in task ${task.task_id}.`);
-            }
-          }
-          const newTask = this.TaskRepository.create({
-            task_id: task.task_id,
-            task_type: task.task_type,
-            task_dependency: task.task_dependency,
-            start_location: task.start_location,
-            end_location: task.end_location,
-            wait_time: task.wait_time,
-            cargos: task.cargos,
-            batch_job: newBatchJob,
-            status: 'pending',
-          });
-          this.TaskRepository.save(newTask);
-        } catch (error) {
-          console.error('Error creating task:', error);
-        } finally {
-          continue;
-        }
-      }
-      return {
-        batch_id: createRobotJobDto.batch_job_id,
-        status: 'success',
-      };
-    } catch (error) {
-      // if (Tasks && Array.isArray(Tasks)) {
-      //   for (const task of Tasks) {
-      //     if (task.start_location && task.start_location.location_id) {
-      //       await this.LocationRepository.update(
-      //         { location_id: task.start_location.location_id },
-      //         { isEmpty: true },
-      //       );
-      //     }
-      //     if (task.end_location && task.end_location.location_id) {
-      //       await this.LocationRepository.update(
-      //         { location_id: task.end_location.location_id },
-      //         { isEmpty: true },
-      //       );
-      //     }
-      //   }
-      // }
-      console.error('Error creating task:', error);
-      return {
-        batch_id: createRobotJobDto.batch_job_id || '',
-        status: `error: ${error.message}`,
-      };
+      await this.TaskRepository.save(newTask);
+    } catch (err) {
+      console.error(`Task ${task.task_id} creation failed:`, err);
+      // Optional: collect errors into array and return it at the end
     }
   }
 
+  return {
+      batch_id: createRobotJobDto.batch_job_id,
+
+    status: 'success',
+  };
+}
+
+
+  
   unstructureHelper(
     input: any,
     expression: string,
@@ -337,48 +447,45 @@ export class RobotJobService {
     return null;
   }
 
-  async createUnstructuredTask(
-    warehouseId: string,
-    configFolderName: string,
-    operationType: string,
-    input: any,
-  ): Promise<TaskGenerationRes> {
-    const filePath = `src/config_mapping/${configFolderName}/${operationType}.json`;
-    try {
-      const fileContent = await fs.readFile(filePath, 'utf-8');
-      const jsonData = JSON.parse(fileContent);
+ async createUnstructuredTask(
+  warehouseId: string,
+  configFolderName: string,
+  operationType: string,
+  input: any,
+): Promise<TaskGenerationRes> {
+  const filePath = `src/config_mapping/${configFolderName}/${operationType}.json`;
 
-      const taskRequest = await this._genericTaskTransformer(jsonData, input);
+  try {
+    const fileContent = await fs.readFile(filePath, 'utf-8');
+    const jsonData = JSON.parse(fileContent);
 
-      const structuredDto = plainToInstance(TaskGenerationReq, taskRequest);
-      const validationErrors = await this.validator.validate(structuredDto);
-  
-      if (validationErrors.length === 0) {
-        const result = await this.createTask(warehouseId, structuredDto);
-        if (result.status !== 'success') {
-          throw new BadRequestException(result.status);
-        }
-        return result;
-      }
-      else{
-        throw new BadRequestException(
-          'Transformer failed to produce a valid task structure.',
-        );
-      }
-      
-    } catch (error) {
-      if (error.code === 'ENOENT') {
-        return {
-          status: `error: ${error.message}`,
-          batch_id: '',
-        };
-      }
-      return {
-        status: `error: ${error.message}`,
-        batch_id: '',
-      };
+    const taskRequest = await this._genericTaskTransformer(jsonData, input);
+
+    const structuredDto = plainToInstance(TaskGenerationReq, taskRequest);
+    const validationErrors = await this.validator.validate(structuredDto);
+
+    if (validationErrors.length > 0) {
+      throw new BadRequestException(
+        'Transformer failed to produce a valid task structure.',
+      );
     }
+
+    const result = await this.createTask(warehouseId, structuredDto);
+    return result;
+
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      throw new NotFoundException(`Config file not found: ${filePath}`);
+    }
+
+    // Wrap any other exception into BadRequest (or rethrow if it's already an HttpException)
+    if (error instanceof Error && !(error instanceof HttpException)) {
+      throw new BadRequestException(error.message);
+    }
+
+    throw error;
   }
+}
 
   async updateTask(
     warehouse_id: string,
@@ -445,9 +552,13 @@ export class RobotJobService {
         }
         await this.TaskRepository.save(taskRepo);
       }
+      // catch (error) {
+      //   console.error('Error updating task:', error);
+      // }
       catch (error) {
-        console.error('Error updating task:', error);
-      }
+  console.error(`Error updating task ${task.task_id}:`, error);
+  throw new BadRequestException(`Task ${task.task_id} update failed: ${error.message}`);
+}
       finally{
         continue;
       }
@@ -500,192 +611,374 @@ export class RobotJobService {
         );
       }
     } catch (error) {
+      // if (error.code === 'ENOENT') {
+      //   return {
+      //     batch_id: '',
+      //     updated_at: new Date().toISOString(),
+      //     message: `error: Configuration file '${operationType}.json' not found.`,
+      //     status: `error`,
+      //   };
+      // }
       if (error.code === 'ENOENT') {
-        return {
-          batch_id: '',
-          updated_at: new Date().toISOString(),
-          message: `error: Configuration file '${operationType}.json' not found.`,
-          status: `error`,
-        };
-      }
-      return {
-        batch_id: '',
-        updated_at: new Date().toISOString(),
-        message: `error: Failed to process unstructured task update: ${error.message}`,
-        status: `error`,
-      };
+  throw new NotFoundException({
+    status: 'error',
+    message: `Configuration file '${operationType}.json' not found.`,
+    updated_at: new Date().toISOString(),
+    batch_id: '',
+  });
+}
+      throw new HttpException({
+  status: 'error',
+  message: `Failed to process unstructured task update: ${error.message}`,
+  updated_at: new Date().toISOString(),
+  batch_id: '',
+}, 400);
 
     }
   }
 
-  async cancelBatch(warehouse_id: string, batch_id: string, cancel_req: CancelReq){
-    const batchJob = await this.BatchJobRepository.findOne({
-      where: {
-        batch_job_id: batch_id,
-        warehouse_id: warehouse_id,
-      },
-    });
+  // async cancelBatch(warehouse_id: string, batch_id: string, cancel_req: CancelReq){
+  //   const batchJob = await this.BatchJobRepository.findOne({
+  //     where: {
+  //       batch_job_id: batch_id,
+  //       warehouse_id: warehouse_id,
+  //     },
+  //   });
 
-    if (!batchJob) {
-      return {
-        task_id: batch_id,
-        status: 'success',
-        cancelled_at: new Date().toISOString(),
-        message: `Batch job with ID ${batch_id} not found in warehouse ${warehouse_id}.`,
-      };
-    }
+  //   if (!batchJob) {
+  //     return {
+  //       task_id: batch_id,
+  //       status: 'success',
+  //       cancelled_at: new Date().toISOString(),
+  //       message: `Batch job with ID ${batch_id} not found in warehouse ${warehouse_id}.`,
+  //     };
+  //   }
 
-    if (batchJob.status !== 'pending') {
-      return {
-        task_id: batch_id,
-        status: 'success',
-        cancelled_at: new Date().toISOString(),
-        message: `Batch job with ID ${batch_id} is not in pending state and cannot be cancelled.`,
-      };
-    }
+  //   if (batchJob.status !== 'pending') {
+  //     return {
+  //       task_id: batch_id,
+  //       status: 'success',
+  //       cancelled_at: new Date().toISOString(),
+  //       message: `Batch job with ID ${batch_id} is not in pending state and cannot be cancelled.`,
+  //     };
+  //   }
 
-    await this.BatchJobRepository.remove(batchJob);
+  //   await this.BatchJobRepository.remove(batchJob);
 
-    return {
-      task_id: batchJob.batch_job_id,
-      status: 'success',
+  //   return {
+  //     task_id: batchJob.batch_job_id,
+  //     status: 'success',
+  //     cancelled_at: new Date().toISOString(),
+  //     message: `Batch job with ID ${batchJob.batch_job_id} and its tasks have been cancelled.`,
+  //   };
+  // }
+  async cancelBatch(
+  warehouse_id: string,
+  batch_id: string,
+  cancel_req: CancelReq,
+): Promise<BatchCancelRes> {
+  const batchJob = await this.BatchJobRepository.findOne({
+    where: {
+      batch_job_id: batch_id,
+      warehouse_id: warehouse_id,
+    },
+  });
+
+  if (!batchJob) {
+    throw new NotFoundException({
+      task_id: batch_id,
+      status: 'error',
       cancelled_at: new Date().toISOString(),
-      message: `Batch job with ID ${batchJob.batch_job_id} and its tasks have been cancelled.`,
-    };
+      message: `Batch job '${batch_id}' not found in warehouse '${warehouse_id}'.`,
+    });
   }
 
+  if (batchJob.status !== 'pending') {
+    throw new ConflictException({
+      task_id: batch_id,
+      status: 'error',
+      cancelled_at: new Date().toISOString(),
+      message: `Batch job '${batch_id}' is not in 'pending' state and cannot be cancelled.`,
+    });
+  }
+
+  await this.BatchJobRepository.remove(batchJob);
+
+  return {
+    task_id: batchJob.batch_job_id,
+    status: 'success',
+    cancelled_at: new Date().toISOString(),
+    message: `Batch job '${batchJob.batch_job_id}' and its tasks have been cancelled.`,
+  };
+}
+
+
+  // async cancelTask(
+  //   warehouse_id: string,
+  //   batch_id: string,
+  //   task_id: string,
+  //   cancel_req: CancelReq,
+  // ): Promise<TaskCancelRes> {
+  //   const taskRepo: Task | null = await this.TaskRepository.findOne({
+  //     where: {
+  //       task_id: task_id,
+  //       batch_job: { warehouse_id: warehouse_id },
+  //     },
+  //   });
+
+  //   if (!taskRepo) {
+  //     return {
+  //       task_id: task_id,
+  //       status: 'success',
+  //       cancelled_at: new Date().toISOString(),
+  //       message: `Task with ID ${task_id} not found in warehouse ${warehouse_id}.`,
+  //     };
+  //   }
+
+  //   if (taskRepo.status !== 'pending') {
+  //     return {
+  //       task_id: task_id,
+  //       status: 'success',
+  //       cancelled_at: new Date().toISOString(),
+  //       message: `Task with ID ${task_id} is not in pending state and cannot be cancelled.`,
+  //     };
+  //   }
+  //   await this.TaskRepository.remove(taskRepo);
+
+  //   return {
+  //     task_id: taskRepo.task_id,
+  //     status: 'success',
+  //     cancelled_at: new Date().toISOString(),
+  //     message: `Task with ID ${taskRepo.task_id} has been cancelled.`,
+  //   };
+  // }
   async cancelTask(
-    warehouse_id: string,
-    batch_id: string,
-    task_id: string,
-    cancel_req: CancelReq,
-  ): Promise<TaskCancelRes> {
-    const taskRepo: Task | null = await this.TaskRepository.findOne({
-      where: {
-        task_id: task_id,
-        batch_job: { warehouse_id: warehouse_id },
-      },
-    });
+  warehouse_id: string,
+  batch_id: string,
+  task_id: string,
+  cancel_req: CancelReq,
+): Promise<TaskCancelRes> {
+  const taskRepo: Task | null = await this.TaskRepository.findOne({
+    where: {
+      task_id: task_id,
+      batch_job: { warehouse_id: warehouse_id },
+    },
+    relations: ['batch_job'],
+  });
 
-    if (!taskRepo) {
-      return {
-        task_id: task_id,
-        status: 'success',
-        cancelled_at: new Date().toISOString(),
-        message: `Task with ID ${task_id} not found in warehouse ${warehouse_id}.`,
-      };
-    }
-
-    if (taskRepo.status !== 'pending') {
-      return {
-        task_id: task_id,
-        status: 'success',
-        cancelled_at: new Date().toISOString(),
-        message: `Task with ID ${task_id} is not in pending state and cannot be cancelled.`,
-      };
-    }
-    await this.TaskRepository.remove(taskRepo);
-
-    return {
-      task_id: taskRepo.task_id,
-      status: 'success',
+  if (!taskRepo) {
+    throw new NotFoundException({
+      task_id,
+      status: 'error',
       cancelled_at: new Date().toISOString(),
-      message: `Task with ID ${taskRepo.task_id} has been cancelled.`,
-    };
+      message: `Task with ID '${task_id}' not found in warehouse '${warehouse_id}'.`,
+    });
   }
+
+  if (taskRepo.status !== 'pending') {
+    throw new ConflictException({
+      task_id,
+      status: 'error',
+      cancelled_at: new Date().toISOString(),
+      message: `Task '${task_id}' is not in 'pending' state and cannot be cancelled.`,
+    });
+  }
+
+  await this.TaskRepository.remove(taskRepo);
+
+  return {
+    task_id: taskRepo.task_id,
+    status: 'success',
+    cancelled_at: new Date().toISOString(),
+    message: `Task '${taskRepo.task_id}' has been cancelled.`,
+  };
+}
+
+
+  // async cancelUnstructuredBatch(
+  //   warehouseId: string,
+  //   batchId: string,
+  //   configFolderName: string,
+  //   operationType: string,
+  //   input: any,
+  // ): Promise<BatchCancelRes> {
+  //   const filePath = `src/config_mapping/${configFolderName}/${operationType}.json`;
+  //   try {
+  //     const fileContent = await fs.readFile(filePath, 'utf-8');
+  //     const jsonData = JSON.parse(fileContent);
+
+  //     const cancelRequest = await this._genericTaskTransformer(jsonData, input);
+
+  //     const structuredDto = plainToInstance(CancelReq, cancelRequest);
+  //     const validationErrors = await this.validator.validate(structuredDto);
+  //     if (validationErrors.length > 0) {
+  //       throw new BadRequestException(
+  //         'Transformer failed to produce a valid cancel request structure.',
+  //       );
+  //     }
+
+  //     return await this.cancelBatch(
+  //       warehouseId,
+  //       batchId,
+  //       structuredDto,
+  //     );
+  //   } catch (error) {
+  //     if (error.code === 'ENOENT') {
+  //       return {
+  //         task_id: '',
+  //         status: 'error',
+  //         cancelled_at: new Date().toISOString(),
+  //         message: `Configuration file '${operationType}.json' not found.`,
+  //       };
+  //     }
+  //     return {
+  //       task_id: '',
+  //       status: 'error',
+  //       cancelled_at: new Date().toISOString(),
+  //       message: `Failed to process unstructured batch cancellation: ${error.message}`,
+  //     };
+  //   }
+  // }
 
   async cancelUnstructuredBatch(
-    warehouseId: string,
-    batchId: string,
-    configFolderName: string,
-    operationType: string,
-    input: any,
-  ): Promise<BatchCancelRes> {
-    const filePath = `src/config_mapping/${configFolderName}/${operationType}.json`;
-    try {
-      const fileContent = await fs.readFile(filePath, 'utf-8');
-      const jsonData = JSON.parse(fileContent);
+  warehouseId: string,
+  batchId: string,
+  configFolderName: string,
+  operationType: string,
+  input: any,
+): Promise<BatchCancelRes> {
+  const filePath = `src/config_mapping/${configFolderName}/${operationType}.json`;
 
-      const cancelRequest = await this._genericTaskTransformer(jsonData, input);
+  try {
+    const fileContent = await fs.readFile(filePath, 'utf-8');
+    const jsonData = JSON.parse(fileContent);
 
-      const structuredDto = plainToInstance(CancelReq, cancelRequest);
-      const validationErrors = await this.validator.validate(structuredDto);
-      if (validationErrors.length > 0) {
-        throw new BadRequestException(
-          'Transformer failed to produce a valid cancel request structure.',
-        );
-      }
+    const cancelRequest = await this._genericTaskTransformer(jsonData, input);
 
-      return await this.cancelBatch(
-        warehouseId,
-        batchId,
-        structuredDto,
-      );
-    } catch (error) {
-      if (error.code === 'ENOENT') {
-        return {
-          task_id: '',
-          status: 'error',
-          cancelled_at: new Date().toISOString(),
-          message: `Configuration file '${operationType}.json' not found.`,
-        };
-      }
-      return {
+    const structuredDto = plainToInstance(CancelReq, cancelRequest);
+    const validationErrors = await this.validator.validate(structuredDto);
+    if (validationErrors.length > 0) {
+      throw new BadRequestException({
+        task_id: batchId,
+        status: 'error',
+        cancelled_at: new Date().toISOString(),
+        message: 'Transformer failed to produce a valid cancel request structure.',
+      });
+    }
+
+    return await this.cancelBatch(warehouseId, batchId, structuredDto);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      throw new NotFoundException({
         task_id: '',
         status: 'error',
         cancelled_at: new Date().toISOString(),
-        message: `Failed to process unstructured batch cancellation: ${error.message}`,
-      };
+        message: `Configuration file '${operationType}.json' not found.`,
+      });
     }
-  }
 
+    throw new BadRequestException({
+      task_id: '',
+      status: 'error',
+      cancelled_at: new Date().toISOString(),
+      message: `Failed to process unstructured batch cancellation: ${error.message}`,
+    });
+  }
+}
+
+
+  // async cancelUnstructuredTask(
+  //   warehouseId: string,
+  //   batchId: string,
+  //   taskId: string,
+  //   configFolderName: string,
+  //   operationType: string,
+  //   input: any,
+  // ): Promise<TaskCancelRes> {
+  //   const filePath = `src/config_mapping/${configFolderName}/${operationType}.json`;
+  //   try {
+  //     const fileContent = await fs.readFile(filePath, 'utf-8');
+  //     const jsonData = JSON.parse(fileContent);
+
+  //     const cancelRequest = await this._genericTaskTransformer(jsonData, input);
+
+  //     const structuredDto = plainToInstance(CancelReq, cancelRequest);
+  //     const validationErrors = await this.validator.validate(structuredDto);
+  //     if (validationErrors.length > 0) {
+  //       throw new BadRequestException(
+  //         'Transformer failed to produce a valid cancel request structure.',
+  //       );
+  //     }
+
+  //     return await this.cancelTask(
+  //       warehouseId,
+  //       batchId,
+  //       taskId,
+  //       structuredDto
+  //     );
+  //   } catch (error) {
+  //     if (error.code === 'ENOENT') {
+  //       return {
+  //         task_id: '',
+  //         status: 'error',
+  //         cancelled_at: new Date().toISOString(),
+  //         message: `Configuration file '${operationType}.json' not found.`,
+  //       };
+  //     }
+  //     return {
+  //       task_id: '',
+  //       status: 'error',
+  //       cancelled_at: new Date().toISOString(),
+  //       message: `Failed to process unstructured task cancellation: ${error.message}`,
+  //     };
+  //   }
+  // }
   async cancelUnstructuredTask(
-    warehouseId: string,
-    batchId: string,
-    taskId: string,
-    configFolderName: string,
-    operationType: string,
-    input: any,
-  ): Promise<TaskCancelRes> {
-    const filePath = `src/config_mapping/${configFolderName}/${operationType}.json`;
-    try {
-      const fileContent = await fs.readFile(filePath, 'utf-8');
-      const jsonData = JSON.parse(fileContent);
+  warehouseId: string,
+  batchId: string,
+  taskId: string,
+  configFolderName: string,
+  operationType: string,
+  input: any,
+): Promise<TaskCancelRes> {
+  const filePath = `src/config_mapping/${configFolderName}/${operationType}.json`;
+  try {
+    const fileContent = await fs.readFile(filePath, 'utf-8');
+    const jsonData = JSON.parse(fileContent);
 
-      const cancelRequest = await this._genericTaskTransformer(jsonData, input);
+    const cancelRequest = await this._genericTaskTransformer(jsonData, input);
 
-      const structuredDto = plainToInstance(CancelReq, cancelRequest);
-      const validationErrors = await this.validator.validate(structuredDto);
-      if (validationErrors.length > 0) {
-        throw new BadRequestException(
-          'Transformer failed to produce a valid cancel request structure.',
-        );
-      }
-
-      return await this.cancelTask(
-        warehouseId,
-        batchId,
-        taskId,
-        structuredDto
-      );
-    } catch (error) {
-      if (error.code === 'ENOENT') {
-        return {
-          task_id: '',
-          status: 'error',
-          cancelled_at: new Date().toISOString(),
-          message: `Configuration file '${operationType}.json' not found.`,
-        };
-      }
-      return {
-        task_id: '',
+    const structuredDto = plainToInstance(CancelReq, cancelRequest);
+    const validationErrors = await this.validator.validate(structuredDto);
+    if (validationErrors.length > 0) {
+      throw new BadRequestException({
         status: 'error',
+        message: 'Transformer failed to produce a valid cancel request structure.',
         cancelled_at: new Date().toISOString(),
-        message: `Failed to process unstructured task cancellation: ${error.message}`,
-      };
+        task_id: taskId,
+      });
     }
+
+    return await this.cancelTask(warehouseId, batchId, taskId, structuredDto);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      throw new NotFoundException({
+        status: 'error',
+        message: `Configuration file '${operationType}.json' not found.`,
+        cancelled_at: new Date().toISOString(),
+        task_id: '',
+      });
+    }
+
+    throw new BadRequestException({
+      status: 'error',
+      message: `Failed to process unstructured task cancellation: ${error.message}`,
+      cancelled_at: new Date().toISOString(),
+      task_id: '',
+    });
   }
-  
+}
+
   async getLocations(
     warehouseId: string,
     getLocationReq: GetLocationReq,
