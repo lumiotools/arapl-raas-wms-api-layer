@@ -24,21 +24,18 @@ export class AuthenticationMiddleware implements NestMiddleware {
   async use(req: Request, res: Response, next: NextFunction) {
     try {
       // Extract authentication token from headers
-      const authHeader = req.headers.authorization;
-      console.log('Auth Header:', authHeader);
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      const token = req.headers.authorization;
+      console.log('Auth Header:', token);
+      if (!token) {
         throw new UnauthorizedException('Authorization token is required');
       }
 
-      const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+
       
       // Extract warehouse ID from token, headers, or query params
       // Option 1: From path parameter, then header, then query, then token
-      const warehouseId = (req.params && req.params.warehouse_id) as string ||
-             req.headers['x-warehouse-id'] as string ||
-             req.query.warehouseId as string ||
-             this.extractWarehouseFromToken(token);
-
+      const warehouseId = (req.params && req.params.warehouse_id) as string 
+            
       if (!warehouseId) {
         throw new UnauthorizedException('Warehouse ID is required');
       }
@@ -75,14 +72,5 @@ export class AuthenticationMiddleware implements NestMiddleware {
     }
   }
 
-  private extractWarehouseFromToken(token: string): string | null {
-    try {
-      // If using JWT, decode and extract warehouse ID
-      // This is a simple example - use proper JWT library in production
-      const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-      return payload.warehouseId || payload.warehouse_id || null;
-    } catch {
-      return null;
-    }
-  }
+  
 }

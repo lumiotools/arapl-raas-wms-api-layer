@@ -20,7 +20,7 @@ import {
 import { TaskUpdateReq, TaskUpdateRes } from './dto/Task_Update.dto';
 import { BatchCancelRes, CancelReq, TaskCancelRes } from './dto/Cancel.dto';
 import { GetLocationReq, GetLocationRes } from './dto/GetLocation.dto';
-import { ErrorResponseDto } from './dto/ErrorResponse.dto';
+
 import { NotFoundDto } from './dto/NotFound.dto';
 import { BadRequestDto } from './dto/BadRequest.dto';
 import { UnauthorizedDto } from './dto/Unauthorized.dto';
@@ -94,21 +94,13 @@ export class RobotJobController {
   description: 'Authentication token missing or invalid',
   type: UnauthorizedDto,
 })
-@ApiResponse({
-  status: 403,
-  description: 'Access forbidden. User lacks permission to access this batch or warehouse',
-  type: ForbiddenDto,
-})
+
 @ApiResponse({
   status: 404,
   description: 'Batch job not found in the specified warehouse',
   type: NotFoundDto,
 })
-@ApiResponse({
-  status: 409,
-  description: 'Conflict occurred while processing request (e.g., batch job already completed)',
-  type: ConflictDto,
-})
+
 @ApiResponse({
   status: 500,
   description: 'Unexpected internal server error',
@@ -184,13 +176,6 @@ export class RobotJobController {
   example: 'WH_001',
 })
 
-@ApiQuery({
-  name: 'config_name',
-  required: false,
-  type: String,
-  description: 'Optional config name used for unstructured task creation',
-  example: 'robot_sorting_config',
-})
 
 @ApiBody({
   type: TaskGenerationReq,
@@ -205,7 +190,7 @@ export class RobotJobController {
 
 @ApiResponse({
   status: 400,
-  description: 'Invalid structured task or missing config name for unstructured task',
+  description: 'Invalid structured task or missing request body for unstructured task',
   type: BadRequestDto,
 })
 
@@ -213,12 +198,6 @@ export class RobotJobController {
   status: 401,
   description: 'Unauthorized request due to missing/invalid credentials',
   type: UnauthorizedDto,
-})
-
-@ApiResponse({
-  status: 403,
-  description: 'User does not have permission to create tasks in this warehouse',
-  type: ForbiddenDto,
 })
 
 @ApiResponse({
@@ -237,7 +216,7 @@ export class RobotJobController {
 async unifiedCreateTask(
   @Param('warehouse_id') warehouseId: string,
   @Body() body: any,
-  @Query('config_name') configName?: string,
+  // @Query('config_name') configName?: string,
 ): Promise<TaskGenerationRes> {
   const structuredDto = plainToInstance(TaskGenerationReq, body);
   const validationErrors = await this.validator.validate(structuredDto);
@@ -246,17 +225,17 @@ async unifiedCreateTask(
     return this.robotJobService.createTask(warehouseId, structuredDto);
   }
 
-  if (configName) {
-    return this.robotJobService.createUnstructuredTask(
-      warehouseId,
-      configName,
-      'create_task',
-      body,
-    );
-  }
+  // if (configName) {
+  //   return this.robotJobService.createUnstructuredTask(
+  //     warehouseId,
+  //     configName,
+  //     'create_task',
+  //     body,
+  //   );
+  // }
 
   throw new BadRequestException(
-    'Request body is not a valid task structure and no `config_name` was provided.',
+    'Request body is not a valid .',
   );
 }
 

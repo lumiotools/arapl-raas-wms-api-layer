@@ -3,6 +3,7 @@ import {
   NestMiddleware,
   HttpException,
   HttpStatus,
+  BadRequestException,
 } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { REQUIRED_VERSION } from 'src/config/auth.config';
@@ -15,7 +16,7 @@ export class VersionMiddleware implements NestMiddleware {
     if (version && version === REQUIRED_VERSION) {
       next();
     } else {
-      throw new HttpException('Version unavailable', HttpStatus.BAD_REQUEST);
+      throw new BadRequestException('Version unavailable');
     }
   }
 }
