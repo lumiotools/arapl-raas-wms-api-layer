@@ -3,6 +3,8 @@ import { NotFoundException } from '@nestjs/common';
 import {
   batch_type,
   Location as CreateLocation,
+  LocationAction,
+  LocationType,
   TaskGenerationReq,
   TaskGenerationRes,
   Wait,
@@ -26,6 +28,7 @@ import { create } from 'domain';
 import { Validator } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 import {Task as TaskEntity} from './entities/task.entity';
+import { Warehouse } from './entities/warehouse.entity';
 
 @Injectable()
 export class RobotJobService {
@@ -38,6 +41,9 @@ export class RobotJobService {
 
     @InjectRepository(Location)
     private readonly LocationRepository: Repository<Location>,
+
+    @InjectRepository(Warehouse)
+    private readonly WarehouseRepository: Repository<Warehouse>,
 
     private readonly validator: Validator = new Validator(),
     
@@ -982,15 +988,46 @@ async createTask(
   async getLocations(
     warehouseId: string,
     getLocationReq: GetLocationReq,
-    config_name: string,
+    config_name: string | null = null,
   ): Promise<GetLocationRes> {
     const filePath = `src/config_mapping/${config_name}/get_empty_location.json`;
     try {
+      const warehouse = await this.WarehouseRepository.findOne({
+        where: { warehouse_id: warehouseId },
+      });
+      if (!warehouse) {
+        throw new NotFoundException(
+          `Warehouse with ID '${warehouseId}' not found.`,
+        );
+      }
       const fileContent = await fs.readFile(filePath, 'utf-8');
+      if (!fileContent) {
+        throw new Error(`Configuration file '${filePath}' not found.`);
+      }
       const mapping = JSON.parse(fileContent);
 
       let apiEndpoint = mapping.endpoint.url;
-
+      const dummy: GetLocationRes = {
+          "zone_id": 'zone-1',
+          "available_location_types": [
+              {
+                  "location_id": "LOC-DROP-101",
+                  "location_dimension":{
+                    "length": 100,
+                    "width": 80,
+                    "height": 150
+                  },
+                  "location_type": LocationType.Zone,
+                  "location_action": LocationAction.Drop,
+              }
+          ]
+      }
+      if (warehouse.locations_customer_managed){
+        return dummy;
+      }
+      else{
+        return dummy;
+      }
       const path_params = mapping.request.path_params;
       if (!path_params) {
         throw new Error('Path parameters are not defined in the mapping.');
