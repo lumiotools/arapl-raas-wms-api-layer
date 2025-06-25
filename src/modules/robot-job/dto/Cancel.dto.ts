@@ -74,7 +74,7 @@ export class BatchCancelRes {
   })
   @IsString()
   @IsNotEmpty()
-  task_id: string;
+  batch_id: string;
 
   @ApiProperty({
     description: 'Cancellation status',

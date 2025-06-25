@@ -5,8 +5,8 @@ let DBEnv: string = 'local';
 let DBCredentials: any = {
   local: {
     username: 'postgres',
-    password: 'Mahdi',
-    database: 'arapl_wms_layer',
+    password: 'rishav',
+    database: 'wms_api_layer',
   },
 };
 

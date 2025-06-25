@@ -692,7 +692,7 @@ async createTask(
 
   if (!batchJob) {
     throw new NotFoundException({
-      task_id: batch_id,
+      // task_id: batch_id,
       status: 'error',
       cancelled_at: new Date().toISOString(),
       message: `Batch job '${batch_id}' not found in warehouse '${warehouse_id}'.`,
@@ -701,7 +701,7 @@ async createTask(
 
   if (batchJob.status !== 'pending') {
     throw new ConflictException({
-      task_id: batch_id,
+      // task_id: batch_id,
       status: 'error',
       cancelled_at: new Date().toISOString(),
       message: `Batch job '${batch_id}' is not in 'pending' state and cannot be cancelled.`,
@@ -711,7 +711,7 @@ async createTask(
   await this.BatchJobRepository.remove(batchJob);
 
   return {
-    task_id: batchJob.batch_job_id,
+    batch_id: batchJob.batch_job_id,
     status: 'success',
     cancelled_at: new Date().toISOString(),
     message: `Batch job '${batchJob.batch_job_id}' and its tasks have been cancelled.`,
@@ -767,23 +767,21 @@ async createTask(
   const taskRepo: Task | null = await this.TaskRepository.findOne({
     where: {
       task_id: task_id,
-      batch_job: { warehouse_id: warehouse_id },
+      batch_job: { batch_job_id: batch_id },
     },
     relations: ['batch_job'],
   });
 
   if (!taskRepo) {
     throw new NotFoundException({
-      task_id,
       status: 'error',
       cancelled_at: new Date().toISOString(),
-      message: `Task with ID '${task_id}' not found in warehouse '${warehouse_id}'.`,
+      message: `Task with ID '${task_id}' not found in warehouse '${batch_id}'.`,
     });
   }
 
   if (taskRepo.status !== 'pending') {
     throw new ConflictException({
-      task_id,
       status: 'error',
       cancelled_at: new Date().toISOString(),
       message: `Task '${task_id}' is not in 'pending' state and cannot be cancelled.`,

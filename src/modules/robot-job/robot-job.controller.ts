@@ -433,13 +433,13 @@ async unifiedUpdateTask(
   example: 'BATCH_456',
 })
 
-@ApiQuery({
-  name: 'config_name',
-  required: false,
-  type: String,
-  description: 'Optional config name for unstructured batch cancellation',
-  example: 'cancel_config_v1',
-})
+// @ApiQuery({
+//   name: 'config_name',
+//   required: false,
+//   type: String,
+//   description: 'Optional config name for unstructured batch cancellation',
+//   example: 'cancel_config_v1',
+// })
 
 @ApiBody({
   type: CancelReq,
@@ -493,21 +493,21 @@ async cancelBatch(
   @Param('warehouse_id') warehouseId: string,
   @Param('batch_id') batchId: string,
   @Body() body: CancelReq,
-  @Query('config_name') configName?: string,
+  // @Query('config_name') configName?: string,
 ): Promise<BatchCancelRes> {
-  if (configName) {
-    const result = await this.robotJobService.cancelUnstructuredBatch(
-      warehouseId,
-      batchId,
-      configName,
-      'cancel_task',
-      body,
-    );
-    if (result.status !== 'success') {
-      throw new BadRequestException(result.message);
-    }
-    return result;
-  }
+  // if (configName) {
+  //   const result = await this.robotJobService.cancelUnstructuredBatch(
+  //     warehouseId,
+  //     batchId,
+  //     configName,
+  //     'cancel_task',
+  //     body,
+  //   );
+  //   if (result.status !== 'success') {
+  //     throw new BadRequestException(result.message);
+  //   }
+  //   return result;
+  // }
 
   const batchDto = plainToInstance(CancelReq, body);
   const validationErrors = await this.validator.validate(batchDto);
@@ -525,7 +525,7 @@ async cancelBatch(
   }
 
   throw new BadRequestException(
-    'Request body is not a valid cancellation structure and no `config_name` was provided for transformation.',
+    'Invalid request body found.',
   );
 }
 
@@ -595,13 +595,13 @@ async cancelBatch(
   example: 'TASK_789',
 })
 
-@ApiQuery({
-  name: 'config_name',
-  required: false,
-  type: String,
-  description: 'Optional config name used for unstructured task cancellation',
-  example: 'cancel_config_v1',
-})
+// @ApiQuery({
+//   name: 'config_name',
+//   required: false,
+//   type: String,
+//   description: 'Optional config name used for unstructured task cancellation',
+//   example: 'cancel_config_v1',
+// })
 
 @ApiBody({
   type: CancelReq,
@@ -649,22 +649,22 @@ async cancelTask(
   @Param('batch_id') batchId: string,
   @Param('task_id') taskId: string,
   @Body() body: CancelReq,
-  @Query('config_name') configName?: string,
+  // @Query('config_name') configName?: string,
 ): Promise<TaskCancelRes> {
-  if (configName) {
-    const result = await this.robotJobService.cancelUnstructuredTask(
-      warehouseId,
-      batchId,
-      taskId,
-      configName,
-      'cancel_task',
-      body,
-    );
-    if (result.status !== 'success') {
-      throw new BadRequestException(result.message);
-    }
-    return result;
-  }
+  // if (configName) {
+  //   const result = await this.robotJobService.cancelUnstructuredTask(
+  //     warehouseId,
+  //     batchId,
+  //     taskId,
+  //     configName,
+  //     'cancel_task',
+  //     body,
+  //   );
+  //   if (result.status !== 'success') {
+  //     throw new BadRequestException(result.message);
+  //   }
+  //   return result;
+  // }
 
   const singleTaskDto = plainToInstance(CancelReq, body);
   const validationErrors = await this.validator.validate(singleTaskDto);
@@ -683,7 +683,7 @@ async cancelTask(
   }
 
   throw new BadRequestException(
-    'Request body is not a valid cancellation structure and no `config_name` was provided for transformation.',
+    'Invalid Request Body Found.',
   );
 }
 
