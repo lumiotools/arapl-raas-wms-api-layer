@@ -1,15 +1,26 @@
-import { Injectable, NestMiddleware, UnauthorizedException, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  NestMiddleware,
+  UnauthorizedException,
+  Inject,
+} from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Warehouse } from '../modules/robot-job/entities/warehouse.entity';
 
-// Extend the Request interface to include warehouse
+// Extend the Request interface to include warehouse and configs
 declare global {
   namespace Express {
     interface Request {
       warehouse?: Warehouse;
       warehouseId?: string;
+      taskConfigs?: {
+        create_task?: any;
+        update_task?: any;
+        cancel_task?: any;
+        get_location?: any;
+      };
     }
   }
 }
@@ -30,26 +41,36 @@ export class AuthenticationMiddleware implements NestMiddleware {
         throw new UnauthorizedException('Authorization token is required');
       }
 
-
-      
       // Extract warehouse ID from token, headers, or query params
       // Option 1: From path parameter, then header, then query, then token
-      const warehouseId = (req.params && req.params.warehouse_id) as string 
-            
+      const warehouseId = (req.params && req.params.warehouse_id) as string;
+
       if (!warehouseId) {
         throw new UnauthorizedException('Warehouse ID is required');
       }
 
-      // Validate warehouse exists and is active
+      // Validate warehouse exists and is active - now including config fields
       const warehouse = await this.warehouseRepository.findOne({
-        where: { 
+        where: {
           warehouse_id: warehouseId,
           // Add any additional conditions like isActive: true
-        }
+        },
+        select: [
+          'warehouse_id',
+          'warehouse_name',
+          'api_key',
+          'locations_customer_managed',
+          'create_task_config',
+          'update_task_config',
+          'cancel_task_config',
+          'get_location_config',
+        ],
       });
 
       if (!warehouse) {
-        throw new UnauthorizedException('Invalid warehouse or warehouse not found');
+        throw new UnauthorizedException(
+          'Invalid warehouse or warehouse not found',
+        );
       }
 
       // Validate the token against the warehouse
@@ -63,6 +84,14 @@ export class AuthenticationMiddleware implements NestMiddleware {
       req.warehouse = warehouse;
       req.warehouseId = warehouseId;
 
+      // Attach task configurations for easy access
+      req.taskConfigs = {
+        create_task: warehouse.create_task_config,
+        update_task: warehouse.update_task_config,
+        cancel_task: warehouse.cancel_task_config,
+        get_location: warehouse.get_location_config,
+      };
+
       next();
     } catch (error) {
       if (error instanceof UnauthorizedException) {
@@ -71,6 +100,4 @@ export class AuthenticationMiddleware implements NestMiddleware {
       throw new UnauthorizedException('Authentication failed');
     }
   }
-
-  
 }
