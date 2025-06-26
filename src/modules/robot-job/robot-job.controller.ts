@@ -9,10 +9,12 @@ import {
   Query,
   BadRequestException,
   Logger,
+  Req,
 } from '@nestjs/common';
 import { RobotJobService } from './robot-job.service';
 import { Validator } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
+import { Request } from 'express';
 import {
   TaskGenerationReq,
   TaskGenerationRes,
@@ -176,6 +178,14 @@ export class RobotJobController {
   example: 'WH_001',
 })
 
+// @ApiQuery({
+//   name: 'config_name',
+//   required: false,
+//   type: String,
+//   description: 'Optional config name used for unstructured task creation',
+//   example: 'robot_sorting_config',
+// })
+
 
 @ApiBody({
   type: TaskGenerationReq,
@@ -216,8 +226,10 @@ export class RobotJobController {
 async unifiedCreateTask(
   @Param('warehouse_id') warehouseId: string,
   @Body() body: any,
-  @Query('config_name') configName?: string,
+  // @Query('config_name') configName?: string,
+  @Req() request: Request,
 ): Promise<TaskGenerationRes> {
+  const configName = request.query.config_name as string;
   const structuredDto = plainToInstance(TaskGenerationReq, body);
   const validationErrors = await this.validator.validate(structuredDto);
 
@@ -235,7 +247,7 @@ async unifiedCreateTask(
   }
 
   throw new BadRequestException(
-    'Request body is not a valid .',
+    'Request body is not valid.',
   );
 }
 
@@ -344,8 +356,10 @@ async unifiedCreateTask(
 async unifiedUpdateTask(
   @Param('warehouse_id') warehouseId: string,
   @Body() body: any,
-  @Query('config_name') configName?: string,
+  // @Query('config_name') configName?: string,
+  @Req() request: Request,
 ): Promise<TaskUpdateRes> {
+  const configName = request.query.config_name as string;
   const structuredDto = plainToInstance(TaskUpdateReq, body);
   const validationErrors = await this.validator.validate(structuredDto);
 
@@ -371,7 +385,7 @@ async unifiedUpdateTask(
   }
 
   throw new BadRequestException(
-    'Request body is not a valid update structure and no `config_name` was provided for transformation.',
+    'Request body is not a valid update structure.',
   );
 }
 
@@ -487,8 +501,10 @@ async cancelBatch(
   @Param('warehouse_id') warehouseId: string,
   @Param('batch_id') batchId: string,
   @Body() body: CancelReq,
-  @Query('config_name') configName?: string,
+  // @Query('config_name') configName?: string,
+  @Req() request: Request,
 ): Promise<BatchCancelRes> {
+  const configName = request.query.config_name as string;
   if (configName) {
     const result = await this.robotJobService.cancelUnstructuredBatch(
       warehouseId,
@@ -643,8 +659,10 @@ async cancelTask(
   @Param('batch_id') batchId: string,
   @Param('task_id') taskId: string,
   @Body() body: CancelReq,
-  @Query('config_name') configName?: string,
+  // @Query('config_name') configName?: string,
+  @Req() request: Request,
 ): Promise<TaskCancelRes> {
+  const configName = request.query.config_name as string; // Assuming config_name is part of the body
   if (configName) {
     const result = await this.robotJobService.cancelUnstructuredTask(
       warehouseId,
@@ -713,13 +731,13 @@ async cancelTask(
   example: 'WH_001',
 })
 
-@ApiQuery({
-  name: 'config_name',
-  required: true,
-  type: String,
-  description: 'Configuration name used to filter locations',
-  example: 'putaway_config_v1',
-})
+// @ApiQuery({
+//   name: 'config_name',
+//   required: true,
+//   type: String,
+//   description: 'Configuration name used to filter locations',
+//   example: 'putaway_config_v1',
+// })
 
 @ApiQuery({
   name: 'location_status',

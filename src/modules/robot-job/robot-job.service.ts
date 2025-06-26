@@ -497,6 +497,25 @@ async createTask(
     warehouse_id: string,
     updateRobotJobDto: TaskUpdateReq,
   ): Promise<TaskUpdateRes> {
+    const warehouse = await this.WarehouseRepository.findOne({
+      where: { warehouse_id: warehouse_id },
+    });
+    if (!warehouse) {
+      throw new NotFoundException(
+        `Warehouse with ID '${warehouse_id}' not found.`,
+      );
+    }
+    const batchJob = await this.BatchJobRepository.findOne({
+      where: {
+        batch_job_id: updateRobotJobDto.batch_job_id,
+        warehouse_id: warehouse_id,
+      },
+    });
+    if (!batchJob) {
+      throw new NotFoundException(
+        `Batch job with ID '${updateRobotJobDto.batch_job_id}' not found in warehouse '${warehouse_id}'.`,
+      );
+    }
     const tasks: UpdateTask[] = updateRobotJobDto.updates;
     for (const task of tasks) {
       try{
@@ -562,9 +581,9 @@ async createTask(
       //   console.error('Error updating task:', error);
       // }
       catch (error) {
-  console.error(`Error updating task ${task.task_id}:`, error);
-  throw new BadRequestException(`Task ${task.task_id} update failed: ${error.message}`);
-}
+        console.error(`Error updating task ${task.task_id}:`, error);
+        throw new BadRequestException(`Task ${task.task_id} update failed: ${error.message}`);
+      }
       finally{
         continue;
       }
