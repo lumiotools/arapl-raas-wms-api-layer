@@ -9,7 +9,6 @@ import {
   batch_type,
   Location as CreateLocation,
   LocationAction,
-  LocationType,
   TaskGenerationReq,
   TaskGenerationRes,
   Wait,
@@ -28,7 +27,11 @@ import { BatchJob } from './entities/batch_task.entity';
 import { Task } from './entities/task.entity';
 import { CancelReq, BatchCancelRes, TaskCancelRes } from './dto/Cancel.dto';
 import { Location } from './entities/locations.entity';
-import { GetLocationReq, GetLocationRes } from './dto/GetLocation.dto';
+import {
+  GetLocationReq,
+  GetLocationRes,
+  LocationType,
+} from './dto/GetLocation.dto';
 import * as fs from 'fs/promises';
 import axios from 'axios';
 import { DEFAULT_FACTORY_CLASS_METHOD_KEY } from '@nestjs/common/module-utils/constants';
@@ -1029,7 +1032,7 @@ export class RobotJobService {
               width: 80,
               height: 150,
             },
-            location_type: LocationType.Zone,
+            location_type: LocationType.Pallet,
             location_action: LocationAction.Drop,
           },
         ],
