@@ -1,5 +1,0 @@
-{
-  "object_type": "object",
-  "reason": {"object_type": "string", "path": "input.cancellation_reason"},
-  "timestamp": {"object_type": "string", "path": "input.cancellation_timestamp"}
-}
