@@ -31,6 +31,24 @@
 $ npm install
 ```
 
+## Environment Configuration
+
+This project uses environment variables for configuration. Create a `.env` file in the root directory with the following variables:
+
+```bash
+# Database Configuration
+DB_ENV=local
+DB_HOST=localhost
+DB_PORT=5432
+DB_USERNAME=postgres
+DB_PASSWORD=rishav
+DB_DATABASE=wms_api_layer
+
+# Authentication Configuration
+SECRET_TOKEN=your-super-secret-alphanumeric-token-d8f7g6h5j4k3l2
+REQUIRED_VERSION=2.1.3
+```
+
 ## Compile and run the project
 
 ```bash
