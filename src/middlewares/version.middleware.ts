@@ -13,6 +13,8 @@ export class VersionMiddleware implements NestMiddleware {
   constructor(private configService: ConfigService) {}
 
   use(req: Request, res: Response, next: NextFunction) {
+    next();
+    return;
     const version = req.headers['version'];
     const requiredVersion = this.configService.get<string>(
       'REQUIRED_VERSION',

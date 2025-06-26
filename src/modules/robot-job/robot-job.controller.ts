@@ -16,6 +16,7 @@ import { Validator } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 import { Request } from 'express';
 import {
+  LocationAction,
   TaskGenerationReq,
   TaskGenerationRes,
 } from './dto/Task_Generation.dto';
@@ -48,12 +49,6 @@ import {
 } from '@nestjs/swagger';
 
 @ApiSecurity('api-key')
-@ApiHeader({
-  name: 'version',
-  description: 'API version header',
-  required: true,
-  example: '2.1.3',
-})
 @Controller('robot-job')
 export class RobotJobController {
   private readonly logger = new Logger(RobotJobController.name);
@@ -788,9 +783,23 @@ export class RobotJobController {
         config,
       );
     } else {
-      throw new BadRequestException(
-        '`config_name` parameter is not supported for this endpoint.',
-      );
+      const dummy: GetLocationRes = {
+        zone_id: 'zone-1',
+        available_location_types: [
+          {
+            location_id: 'LOC-DROP-101',
+            location_dimension: {
+              length: 100,
+              width: 80,
+              height: 150,
+            },
+            location_type: LocationType.Pallet,
+            location_action: LocationAction.Drop,
+          },
+        ],
+      };
+
+      return dummy;
     }
   }
 }

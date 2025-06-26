@@ -41,10 +41,10 @@
 //     available_location_types: Location[];
 // }
 
-import { IsEnum, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { ApiPropertyOptional, ApiProperty } from '@nestjs/swagger';
-import { LocationAction } from './Task_Generation.dto';
-import { Location } from './Task_Generation.dto';
+import { Dimension, LocationAction } from './Task_Generation.dto';
+import { Type } from 'class-transformer';
 
 export enum LocationStatus {
   All = 'All',
@@ -55,6 +55,30 @@ export enum LocationStatus {
 export enum LocationType {
   Pallet = 'Pallet',
   BaleClampBox = 'BaleClampBox',
+}
+
+
+export class Location {
+  @ApiProperty({ example: 'LOC001' })
+  @IsString()
+  @IsNotEmpty()
+  location_id: string;
+
+  @ApiProperty({ enum: LocationType })
+  @IsEnum(LocationType)
+  @IsNotEmpty()
+  location_type: LocationType;
+
+  @ApiProperty({ enum: LocationAction })
+  @IsEnum(LocationAction)
+  @IsNotEmpty()
+  location_action: LocationAction;
+
+  @ApiProperty({ type: Dimension })
+  @IsNotEmpty()
+  @ValidateNested()
+  @Type(() => Dimension)
+  location_dimension: Dimension;
 }
 
 export class GetLocationReq {
