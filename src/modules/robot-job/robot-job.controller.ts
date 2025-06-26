@@ -433,7 +433,7 @@ export class RobotJobController {
     throw new BadRequestException('Invalid Request Body Found.');
   }
 
-  @ApiOperation({ summary: 'Get available empty locations in a warehouse' })
+  @ApiOperation({ summary: 'Get available locations in a warehouse' })
   @ApiParam({
     name: 'warehouse_id',
     type: String,
