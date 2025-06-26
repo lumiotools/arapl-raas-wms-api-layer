@@ -11,6 +11,7 @@ export const getDBConfig = (
       username: configService.get<string>('DB_USERNAME', 'postgres'),
       password: configService.get<string>('DB_PASSWORD'),
       database: configService.get<string>('DB_DATABASE', 'wms_api_layer'),
+      ssl: configService.get<boolean>('DB_SSL', false), // Optional SSL configuration
     },
   };
 
@@ -21,6 +22,7 @@ export const getDBConfig = (
     username: dbCredentials[dbEnv]?.username || dbCredentials.local.username,
     password: dbCredentials[dbEnv]?.password || dbCredentials.local.password,
     database: dbCredentials[dbEnv]?.database || dbCredentials.local.database,
+    ssl: dbCredentials[dbEnv]?.ssl || false, // Add SSL configuration if needed
     entities: [__dirname + '/../**/*.entity{.ts,.js}'],
     synchronize: true, // Set to false in production
     logging: true, // Enable logging for debugging
