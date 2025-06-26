@@ -6,14 +6,20 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
-import { REQUIRED_VERSION } from 'src/config/auth.config';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class VersionMiddleware implements NestMiddleware {
+  constructor(private configService: ConfigService) {}
+
   use(req: Request, res: Response, next: NextFunction) {
     const version = req.headers['version'];
+    const requiredVersion = this.configService.get<string>(
+      'REQUIRED_VERSION',
+      '2.1.3',
+    );
 
-    if (version && version === REQUIRED_VERSION) {
+    if (version && version === requiredVersion) {
       next();
     } else {
       throw new BadRequestException('Version unavailable');

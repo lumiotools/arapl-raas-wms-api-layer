@@ -1,22 +1,40 @@
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
 
-let DBEnv: string = 'local';
+export const getDBConfig = (
+  configService: ConfigService,
+): TypeOrmModuleOptions => {
+  const dbEnv = configService.get<string>('DB_ENV', 'local');
 
-let DBCredentials: any = {
-  local: {
-    username: 'postgres',
-    password: 'rishav',
-    database: 'wms_api_layer',
-  },
+  const dbCredentials = {
+    local: {
+      username: configService.get<string>('DB_USERNAME', 'postgres'),
+      password: configService.get<string>('DB_PASSWORD'),
+      database: configService.get<string>('DB_DATABASE', 'wms_api_layer'),
+    },
+  };
+
+  return {
+    type: 'postgres',
+    host: configService.get<string>('DB_HOST', 'localhost'),
+    port: configService.get<number>('DB_PORT', 5432),
+    username: dbCredentials[dbEnv]?.username || dbCredentials.local.username,
+    password: dbCredentials[dbEnv]?.password || dbCredentials.local.password,
+    database: dbCredentials[dbEnv]?.database || dbCredentials.local.database,
+    entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+    synchronize: true, // Set to false in production
+    logging: true, // Enable logging for debugging
+  };
 };
 
+// Legacy export for backward compatibility
 export const DBConfig: TypeOrmModuleOptions = {
   type: 'postgres',
   host: 'localhost',
   port: 5432,
-  username: DBCredentials[DBEnv].username,
-  password: DBCredentials[DBEnv].password,
-  database: DBCredentials[DBEnv].database,
+  username: 'postgres',
+  password: 'rishav',
+  database: 'wms_api_layer',
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
   synchronize: true, // Set to false in production
   logging: true, // Enable logging for debugging
