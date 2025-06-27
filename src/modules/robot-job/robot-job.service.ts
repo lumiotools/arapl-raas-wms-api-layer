@@ -469,7 +469,6 @@ export class RobotJobService {
   ): Promise<TaskGenerationRes> {
     try {
       const taskRequest = await this._genericTaskTransformer(config, input);
-
       const structuredDto = plainToInstance(TaskGenerationReq, taskRequest);
       const validationErrors = await this.validator.validate(structuredDto);
 

@@ -1,4 +1,10 @@
-import { IsString, IsNotEmpty, IsOptional, IsObject } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsObject,
+  IsBoolean,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateTaskConfigDto {
@@ -94,4 +100,18 @@ export class WarehouseConfigResponseDto {
   @IsOptional()
   @IsObject()
   get_location_config?: any;
+}
+
+export class WarehouseConfigUpdateResponseDto {
+  @ApiProperty({ description: 'Success status' })
+  @IsBoolean()
+  success: boolean;
+
+  @ApiProperty({ description: 'Success message' })
+  @IsString()
+  message: string;
+
+  @ApiProperty({ description: 'Sample data for robot-job API' })
+  @IsObject()
+  sample_data: any;
 }

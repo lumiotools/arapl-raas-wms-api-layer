@@ -15,6 +15,7 @@ import {
   CancelTaskConfigDto,
   GetLocationConfigDto,
   WarehouseConfigResponseDto,
+  WarehouseConfigUpdateResponseDto,
 } from './dto/warehouse-config.dto';
 
 @ApiTags('Warehouse Configuration')
@@ -31,7 +32,7 @@ export class WarehouseConfigController {
   @ApiResponse({
     status: 200,
     description: 'Create task configuration updated successfully',
-    type: WarehouseConfigResponseDto,
+    type: WarehouseConfigUpdateResponseDto,
   })
   @ApiResponse({
     status: 404,
@@ -40,7 +41,7 @@ export class WarehouseConfigController {
   async updateCreateTaskConfig(
     @Param('warehouseId') warehouseId: string,
     @Body() createTaskConfigDto: CreateTaskConfigDto,
-  ): Promise<WarehouseConfigResponseDto> {
+  ): Promise<WarehouseConfigUpdateResponseDto> {
     return this.warehouseConfigService.updateCreateTaskConfig(
       warehouseId,
       createTaskConfigDto,
@@ -54,7 +55,7 @@ export class WarehouseConfigController {
   @ApiResponse({
     status: 200,
     description: 'Update task configuration updated successfully',
-    type: WarehouseConfigResponseDto,
+    type: WarehouseConfigUpdateResponseDto,
   })
   @ApiResponse({
     status: 404,
@@ -63,7 +64,7 @@ export class WarehouseConfigController {
   async updateUpdateTaskConfig(
     @Param('warehouseId') warehouseId: string,
     @Body() updateTaskConfigDto: UpdateTaskConfigDto,
-  ): Promise<WarehouseConfigResponseDto> {
+  ): Promise<WarehouseConfigUpdateResponseDto> {
     return this.warehouseConfigService.updateUpdateTaskConfig(
       warehouseId,
       updateTaskConfigDto,
@@ -77,7 +78,7 @@ export class WarehouseConfigController {
   @ApiResponse({
     status: 200,
     description: 'Cancel task configuration updated successfully',
-    type: WarehouseConfigResponseDto,
+    type: WarehouseConfigUpdateResponseDto,
   })
   @ApiResponse({
     status: 404,
@@ -86,7 +87,7 @@ export class WarehouseConfigController {
   async updateCancelTaskConfig(
     @Param('warehouseId') warehouseId: string,
     @Body() cancelTaskConfigDto: CancelTaskConfigDto,
-  ): Promise<WarehouseConfigResponseDto> {
+  ): Promise<WarehouseConfigUpdateResponseDto> {
     return this.warehouseConfigService.updateCancelTaskConfig(
       warehouseId,
       cancelTaskConfigDto,
@@ -102,7 +103,7 @@ export class WarehouseConfigController {
   @ApiResponse({
     status: 200,
     description: 'Get location configuration updated successfully',
-    type: WarehouseConfigResponseDto,
+    type: WarehouseConfigUpdateResponseDto,
   })
   @ApiResponse({
     status: 404,
@@ -111,7 +112,7 @@ export class WarehouseConfigController {
   async updateGetLocationConfig(
     @Param('warehouseId') warehouseId: string,
     @Body() getLocationConfigDto: GetLocationConfigDto,
-  ): Promise<WarehouseConfigResponseDto> {
+  ): Promise<WarehouseConfigUpdateResponseDto> {
     return this.warehouseConfigService.updateGetLocationConfig(
       warehouseId,
       getLocationConfigDto,
