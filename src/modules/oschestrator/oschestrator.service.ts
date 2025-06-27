@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Batch, Repository } from 'typeorm';
 import { Task } from '../robot-job/entities/task.entity';
 import { BatchJob } from 'src/modules/robot-job/entities/batch_task.entity';
+import { Warehouse } from 'src/modules/robot-job/entities/warehouse.entity';
 import { TaskGenerationReq } from 'src/modules/robot-job/dto/Task_Generation.dto';
 import { queueElementDto } from './dto/queue.dto';
 import axios from 'axios';
@@ -23,8 +24,10 @@ export class OschestratorService {
 
         @InjectRepository(BatchJob)
         private readonly batchJobRepository: Repository<BatchJob>,
-        
-    ){}
+
+        @InjectRepository(Warehouse)
+        private readonly warehouseRepository: Repository<Warehouse>,
+    ) { }
 
 
     @Interval(60000) // Check every minute
@@ -137,19 +140,39 @@ export class OschestratorService {
         }
         return defaultPagination;
     }
-    async wms_webhook(queueElement: { tasks: Task[], existingBatchJob: BatchJob }): Promise<any> {
-        try{
+    async wms_webhook(queueElement: {
+        tasks: Task[];
+        existingBatchJob: BatchJob;
+    }): Promise<any> {
+        try {
             const payload = await this.webhook_payload(queueElement);
-            const warehouseId =  1 // Assuming all tasks belong to the same warehouse
-            const response = await axios.post(
-                `http://localhost:6789/api/webhook/${warehouseId}/task_status_update_webhook`,
-                payload,
-                {
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                }
-            );
+            const warehouseId = queueElement.existingBatchJob.warehouse_id;
+
+            // Get the warehouse to find its webhook URL
+            const warehouse = await this.warehouseRepository.findOne({
+                where: { warehouse_id: warehouseId },
+            });
+
+            if (!warehouse) {
+                this.logger.warn(
+                    `Warehouse with ID '${warehouseId}' not found. Skipping webhook.`,
+                );
+                return {};
+            }
+
+            // Use warehouse's webhook URL if available, otherwise skip
+            if (!warehouse.webhook_url) {
+                this.logger.warn(
+                    `No webhook URL configured for warehouse '${warehouseId}'. Skipping webhook.`,
+                );
+                return {};
+            }
+
+            const response = await axios.post(warehouse.webhook_url, payload, {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
             return response;
         }
         catch (error) {

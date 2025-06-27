@@ -4,18 +4,14 @@ import { OschestratorController } from './oschestrator.controller';
 import { ScheduleModule } from '@nestjs/schedule';
 import { Task } from '../robot-job/entities/task.entity';
 import { BatchJob } from 'src/modules/robot-job/entities/batch_task.entity';
+import { Warehouse } from 'src/modules/robot-job/entities/warehouse.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TaskGenerationReq } from 'src/modules/robot-job/dto/Task_Generation.dto';
 
-
 @Module({
-  imports:[
+  imports: [
     ScheduleModule.forRoot(),
-    TypeOrmModule.forFeature([
-      Task,
-      BatchJob,
-      TaskGenerationReq
-    ]),
+    TypeOrmModule.forFeature([Task, BatchJob, Warehouse, TaskGenerationReq]),
   ],
   controllers: [OschestratorController],
   providers: [OschestratorService],
