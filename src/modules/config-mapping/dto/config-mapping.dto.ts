@@ -225,3 +225,50 @@ export class WarehouseConfigUpdateResponseDto {
   @IsObject()
   sample_data: any;
 }
+
+// Error Response DTOs
+export class BadRequestDto {
+  @ApiProperty({ example: 400 })
+  statusCode: number;
+
+  @ApiProperty({ example: 'Bad Request' })
+  error: string;
+
+  @ApiProperty({ example: 'Invalid configuration - validation failed' })
+  message: string;
+}
+
+export class UnauthorizedDto {
+  @ApiProperty({ example: 401 })
+  statusCode: number;
+
+  @ApiProperty({ example: 'Unauthorized' })
+  error: string;
+
+  @ApiProperty({ example: 'Missing or invalid authentication token.' })
+  message: string;
+}
+
+export class NotFoundDto {
+  @ApiProperty({ example: 404 })
+  statusCode: number;
+
+  @ApiProperty({ example: 'Not Found' })
+  error: string;
+
+  @ApiProperty({ example: "Warehouse with ID 'WH_001' not found." })
+  message: string;
+}
+
+export class InternalServerErrorDto {
+  @ApiProperty({ example: 500 })
+  statusCode: number;
+
+  @ApiProperty({ example: 'Internal Server Error' })
+  error: string;
+
+  @ApiProperty({
+    example: 'An unexpected error occurred while processing the configuration.',
+  })
+  message: string;
+}
