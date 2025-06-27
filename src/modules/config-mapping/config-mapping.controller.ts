@@ -7,7 +7,13 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiSecurity,
+} from '@nestjs/swagger';
 import { ConfigMappingService } from './config-mapping.service';
 import {
   CreateTaskConfigDto,
@@ -23,15 +29,16 @@ import {
 } from './dto/config-mapping.dto';
 
 @ApiTags('Configuration Mapping')
+@ApiSecurity('api-key')
 @Controller('config-mapping')
 export class ConfigMappingController {
   constructor(private readonly configMappingService: ConfigMappingService) {}
 
-  @Post(':warehouseId/create-task-data-mapping')
+  @Post(':warehouse_id/create-task-data-mapping')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update create task data mapping for a warehouse' })
   @ApiParam({
-    name: 'warehouseId',
+    name: 'warehouse_id',
     description: 'Warehouse ID',
     example: 'WH_001',
   })
@@ -61,7 +68,7 @@ export class ConfigMappingController {
     type: InternalServerErrorDto,
   })
   async updateCreateTaskConfig(
-    @Param('warehouseId') warehouseId: string,
+    @Param('warehouse_id') warehouseId: string,
     @Body() createTaskConfigDto: CreateTaskConfigDto,
   ): Promise<ConfigMappingUpdateResponseDto> {
     return this.configMappingService.updateCreateTaskConfig(
@@ -70,11 +77,11 @@ export class ConfigMappingController {
     );
   }
 
-  @Post(':warehouseId/update-task-data-mapping')
+  @Post(':warehouse_id/update-task-data-mapping')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update update task data mapping for a warehouse' })
   @ApiParam({
-    name: 'warehouseId',
+    name: 'warehouse_id',
     description: 'Warehouse ID',
     example: 'WH_001',
   })
@@ -104,7 +111,7 @@ export class ConfigMappingController {
     type: InternalServerErrorDto,
   })
   async updateUpdateTaskConfig(
-    @Param('warehouseId') warehouseId: string,
+    @Param('warehouse_id') warehouseId: string,
     @Body() updateTaskConfigDto: UpdateTaskConfigDto,
   ): Promise<ConfigMappingUpdateResponseDto> {
     return this.configMappingService.updateUpdateTaskConfig(
@@ -113,11 +120,11 @@ export class ConfigMappingController {
     );
   }
 
-  @Post(':warehouseId/cancel-task-data-mapping')
+  @Post(':warehouse_id/cancel-task-data-mapping')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update cancel task data mapping for a warehouse' })
   @ApiParam({
-    name: 'warehouseId',
+    name: 'warehouse_id',
     description: 'Warehouse ID',
     example: 'WH_001',
   })
@@ -147,7 +154,7 @@ export class ConfigMappingController {
     type: InternalServerErrorDto,
   })
   async updateCancelTaskConfig(
-    @Param('warehouseId') warehouseId: string,
+    @Param('warehouse_id') warehouseId: string,
     @Body() cancelTaskConfigDto: CancelTaskConfigDto,
   ): Promise<ConfigMappingUpdateResponseDto> {
     return this.configMappingService.updateCancelTaskConfig(
@@ -156,13 +163,13 @@ export class ConfigMappingController {
     );
   }
 
-  @Post(':warehouseId/get-location-data-mapping')
+  @Post(':warehouse_id/get-location-data-mapping')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Update get location data mapping for a warehouse',
   })
   @ApiParam({
-    name: 'warehouseId',
+    name: 'warehouse_id',
     description: 'Warehouse ID',
     example: 'WH_001',
   })
@@ -192,7 +199,7 @@ export class ConfigMappingController {
     type: InternalServerErrorDto,
   })
   async updateGetLocationConfig(
-    @Param('warehouseId') warehouseId: string,
+    @Param('warehouse_id') warehouseId: string,
     @Body() getLocationConfigDto: GetLocationConfigDto,
   ): Promise<ConfigMappingUpdateResponseDto> {
     return this.configMappingService.updateGetLocationConfig(
@@ -201,11 +208,11 @@ export class ConfigMappingController {
     );
   }
 
-  @Get(':warehouseId')
+  @Get(':warehouse_id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get configuration mapping for a warehouse' })
   @ApiParam({
-    name: 'warehouseId',
+    name: 'warehouse_id',
     description: 'Warehouse ID',
     example: 'WH_001',
   })
@@ -230,7 +237,7 @@ export class ConfigMappingController {
     type: InternalServerErrorDto,
   })
   async getConfigMapping(
-    @Param('warehouseId') warehouseId: string,
+    @Param('warehouse_id') warehouseId: string,
   ): Promise<ConfigMappingResponseDto> {
     return this.configMappingService.getConfigMapping(warehouseId);
   }
