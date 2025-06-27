@@ -37,6 +37,7 @@ import { InternalServerErrorDto } from './dto/InternalServerError.dto';
 import { ConflictDto } from './dto/Conflict.dto';
 import { config } from 'process';
 import { GetTasksParamsDto, GetTasksResponseDto } from './dto/GetTasks.dto';
+import { UpdateWebhookReq, UpdateWebhookRes } from './dto/UpdateWebhook.dto';
 import {
   ApiTags,
   ApiHeader,
@@ -801,5 +802,56 @@ export class RobotJobController {
 
       return dummy;
     }
+  }
+
+  @ApiOperation({ summary: 'Update webhook URL for a warehouse' })
+  @ApiParam({
+    name: 'warehouse_id',
+    type: String,
+    description: 'Unique identifier of the warehouse',
+    example: 'WH_001',
+  })
+  @ApiBody({
+    type: UpdateWebhookReq,
+    description: 'Webhook update request body',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Webhook URL updated successfully',
+    type: UpdateWebhookRes,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request body or webhook URL format',
+    type: BadRequestDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - invalid or missing API key',
+    type: UnauthorizedDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Warehouse not found',
+    type: NotFoundDto,
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error while updating webhook',
+    type: InternalServerErrorDto,
+  })
+  @Post(':warehouse_id/webhook')
+  async updateWebhook(
+    @Param('warehouse_id') warehouseId: string,
+    @Body() updateWebhookDto: UpdateWebhookReq,
+  ): Promise<UpdateWebhookRes> {
+    const structuredDto = plainToInstance(UpdateWebhookReq, updateWebhookDto);
+    const validationErrors = await this.validator.validate(structuredDto);
+
+    if (validationErrors.length > 0) {
+      throw new BadRequestException('Invalid webhook URL format');
+    }
+
+    return await this.robotJobService.updateWebhook(warehouseId, structuredDto);
   }
 }

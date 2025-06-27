@@ -41,6 +41,7 @@ import { Validator } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 import { Task as TaskEntity } from './entities/task.entity';
 import { Warehouse } from './entities/warehouse.entity';
+import { UpdateWebhookReq, UpdateWebhookRes } from './dto/UpdateWebhook.dto';
 
 @Injectable()
 export class RobotJobService {
@@ -1108,6 +1109,44 @@ export class RobotJobService {
           `Error processing request: ${error.message}`,
         );
       }
+    }
+  }
+
+  async updateWebhook(
+    warehouseId: string,
+    updateWebhookDto: UpdateWebhookReq,
+  ): Promise<UpdateWebhookRes> {
+    try {
+      const warehouse = await this.WarehouseRepository.findOne({
+        where: { warehouse_id: warehouseId },
+      });
+
+      if (!warehouse) {
+        throw new NotFoundException(
+          `Warehouse with ID '${warehouseId}' not found.`,
+        );
+      }
+
+      // Update the webhook URL (can be undefined to clear it)
+      warehouse.webhook_url = updateWebhookDto.webhook_url || null;
+      await this.WarehouseRepository.save(warehouse);
+
+      return {
+        status: 'success',
+        message: 'Webhook URL updated successfully',
+        warehouse: {
+          warehouse_id: warehouse.warehouse_id,
+          warehouse_name: warehouse.warehouse_name,
+          webhook_url: warehouse.webhook_url,
+        },
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        `Failed to update webhook URL: ${error.message}`,
+      );
     }
   }
 }
