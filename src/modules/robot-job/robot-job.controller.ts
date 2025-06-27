@@ -840,7 +840,7 @@ export class RobotJobController {
     description: 'Internal server error while updating webhook',
     type: InternalServerErrorDto,
   })
-  @Post(':warehouse_id/update-webhook')
+  @Patch(':warehouse_id/update-webhook')
   async updateWebhook(
     @Param('warehouse_id') warehouseId: string,
     @Body() updateWebhookDto: UpdateWebhookReq,
