@@ -14,6 +14,8 @@ import {
   ConfigMappingResponseDto,
   ConfigMappingUpdateResponseDto,
 } from './dto/config-mapping.dto';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class ConfigMappingService {
@@ -22,10 +24,148 @@ export class ConfigMappingService {
     private warehouseRepository: Repository<Warehouse>,
   ) {}
 
-  // Validate create task config structure
+  // Load reference config from @/config_mapping
+  private loadReferenceConfig(configType: string): any {
+    // Try multiple possible paths for the config file
+    const possiblePaths = [
+      // Development path (from src directory)
+      path.join(__dirname, '../../config_mapping/cli', `${configType}.json`),
+      // Production path (from dist directory)
+      path.join(
+        __dirname,
+        '../../../src/config_mapping/cli',
+        `${configType}.json`,
+      ),
+      // Alternative production path
+      path.join(process.cwd(), 'src/config_mapping/cli', `${configType}.json`),
+      // Root directory path
+      path.join(process.cwd(), 'config_mapping/cli', `${configType}.json`),
+    ];
+
+    let configContent: string;
+    let lastError: Error | null = null;
+
+    for (const configPath of possiblePaths) {
+      try {
+        configContent = fs.readFileSync(configPath, 'utf8');
+        return JSON.parse(configContent);
+      } catch (error) {
+        lastError = error as Error;
+        // Continue to next path
+      }
+    }
+
+    // If we get here, none of the paths worked
+    throw new Error(
+      `Failed to load reference config for ${configType}. Tried paths: ${possiblePaths.join(', ')}. Last error: ${lastError?.message}`,
+    );
+  }
+
+  // Compare config structures, ignoring path and default values
+  private compareConfigStructures(
+    userConfig: any,
+    referenceConfig: any,
+    configPath: string = '',
+  ): void {
+    // Check if both are objects
+    if (typeof userConfig !== 'object' || typeof referenceConfig !== 'object') {
+      throw new Error(
+        `Type mismatch at ${configPath}: expected object, got ${typeof userConfig}`,
+      );
+    }
+
+    // Check if both are null
+    if (userConfig === null && referenceConfig === null) {
+      return;
+    }
+
+    // Check if one is null and the other isn't
+    if (userConfig === null || referenceConfig === null) {
+      throw new Error(
+        `Null mismatch at ${configPath}: user config is ${userConfig === null ? 'null' : 'object'}, reference is ${referenceConfig === null ? 'null' : 'object'}`,
+      );
+    }
+
+    // Check object_type
+    if (userConfig.object_type !== referenceConfig.object_type) {
+      throw new Error(
+        `object_type mismatch at ${configPath}: expected "${referenceConfig.object_type}", got "${userConfig.object_type}"`,
+      );
+    }
+
+    // For path-type configs, only check object_type (ignore path and default)
+    if (referenceConfig.path) {
+      return;
+    }
+
+    // For array-type configs
+    if (userConfig.object_type === 'array') {
+      if (!userConfig.source || !referenceConfig.source) {
+        throw new Error(`Array config missing source at ${configPath}`);
+      }
+      if (!userConfig.map || !referenceConfig.map) {
+        throw new Error(`Array config missing map at ${configPath}`);
+      }
+      // Recursively validate the map structure
+      this.compareConfigStructures(
+        userConfig.map,
+        referenceConfig.map,
+        `${configPath}.map`,
+      );
+      return;
+    }
+
+    // For object-type configs, check all fields except path and default
+    const userKeys = Object.keys(userConfig).filter(
+      (key) => key !== 'path' && key !== 'default',
+    );
+    const referenceKeys = Object.keys(referenceConfig).filter(
+      (key) => key !== 'path' && key !== 'default',
+    );
+
+    // Check if all required fields from reference exist in user config
+    for (const key of referenceKeys) {
+      if (!userKeys.includes(key)) {
+        throw new Error(`Missing field "${key}" at ${configPath}`);
+      }
+    }
+
+    // Check if user config has extra fields not in reference
+    for (const key of userKeys) {
+      if (!referenceKeys.includes(key)) {
+        throw new Error(`Extra field "${key}" not allowed at ${configPath}`);
+      }
+    }
+
+    // Recursively validate nested objects
+    for (const key of userKeys) {
+      const userValue = userConfig[key];
+      const referenceValue = referenceConfig[key];
+
+      if (
+        typeof userValue === 'object' &&
+        userValue !== null &&
+        typeof referenceValue === 'object' &&
+        referenceValue !== null
+      ) {
+        this.compareConfigStructures(
+          userValue,
+          referenceValue,
+          `${configPath}.${key}`,
+        );
+      }
+    }
+  }
+
+  // Validate create task config structure against reference
   private async validateCreateTaskConfig(config: any): Promise<void> {
     try {
-      this.validateConfigStructure(config, 'TaskGenerationReq');
+      const referenceConfig = this.loadReferenceConfig('create_task');
+      this.compareConfigStructures(
+        config,
+        referenceConfig,
+        'create_task_config',
+      );
     } catch (error) {
       throw new BadRequestException(
         `Create task config validation failed: ${error.message}`,
@@ -33,10 +173,15 @@ export class ConfigMappingService {
     }
   }
 
-  // Validate update task config structure
+  // Validate update task config structure against reference
   private async validateUpdateTaskConfig(config: any): Promise<void> {
     try {
-      this.validateConfigStructure(config, 'TaskUpdateReq');
+      const referenceConfig = this.loadReferenceConfig('update_task');
+      this.compareConfigStructures(
+        config,
+        referenceConfig,
+        'update_task_config',
+      );
     } catch (error) {
       throw new BadRequestException(
         `Update task config validation failed: ${error.message}`,
@@ -44,10 +189,15 @@ export class ConfigMappingService {
     }
   }
 
-  // Validate cancel task config structure
+  // Validate cancel task config structure against reference
   private async validateCancelTaskConfig(config: any): Promise<void> {
     try {
-      this.validateConfigStructure(config, 'CancelReq');
+      const referenceConfig = this.loadReferenceConfig('cancel_task');
+      this.compareConfigStructures(
+        config,
+        referenceConfig,
+        'cancel_task_config',
+      );
     } catch (error) {
       throw new BadRequestException(
         `Cancel task config validation failed: ${error.message}`,
@@ -55,196 +205,15 @@ export class ConfigMappingService {
     }
   }
 
-  // Validate config structure only (not path resolution)
-  private validateConfigStructure(config: any, targetType: string): void {
-    if (!config || typeof config !== 'object') {
-      throw new Error('Config must be an object');
-    }
-
-    if (!config.object_type) {
-      throw new Error('Config must have object_type property');
-    }
-
-    if (config.object_type === 'object') {
-      this.validateObjectConfig(config, targetType);
-    } else if (config.object_type === 'array') {
-      this.validateArrayConfig(config);
-    } else if (config.path) {
-      this.validatePathConfig(config);
-    }
-  }
-
-  // Validate object-type config structure
-  private validateObjectConfig(config: any, targetType: string): void {
-    const requiredFields = this.getRequiredFieldsForType(targetType);
-
-    for (const field of requiredFields) {
-      if (!config[field]) {
-        throw new Error(`Missing required field '${field}' for ${targetType}`);
-      }
-    }
-
-    // Recursively validate nested fields with proper type checking
-    for (const [key, value] of Object.entries(config)) {
-      if (key === 'object_type') continue;
-
-      if (typeof value === 'object' && value !== null) {
-        // Determine the nested type based on the field name and parent type
-        const nestedType = this.getNestedFieldType(targetType, key);
-        this.validateConfigStructure(value, nestedType);
-      }
-    }
-  }
-
-  // Validate array-type config structure
-  private validateArrayConfig(config: any): void {
-    if (!config.source) {
-      throw new Error('Array config must have source property');
-    }
-
-    if (!config.map) {
-      throw new Error('Array config must have map property');
-    }
-
-    if (typeof config.map !== 'object') {
-      throw new Error('Array config map must be an object');
-    }
-
-    // Validate the map structure - determine type based on context
-    // For arrays in tasks, the map should validate as 'Task'
-    // For arrays in cargos, the map should validate as 'Cargo'
-    let mapType = 'nested';
-    if (config.source && config.source.includes('task')) {
-      mapType = 'Task';
-    } else if (config.source && config.source.includes('cargo')) {
-      mapType = 'Cargo';
-    }
-
-    this.validateConfigStructure(config.map, mapType);
-  }
-
-  // Validate path-type config structure
-  private validatePathConfig(config: any): void {
-    if (!config.path || typeof config.path !== 'string') {
-      throw new Error('Path config must have valid path string');
-    }
-
-    if (!config.object_type) {
-      throw new Error('Path config must specify object_type');
-    }
-
-    const validTypes = [
-      'string',
-      'number',
-      'boolean',
-      'object',
-      'array',
-      'null',
-    ];
-    if (!validTypes.includes(config.object_type)) {
-      throw new Error(
-        `Invalid object_type '${config.object_type}'. Must be one of: ${validTypes.join(', ')}`,
-      );
-    }
-  }
-
-  // Get required fields for each DTO type (based on @IsNotEmpty/@IsString without @IsOptional)
-  private getRequiredFieldsForType(type: string): string[] {
-    switch (type) {
-      case 'TaskGenerationReq':
-        return ['tasks']; // Only tasks is required, others are optional
-      case 'TaskUpdateReq':
-        return ['batch_job_id', 'updates']; // Both are required
-      case 'CancelReq':
-        return []; // All fields are optional
-      case 'Task': // Task object from TaskGenerationReq
-        return [
-          'task_id',
-          'task_type',
-          'start_location',
-          'end_location',
-          'cargos',
-        ];
-      case 'TaskUpdate': // Task object from TaskUpdateReq
-        return ['task_id', 'start_location', 'end_location', 'cargos'];
-      case 'Location':
-        return [
-          'location_id',
-          'location_type',
-          'location_action',
-          'location_dimension',
-        ];
-      case 'Cargo':
-        return ['cargo_code'];
-      case 'Dimension':
-        return ['length', 'width', 'height'];
-      default:
-        return [];
-    }
-  }
-
-  // Determine the nested field type based on parent type and field name
-  private getNestedFieldType(parentType: string, fieldName: string): string {
-    switch (parentType) {
-      case 'TaskGenerationReq':
-        if (fieldName === 'tasks') return 'Task';
-        break;
-      case 'TaskUpdateReq':
-        if (fieldName === 'updates') return 'TaskUpdate';
-        break;
-      case 'Task':
-      case 'TaskUpdate':
-        if (fieldName === 'start_location' || fieldName === 'end_location')
-          return 'Location';
-        if (fieldName === 'cargos') return 'Cargo';
-        if (fieldName === 'wait' || fieldName === 'wait_time') return 'Wait';
-        break;
-      case 'Location':
-        if (fieldName === 'location_dimension') return 'Dimension';
-        if (fieldName === 'location_attribute') return 'Attribute';
-        break;
-      case 'Cargo':
-        if (fieldName === 'cargo_dimension') return 'Dimension';
-        if (fieldName === 'cargo_attributes') return 'Attribute';
-        break;
-    }
-    return 'nested'; // Default fallback
-  }
-
-  // Validate get location config
+  // Validate get location config structure against reference
   private async validateGetLocationConfig(config: any): Promise<void> {
     try {
-      // For get location config, we validate the endpoint structure
-      if (!config.endpoint) {
-        throw new Error('endpoint configuration is required');
-      }
-
-      if (!config.endpoint.url) {
-        throw new Error('endpoint.url is required');
-      }
-
-      if (!config.endpoint.method) {
-        throw new Error('endpoint.method is required');
-      }
-
-      const allowedMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
-      if (!allowedMethods.includes(config.endpoint.method.toUpperCase())) {
-        throw new Error(
-          `endpoint.method must be one of: ${allowedMethods.join(', ')}`,
-        );
-      }
-
-      // Validate URL format
-      try {
-        // Check if it's a valid URL pattern (with or without parameters)
-        const urlPattern = config.endpoint.url.replace(
-          /:[a-zA-Z_][a-zA-Z0-9_]*/g,
-          'param',
-        );
-        new URL(urlPattern);
-      } catch {
-        throw new Error('endpoint.url must be a valid URL format');
-      }
+      const referenceConfig = this.loadReferenceConfig('get_empty_location');
+      this.compareConfigStructures(
+        config,
+        referenceConfig,
+        'get_location_config',
+      );
     } catch (error) {
       throw new BadRequestException(
         `Get location config validation failed: ${error.message}`,
