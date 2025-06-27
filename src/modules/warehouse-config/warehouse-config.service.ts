@@ -139,43 +139,6 @@ export class WarehouseConfigService {
     };
   }
 
-  private generateSampleDataFromConfig(config: any): any {
-    if (!config || typeof config !== 'object') {
-      return {};
-    }
-
-    const sampleData: any = {};
-
-    // Process each field in the config
-    for (const [fieldName, fieldConfig] of Object.entries(config)) {
-      if (fieldName === 'object_type') continue;
-
-      if (typeof fieldConfig === 'object' && fieldConfig !== null) {
-        const typedFieldConfig = fieldConfig as any;
-        if (typedFieldConfig.object_type === 'array') {
-          // Handle array type
-          sampleData[fieldName] =
-            this.generateArraySampleData(typedFieldConfig);
-        } else if (typedFieldConfig.object_type === 'object') {
-          // Handle nested object type
-          sampleData[fieldName] =
-            this.generateObjectSampleData(typedFieldConfig);
-        } else {
-          // Handle primitive types
-          sampleData[fieldName] =
-            this.generatePrimitiveSampleData(typedFieldConfig);
-        }
-      } else {
-        // Handle direct field mappings
-        sampleData[fieldName] = this.generatePrimitiveSampleData({
-          object_type: 'string',
-        });
-      }
-    }
-
-    return sampleData;
-  }
-
   private generateArraySampleData(arrayConfig: any): any[] {
     if (!arrayConfig.map) {
       return [];
@@ -219,17 +182,17 @@ export class WarehouseConfigService {
       return 'sample_value';
     }
 
-    const { object_type, default: defaultValue } = fieldConfig;
+    const { object_type, default: defaultValue, path } = fieldConfig;
 
     // Return default value if specified
     if (defaultValue !== undefined) {
       return defaultValue;
     }
 
-    // Generate sample data based on object_type
+    // Generate sample data based on object_type and field context
     switch (object_type) {
       case 'string':
-        return 'sample_string';
+        return this.generateStringSampleData(path);
       case 'number':
         return 123;
       case 'boolean':
@@ -241,14 +204,68 @@ export class WarehouseConfigService {
     }
   }
 
+  private generateStringSampleData(path: string): string {
+    // Generate appropriate sample data based on the field path
+    if (path && path.includes('batch_type')) {
+      return 'Discrete'; // Use valid enum value
+    }
+    if (path && path.includes('task_type')) {
+      return 'Crossdock'; // Use a realistic task type
+    }
+    if (path && path.includes('location_type')) {
+      return 'Zone'; // Use a realistic location type
+    }
+    if (path && path.includes('location_action')) {
+      return 'Pick'; // Use a realistic action
+    }
+    if (path && path.includes('cargo_type')) {
+      return 'Box'; // Use a realistic cargo type
+    }
+    if (path && path.includes('wait_type')) {
+      return 'Trigger'; // Use a realistic wait type
+    }
+    if (path && path.includes('wait_condition')) {
+      return 'Time'; // Use a realistic wait condition
+    }
+    if (path && path.includes('wait_status')) {
+      return 'Not Started'; // Use a realistic status
+    }
+    if (path && path.includes('fallback_action')) {
+      return 'Retry'; // Use a realistic fallback action
+    }
+    if (path && path.includes('attribute_name')) {
+      return 'Color'; // Use a realistic attribute name
+    }
+    if (path && path.includes('attribute_value')) {
+      return 'Blue'; // Use a realistic attribute value
+    }
+    if (path && path.includes('task_id')) {
+      return 'TASK123'; // Use a realistic task ID
+    }
+    if (path && path.includes('job_id')) {
+      return 'BATC_AmC'; // Use a realistic job ID
+    }
+    if (path && path.includes('location_id')) {
+      return 'LOC001'; // Use a realistic location ID
+    }
+    if (path && path.includes('cargo_code')) {
+      return 'CARGO123'; // Use a realistic cargo code
+    }
+
+    return 'sample_string'; // Default fallback
+  }
+
   private generateInputSampleDataFromConfig(config: any): any {
     if (!config || typeof config !== 'object') {
       return {};
     }
 
     const sampleData: any = {};
+    this.processConfigForSampleData(config, sampleData);
+    return sampleData;
+  }
 
-    // Process each field in the config
+  private processConfigForSampleData(config: any, sampleData: any): void {
     for (const [fieldName, fieldConfig] of Object.entries(config)) {
       if (fieldName === 'object_type') continue;
 
@@ -256,13 +273,17 @@ export class WarehouseConfigService {
         const typedFieldConfig = fieldConfig as any;
 
         if (typedFieldConfig.path) {
-          // Extract the input field name from the path
+          // Extract the input field name and set the value
           const inputFieldName = this.extractInputFieldName(
             typedFieldConfig.path,
           );
           if (inputFieldName) {
-            sampleData[inputFieldName] =
-              this.generatePrimitiveSampleData(typedFieldConfig);
+            // Build nested structure based on the remaining path
+            this.setNestedValue(
+              sampleData,
+              inputFieldName,
+              this.generatePrimitiveSampleData(typedFieldConfig),
+            );
           }
         } else if (typedFieldConfig.object_type === 'array') {
           // Handle array type - look for source field
@@ -270,165 +291,62 @@ export class WarehouseConfigService {
             const sourceFieldName = this.extractInputFieldName(
               typedFieldConfig.source,
             );
-            if (sourceFieldName) {
-              sampleData[sourceFieldName] =
-                this.generateArrayInputSampleData(typedFieldConfig);
+            if (sourceFieldName && typedFieldConfig.map) {
+              // Generate array sample data
+              const arrayItemSample = {};
+              this.processConfigForSampleData(
+                typedFieldConfig.map,
+                arrayItemSample,
+              );
+              sampleData[sourceFieldName] = [arrayItemSample];
             }
           }
         } else if (typedFieldConfig.object_type === 'object') {
-          // Handle nested object type - generate nested structure
-          const nestedData =
-            this.generateNestedObjectSampleData(typedFieldConfig);
-          if (Object.keys(nestedData).length > 0) {
-            // Find the parent field name from the first path in the nested object
-            const parentFieldName = this.findParentFieldName(typedFieldConfig);
-            if (parentFieldName) {
-              sampleData[parentFieldName] = nestedData;
-            } else {
-              // If no parent field name found, merge directly
-              Object.assign(sampleData, nestedData);
-            }
-          }
+          // Recursively process nested object
+          this.processConfigForSampleData(typedFieldConfig, sampleData);
         }
       }
     }
+  }
 
-    return sampleData;
+  private setNestedValue(obj: any, path: string, value: any): void {
+    const parts = path.split('.');
+    let current = obj;
+
+    // Navigate/create the nested structure
+    for (let i = 0; i < parts.length - 1; i++) {
+      const part = parts[i];
+      if (!current[part]) {
+        current[part] = {};
+      }
+      current = current[part];
+    }
+
+    // Set the final value
+    current[parts[parts.length - 1]] = value;
   }
 
   private generateNestedObjectSampleData(
     objectConfig: any,
     skipParts = 1,
   ): any {
+    // This method is now simplified since we handle everything in processConfigForSampleData
     const sampleObject: any = {};
-
-    for (const [fieldName, fieldConfig] of Object.entries(objectConfig)) {
-      if (fieldName === 'object_type') continue;
-
-      if (typeof fieldConfig === 'object' && fieldConfig !== null) {
-        const typedFieldConfig = fieldConfig as any;
-
-        if (typedFieldConfig.path) {
-          this.buildNestedObjectFromPath(
-            sampleObject,
-            typedFieldConfig.path,
-            this.generatePrimitiveSampleData(typedFieldConfig),
-            skipParts,
-          );
-        } else if (typedFieldConfig.object_type === 'array') {
-          if (typedFieldConfig.source) {
-            const sourceFieldName = this.extractNestedFieldName(
-              typedFieldConfig.source,
-            );
-            if (sourceFieldName) {
-              sampleObject[sourceFieldName] = this.generateArrayInputSampleData(
-                typedFieldConfig,
-                skipParts,
-              );
-            }
-          }
-        } else if (typedFieldConfig.object_type === 'object') {
-          // Instead of wrapping under parentFieldName, just merge the nested structure directly
-          const nestedData = this.generateNestedObjectSampleData(
-            typedFieldConfig,
-            skipParts,
-          );
-          Object.assign(sampleObject, nestedData);
-        }
-      }
-    }
-
+    this.processConfigForSampleData(objectConfig, sampleObject);
     return sampleObject;
   }
 
-  private buildNestedObjectFromPath(
-    obj: any,
-    path: string,
-    value: any,
-    skipParts = 1,
-  ): void {
-    // Parse path like "op.start_location.location_dimension.length"
-    const parts = path.split('.');
-
-    // Skip the first part (input, op, item) only if skipParts > 0
-    const relevantParts = parts.slice(skipParts);
-
-    if (relevantParts.length === 1) {
-      // Direct field
-      obj[relevantParts[0]] = value;
-    } else {
-      // Nested field - build the object structure
-      let current = obj;
-      for (let i = 0; i < relevantParts.length - 1; i++) {
-        const part = relevantParts[i];
-        if (!current[part]) {
-          current[part] = {};
-        }
-        current = current[part];
-      }
-      current[relevantParts[relevantParts.length - 1]] = value;
-    }
-  }
-
-  private findParentFieldName(objectConfig: any): string | null {
-    // Find the first path in the object to determine the parent field name
-    for (const [fieldName, fieldConfig] of Object.entries(objectConfig)) {
-      if (fieldName === 'object_type') continue;
-
-      if (typeof fieldConfig === 'object' && fieldConfig !== null) {
-        const typedFieldConfig = fieldConfig as any;
-        if (typedFieldConfig.path) {
-          return this.extractParentFieldName(typedFieldConfig.path);
-        }
-      }
-    }
-    return null;
-  }
-
-  private extractParentFieldName(path: string): string | null {
-    // Extract parent field name from paths like "op.start_location.location_id" -> "start_location"
-    const parts = path.split('.');
-    if (parts.length >= 2) {
-      // Skip the first part (input, op, item) and return the second part
-      return parts[1];
-    }
-    return null;
-  }
-
-  private extractNestedFieldName(path: string): string | null {
-    // Extract nested field name from paths like "op.start_location.location_id" -> "location_id"
-    const parts = path.split('.');
-    if (parts.length >= 3) {
-      // Return the last part for nested fields
-      return parts[parts.length - 1];
-    }
-    return null;
-  }
-
   private extractInputFieldName(path: string): string | null {
-    // Extract field name from paths like "input.job_id" -> "job_id"
+    // Extract field name from paths and maintain nested structure
     if (path.startsWith('input.')) {
-      return path.substring(6); // Remove "input." prefix
+      return path.substring(6); // Remove "input." prefix but keep the rest
     }
     if (path.startsWith('op.')) {
-      return path.substring(3); // Remove "op." prefix
+      return path.substring(3); // Remove "op." prefix but keep the rest
     }
     if (path.startsWith('item.')) {
-      return path.substring(5); // Remove "item." prefix
+      return path.substring(5); // Remove "item." prefix but keep the rest
     }
     return null;
-  }
-
-  private generateArrayInputSampleData(arrayConfig: any, skipParts = 1): any[] {
-    if (!arrayConfig.map) {
-      return [];
-    }
-
-    // Generate a sample array with one item based on the map configuration
-    const sampleItem = this.generateNestedObjectSampleData(
-      arrayConfig.map,
-      skipParts,
-    );
-    return [sampleItem];
   }
 }
