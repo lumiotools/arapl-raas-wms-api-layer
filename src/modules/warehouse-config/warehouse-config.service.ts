@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Warehouse } from '../robot-job/entities/warehouse.entity';
@@ -18,6 +22,236 @@ export class WarehouseConfigService {
     private warehouseRepository: Repository<Warehouse>,
   ) {}
 
+  // Validate create task config structure
+  private async validateCreateTaskConfig(config: any): Promise<void> {
+    try {
+      this.validateConfigStructure(config, 'TaskGenerationReq');
+    } catch (error) {
+      throw new BadRequestException(
+        `Create task config validation failed: ${error.message}`,
+      );
+    }
+  }
+
+  // Validate update task config structure
+  private async validateUpdateTaskConfig(config: any): Promise<void> {
+    try {
+      this.validateConfigStructure(config, 'TaskUpdateReq');
+    } catch (error) {
+      throw new BadRequestException(
+        `Update task config validation failed: ${error.message}`,
+      );
+    }
+  }
+
+  // Validate cancel task config structure
+  private async validateCancelTaskConfig(config: any): Promise<void> {
+    try {
+      this.validateConfigStructure(config, 'CancelReq');
+    } catch (error) {
+      throw new BadRequestException(
+        `Cancel task config validation failed: ${error.message}`,
+      );
+    }
+  }
+
+  // Validate config structure only (not path resolution)
+  private validateConfigStructure(config: any, targetType: string): void {
+    if (!config || typeof config !== 'object') {
+      throw new Error('Config must be an object');
+    }
+
+    if (!config.object_type) {
+      throw new Error('Config must have object_type property');
+    }
+
+    if (config.object_type === 'object') {
+      this.validateObjectConfig(config, targetType);
+    } else if (config.object_type === 'array') {
+      this.validateArrayConfig(config);
+    } else if (config.path) {
+      this.validatePathConfig(config);
+    }
+  }
+
+  // Validate object-type config structure
+  private validateObjectConfig(config: any, targetType: string): void {
+    const requiredFields = this.getRequiredFieldsForType(targetType);
+
+    for (const field of requiredFields) {
+      if (!config[field]) {
+        throw new Error(`Missing required field '${field}' for ${targetType}`);
+      }
+    }
+
+    // Recursively validate nested fields with proper type checking
+    for (const [key, value] of Object.entries(config)) {
+      if (key === 'object_type') continue;
+
+      if (typeof value === 'object' && value !== null) {
+        // Determine the nested type based on the field name and parent type
+        const nestedType = this.getNestedFieldType(targetType, key);
+        this.validateConfigStructure(value, nestedType);
+      }
+    }
+  }
+
+  // Validate array-type config structure
+  private validateArrayConfig(config: any): void {
+    if (!config.source) {
+      throw new Error('Array config must have source property');
+    }
+
+    if (!config.map) {
+      throw new Error('Array config must have map property');
+    }
+
+    if (typeof config.map !== 'object') {
+      throw new Error('Array config map must be an object');
+    }
+
+    // Validate the map structure - determine type based on context
+    // For arrays in tasks, the map should validate as 'Task'
+    // For arrays in cargos, the map should validate as 'Cargo'
+    let mapType = 'nested';
+    if (config.source && config.source.includes('task')) {
+      mapType = 'Task';
+    } else if (config.source && config.source.includes('cargo')) {
+      mapType = 'Cargo';
+    }
+
+    this.validateConfigStructure(config.map, mapType);
+  }
+
+  // Validate path-type config structure
+  private validatePathConfig(config: any): void {
+    if (!config.path || typeof config.path !== 'string') {
+      throw new Error('Path config must have valid path string');
+    }
+
+    if (!config.object_type) {
+      throw new Error('Path config must specify object_type');
+    }
+
+    const validTypes = [
+      'string',
+      'number',
+      'boolean',
+      'object',
+      'array',
+      'null',
+    ];
+    if (!validTypes.includes(config.object_type)) {
+      throw new Error(
+        `Invalid object_type '${config.object_type}'. Must be one of: ${validTypes.join(', ')}`,
+      );
+    }
+  }
+
+  // Get required fields for each DTO type (based on @IsNotEmpty/@IsString without @IsOptional)
+  private getRequiredFieldsForType(type: string): string[] {
+    switch (type) {
+      case 'TaskGenerationReq':
+        return ['tasks']; // Only tasks is required, others are optional
+      case 'TaskUpdateReq':
+        return ['batch_job_id', 'updates']; // Both are required
+      case 'CancelReq':
+        return []; // All fields are optional
+      case 'Task': // Task object from TaskGenerationReq
+        return [
+          'task_id',
+          'task_type',
+          'start_location',
+          'end_location',
+          'cargos',
+        ];
+      case 'TaskUpdate': // Task object from TaskUpdateReq
+        return ['task_id', 'start_location', 'end_location', 'cargos'];
+      case 'Location':
+        return [
+          'location_id',
+          'location_type',
+          'location_action',
+          'location_dimension',
+        ];
+      case 'Cargo':
+        return ['cargo_code'];
+      case 'Dimension':
+        return ['length', 'width', 'height'];
+      default:
+        return [];
+    }
+  }
+
+  // Determine the nested field type based on parent type and field name
+  private getNestedFieldType(parentType: string, fieldName: string): string {
+    switch (parentType) {
+      case 'TaskGenerationReq':
+        if (fieldName === 'tasks') return 'Task';
+        break;
+      case 'TaskUpdateReq':
+        if (fieldName === 'updates') return 'TaskUpdate';
+        break;
+      case 'Task':
+      case 'TaskUpdate':
+        if (fieldName === 'start_location' || fieldName === 'end_location')
+          return 'Location';
+        if (fieldName === 'cargos') return 'Cargo';
+        if (fieldName === 'wait' || fieldName === 'wait_time') return 'Wait';
+        break;
+      case 'Location':
+        if (fieldName === 'location_dimension') return 'Dimension';
+        if (fieldName === 'location_attribute') return 'Attribute';
+        break;
+      case 'Cargo':
+        if (fieldName === 'cargo_dimension') return 'Dimension';
+        if (fieldName === 'cargo_attributes') return 'Attribute';
+        break;
+    }
+    return 'nested'; // Default fallback
+  }
+
+  // Validate get location config
+  private async validateGetLocationConfig(config: any): Promise<void> {
+    try {
+      // For get location config, we validate the endpoint structure
+      if (!config.endpoint) {
+        throw new Error('endpoint configuration is required');
+      }
+
+      if (!config.endpoint.url) {
+        throw new Error('endpoint.url is required');
+      }
+
+      if (!config.endpoint.method) {
+        throw new Error('endpoint.method is required');
+      }
+
+      const allowedMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
+      if (!allowedMethods.includes(config.endpoint.method.toUpperCase())) {
+        throw new Error(
+          `endpoint.method must be one of: ${allowedMethods.join(', ')}`,
+        );
+      }
+
+      // Validate URL format
+      try {
+        // Check if it's a valid URL pattern (with or without parameters)
+        const urlPattern = config.endpoint.url.replace(
+          /:[a-zA-Z_][a-zA-Z0-9_]*/g,
+          'param',
+        );
+        new URL(urlPattern);
+      } catch {
+        throw new Error('endpoint.url must be a valid URL format');
+      }
+    } catch (error) {
+      throw new BadRequestException(
+        `Get location config validation failed: ${error.message}`,
+      );
+    }
+  }
+
   async updateCreateTaskConfig(
     warehouseId: string,
     createTaskConfigDto: CreateTaskConfigDto,
@@ -29,6 +263,9 @@ export class WarehouseConfigService {
     if (!warehouse) {
       throw new NotFoundException(`Warehouse with ID ${warehouseId} not found`);
     }
+
+    // Validate the config before saving
+    await this.validateCreateTaskConfig(createTaskConfigDto.config);
 
     warehouse.create_task_config = createTaskConfigDto.config;
     await this.warehouseRepository.save(warehouse);
@@ -54,6 +291,9 @@ export class WarehouseConfigService {
       throw new NotFoundException(`Warehouse with ID ${warehouseId} not found`);
     }
 
+    // Validate the config before saving
+    await this.validateUpdateTaskConfig(updateTaskConfigDto.config);
+
     warehouse.update_task_config = updateTaskConfigDto.config;
     await this.warehouseRepository.save(warehouse);
 
@@ -78,6 +318,9 @@ export class WarehouseConfigService {
       throw new NotFoundException(`Warehouse with ID ${warehouseId} not found`);
     }
 
+    // Validate the config before saving
+    await this.validateCancelTaskConfig(cancelTaskConfigDto.config);
+
     warehouse.cancel_task_config = cancelTaskConfigDto.config;
     await this.warehouseRepository.save(warehouse);
 
@@ -101,6 +344,9 @@ export class WarehouseConfigService {
     if (!warehouse) {
       throw new NotFoundException(`Warehouse with ID ${warehouseId} not found`);
     }
+
+    // Validate the config before saving
+    await this.validateGetLocationConfig(getLocationConfigDto.config);
 
     warehouse.get_location_config = getLocationConfigDto.config;
     await this.warehouseRepository.save(warehouse);
