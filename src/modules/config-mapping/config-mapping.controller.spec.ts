@@ -6,66 +6,53 @@ import {
   UpdateTaskConfigDto,
   CancelTaskConfigDto,
   GetLocationConfigDto,
-  WarehouseConfigResponseDto,
-  WarehouseConfigUpdateResponseDto,
+  ConfigMappingResponseDto,
+  ConfigMappingUpdateResponseDto,
 } from './dto/config-mapping.dto';
 
 describe('ConfigMappingController', () => {
   let controller: ConfigMappingController;
   let service: ConfigMappingService;
 
-  const mockWarehouseConfig: WarehouseConfigResponseDto = {
-    warehouse_id: 'test-warehouse-1',
+  const mockConfigMapping: ConfigMappingResponseDto = {
+    warehouse_id: 'WH_001',
     warehouse_name: 'Test Warehouse',
-    create_task_config: null,
-    update_task_config: null,
-    cancel_task_config: null,
-    get_location_config: null,
+    create_task_config: { test: 'config' },
+    update_task_config: { test: 'config' },
+    cancel_task_config: { test: 'config' },
+    get_location_config: { test: 'config' },
   };
 
-  const mockCreateTaskResponse: WarehouseConfigUpdateResponseDto = {
+  const mockCreateTaskResponse: ConfigMappingUpdateResponseDto = {
     success: true,
     message: 'Create task configuration updated successfully',
-    sample_data: {
-      batch_job_id: 'sample_string',
-      batch_priority: 5,
-      tasks: [{ task_id: 'sample_string' }],
-    },
+    sample_data: { test: 'sample' },
   };
 
-  const mockUpdateTaskResponse: WarehouseConfigUpdateResponseDto = {
+  const mockUpdateTaskResponse: ConfigMappingUpdateResponseDto = {
     success: true,
     message: 'Update task configuration updated successfully',
-    sample_data: {
-      batch_job_id: 'sample_string',
-      updates: [{ task_id: 'sample_string' }],
-    },
+    sample_data: { test: 'sample' },
   };
 
-  const mockCancelTaskResponse: WarehouseConfigUpdateResponseDto = {
+  const mockCancelTaskResponse: ConfigMappingUpdateResponseDto = {
     success: true,
     message: 'Cancel task configuration updated successfully',
-    sample_data: {
-      reason: 'sample_string',
-      timestamp: 'sample_string',
-    },
+    sample_data: { test: 'sample' },
   };
 
-  const mockGetLocationResponse: WarehouseConfigUpdateResponseDto = {
+  const mockGetLocationResponse: ConfigMappingUpdateResponseDto = {
     success: true,
     message: 'Get location configuration updated successfully',
-    sample_data: {
-      location_status: 'Available',
-      location_zone: 'sample_string',
-    },
+    sample_data: { test: 'sample' },
   };
 
-  const mockWarehouseConfigService = {
+  const mockConfigMappingService = {
     updateCreateTaskConfig: jest.fn(),
     updateUpdateTaskConfig: jest.fn(),
     updateCancelTaskConfig: jest.fn(),
     updateGetLocationConfig: jest.fn(),
-    getWarehouseConfig: jest.fn(),
+    getConfigMapping: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -74,7 +61,7 @@ describe('ConfigMappingController', () => {
       providers: [
         {
           provide: ConfigMappingService,
-          useValue: mockWarehouseConfigService,
+          useValue: mockConfigMappingService,
         },
       ],
     }).compile();
@@ -92,177 +79,113 @@ describe('ConfigMappingController', () => {
   });
 
   describe('updateCreateTaskConfig', () => {
-    it('should update create task config successfully', async () => {
-      const warehouseId = 'test-warehouse-1';
-      const configData = {
-        config: {
-          object_type: 'object',
-          batch_job_id: { object_type: 'string', path: 'input.job_id' },
-          batch_priority: {
-            object_type: 'number',
-            path: 'input.batch_priority',
-            default: 5,
-          },
-        },
+    it('should update create task configuration successfully', async () => {
+      const warehouseId = 'WH_001';
+      const createTaskConfigDto: CreateTaskConfigDto = {
+        config: { object_type: 'object', test: 'config' },
       };
 
-      const expectedResponse = {
-        success: true,
-        message: 'Create task configuration updated successfully',
-        sample_data: {
-          job_id: 'sample_string',
-          batch_priority: 5,
-        },
-      };
-
-      mockWarehouseConfigService.updateCreateTaskConfig.mockResolvedValue(
-        expectedResponse,
+      mockConfigMappingService.updateCreateTaskConfig.mockResolvedValue(
+        mockCreateTaskResponse,
       );
 
       const result = await controller.updateCreateTaskConfig(
         warehouseId,
-        configData,
+        createTaskConfigDto,
       );
 
       expect(service.updateCreateTaskConfig).toHaveBeenCalledWith(
         warehouseId,
-        configData,
+        createTaskConfigDto,
       );
-      expect(result).toEqual(expectedResponse);
+      expect(result).toEqual(mockCreateTaskResponse);
     });
   });
 
   describe('updateUpdateTaskConfig', () => {
-    it('should update update task config successfully', async () => {
-      const warehouseId = 'test-warehouse-1';
-      const configData = {
-        config: {
-          object_type: 'object',
-          task_id: { object_type: 'string', path: 'input.task_id' },
-          status: { object_type: 'string', path: 'input.status' },
-        },
+    it('should update update task configuration successfully', async () => {
+      const warehouseId = 'WH_001';
+      const updateTaskConfigDto: UpdateTaskConfigDto = {
+        config: { object_type: 'object', test: 'config' },
       };
 
-      const expectedResponse = {
-        success: true,
-        message: 'Update task configuration updated successfully',
-        sample_data: {
-          task_id: 'sample_string',
-          status: 'sample_string',
-        },
-      };
-
-      mockWarehouseConfigService.updateUpdateTaskConfig.mockResolvedValue(
-        expectedResponse,
+      mockConfigMappingService.updateUpdateTaskConfig.mockResolvedValue(
+        mockUpdateTaskResponse,
       );
 
       const result = await controller.updateUpdateTaskConfig(
         warehouseId,
-        configData,
+        updateTaskConfigDto,
       );
 
       expect(service.updateUpdateTaskConfig).toHaveBeenCalledWith(
         warehouseId,
-        configData,
+        updateTaskConfigDto,
       );
-      expect(result).toEqual(expectedResponse);
+      expect(result).toEqual(mockUpdateTaskResponse);
     });
   });
 
   describe('updateCancelTaskConfig', () => {
-    it('should update cancel task config successfully', async () => {
-      const warehouseId = 'test-warehouse-1';
-      const configData = {
-        config: {
-          object_type: 'object',
-          task_id: { object_type: 'string', path: 'input.task_id' },
-          reason: { object_type: 'string', path: 'input.reason' },
-        },
+    it('should update cancel task configuration successfully', async () => {
+      const warehouseId = 'WH_001';
+      const cancelTaskConfigDto: CancelTaskConfigDto = {
+        config: { object_type: 'object', test: 'config' },
       };
 
-      const expectedResponse = {
-        success: true,
-        message: 'Cancel task configuration updated successfully',
-        sample_data: {
-          task_id: 'sample_string',
-          reason: 'sample_string',
-        },
-      };
-
-      mockWarehouseConfigService.updateCancelTaskConfig.mockResolvedValue(
-        expectedResponse,
+      mockConfigMappingService.updateCancelTaskConfig.mockResolvedValue(
+        mockCancelTaskResponse,
       );
 
       const result = await controller.updateCancelTaskConfig(
         warehouseId,
-        configData,
+        cancelTaskConfigDto,
       );
 
       expect(service.updateCancelTaskConfig).toHaveBeenCalledWith(
         warehouseId,
-        configData,
+        cancelTaskConfigDto,
       );
-      expect(result).toEqual(expectedResponse);
+      expect(result).toEqual(mockCancelTaskResponse);
     });
   });
 
   describe('updateGetLocationConfig', () => {
-    it('should update get location config successfully', async () => {
-      const warehouseId = 'test-warehouse-1';
-      const configData = {
-        config: {
-          object_type: 'object',
-          location_type: { object_type: 'string', path: 'input.location_type' },
-          available: { object_type: 'boolean', path: 'input.available' },
-        },
+    it('should update get location configuration successfully', async () => {
+      const warehouseId = 'WH_001';
+      const getLocationConfigDto: GetLocationConfigDto = {
+        config: { object_type: 'object', test: 'config' },
       };
 
-      const expectedResponse = {
-        success: true,
-        message: 'Get location configuration updated successfully',
-        sample_data: {
-          location_type: 'sample_string',
-          available: true,
-        },
-      };
-
-      mockWarehouseConfigService.updateGetLocationConfig.mockResolvedValue(
-        expectedResponse,
+      mockConfigMappingService.updateGetLocationConfig.mockResolvedValue(
+        mockGetLocationResponse,
       );
 
       const result = await controller.updateGetLocationConfig(
         warehouseId,
-        configData,
+        getLocationConfigDto,
       );
 
       expect(service.updateGetLocationConfig).toHaveBeenCalledWith(
         warehouseId,
-        configData,
+        getLocationConfigDto,
       );
-      expect(result).toEqual(expectedResponse);
+      expect(result).toEqual(mockGetLocationResponse);
     });
   });
 
-  describe('getWarehouseConfig', () => {
-    it('should return warehouse config successfully', async () => {
-      const warehouseId = 'test-warehouse-1';
-      const expectedResponse = {
-        warehouse_id: 'test-warehouse-1',
-        warehouse_name: 'Test Warehouse',
-        create_task_config: { test: 'config' },
-        update_task_config: { test: 'config' },
-        cancel_task_config: { test: 'config' },
-        get_location_config: { test: 'config' },
-      };
+  describe('getConfigMapping', () => {
+    it('should return configuration mapping successfully', async () => {
+      const warehouseId = 'WH_001';
 
-      mockWarehouseConfigService.getWarehouseConfig.mockResolvedValue(
-        expectedResponse,
+      mockConfigMappingService.getConfigMapping.mockResolvedValue(
+        mockConfigMapping,
       );
 
-      const result = await controller.getWarehouseConfig(warehouseId);
+      const result = await controller.getConfigMapping(warehouseId);
 
-      expect(service.getWarehouseConfig).toHaveBeenCalledWith(warehouseId);
-      expect(result).toEqual(expectedResponse);
+      expect(service.getConfigMapping).toHaveBeenCalledWith(warehouseId);
+      expect(result).toEqual(mockConfigMapping);
     });
   });
 
@@ -305,7 +228,7 @@ describe('ConfigMappingController', () => {
         },
       };
 
-      mockWarehouseConfigService.updateCreateTaskConfig.mockResolvedValue(
+      mockConfigMappingService.updateCreateTaskConfig.mockResolvedValue(
         expectedResponse,
       );
 
@@ -353,7 +276,7 @@ describe('ConfigMappingController', () => {
         },
       };
 
-      mockWarehouseConfigService.updateCreateTaskConfig.mockResolvedValue(
+      mockConfigMappingService.updateCreateTaskConfig.mockResolvedValue(
         expectedResponse,
       );
 

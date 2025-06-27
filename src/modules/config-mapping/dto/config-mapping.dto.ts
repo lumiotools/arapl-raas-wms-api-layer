@@ -182,7 +182,7 @@ export class GetLocationConfigDto {
   config: any;
 }
 
-export class WarehouseConfigResponseDto {
+export class ConfigMappingResponseDto {
   @ApiProperty({ description: 'Warehouse ID' })
   @IsString()
   warehouse_id: string;
@@ -212,7 +212,7 @@ export class WarehouseConfigResponseDto {
   get_location_config?: any;
 }
 
-export class WarehouseConfigUpdateResponseDto {
+export class ConfigMappingUpdateResponseDto {
   @ApiProperty({ description: 'Success status' })
   @IsBoolean()
   success: boolean;

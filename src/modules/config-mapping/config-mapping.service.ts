@@ -11,8 +11,8 @@ import {
   UpdateTaskConfigDto,
   CancelTaskConfigDto,
   GetLocationConfigDto,
-  WarehouseConfigResponseDto,
-  WarehouseConfigUpdateResponseDto,
+  ConfigMappingResponseDto,
+  ConfigMappingUpdateResponseDto,
 } from './dto/config-mapping.dto';
 
 @Injectable()
@@ -255,7 +255,7 @@ export class ConfigMappingService {
   async updateCreateTaskConfig(
     warehouseId: string,
     createTaskConfigDto: CreateTaskConfigDto,
-  ): Promise<WarehouseConfigUpdateResponseDto> {
+  ): Promise<ConfigMappingUpdateResponseDto> {
     const warehouse = await this.warehouseRepository.findOne({
       where: { warehouse_id: warehouseId },
     });
@@ -282,7 +282,7 @@ export class ConfigMappingService {
   async updateUpdateTaskConfig(
     warehouseId: string,
     updateTaskConfigDto: UpdateTaskConfigDto,
-  ): Promise<WarehouseConfigUpdateResponseDto> {
+  ): Promise<ConfigMappingUpdateResponseDto> {
     const warehouse = await this.warehouseRepository.findOne({
       where: { warehouse_id: warehouseId },
     });
@@ -309,7 +309,7 @@ export class ConfigMappingService {
   async updateCancelTaskConfig(
     warehouseId: string,
     cancelTaskConfigDto: CancelTaskConfigDto,
-  ): Promise<WarehouseConfigUpdateResponseDto> {
+  ): Promise<ConfigMappingUpdateResponseDto> {
     const warehouse = await this.warehouseRepository.findOne({
       where: { warehouse_id: warehouseId },
     });
@@ -336,7 +336,7 @@ export class ConfigMappingService {
   async updateGetLocationConfig(
     warehouseId: string,
     getLocationConfigDto: GetLocationConfigDto,
-  ): Promise<WarehouseConfigUpdateResponseDto> {
+  ): Promise<ConfigMappingUpdateResponseDto> {
     const warehouse = await this.warehouseRepository.findOne({
       where: { warehouse_id: warehouseId },
     });
@@ -360,9 +360,9 @@ export class ConfigMappingService {
     };
   }
 
-  async getWarehouseConfig(
+  async getConfigMapping(
     warehouseId: string,
-  ): Promise<WarehouseConfigResponseDto> {
+  ): Promise<ConfigMappingResponseDto> {
     const warehouse = await this.warehouseRepository.findOne({
       where: { warehouse_id: warehouseId },
     });
@@ -374,7 +374,7 @@ export class ConfigMappingService {
     return this.mapToResponseDto(warehouse);
   }
 
-  private mapToResponseDto(warehouse: Warehouse): WarehouseConfigResponseDto {
+  private mapToResponseDto(warehouse: Warehouse): ConfigMappingResponseDto {
     return {
       warehouse_id: warehouse.warehouse_id,
       warehouse_name: warehouse.warehouse_name,

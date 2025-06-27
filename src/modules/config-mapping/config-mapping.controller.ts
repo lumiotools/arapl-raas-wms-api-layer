@@ -14,8 +14,8 @@ import {
   UpdateTaskConfigDto,
   CancelTaskConfigDto,
   GetLocationConfigDto,
-  WarehouseConfigResponseDto,
-  WarehouseConfigUpdateResponseDto,
+  ConfigMappingResponseDto,
+  ConfigMappingUpdateResponseDto,
   BadRequestDto,
   UnauthorizedDto,
   NotFoundDto,
@@ -38,7 +38,7 @@ export class ConfigMappingController {
   @ApiResponse({
     status: 200,
     description: 'Create task data mapping updated successfully',
-    type: WarehouseConfigUpdateResponseDto,
+    type: ConfigMappingUpdateResponseDto,
   })
   @ApiResponse({
     status: 400,
@@ -63,7 +63,7 @@ export class ConfigMappingController {
   async updateCreateTaskConfig(
     @Param('warehouseId') warehouseId: string,
     @Body() createTaskConfigDto: CreateTaskConfigDto,
-  ): Promise<WarehouseConfigUpdateResponseDto> {
+  ): Promise<ConfigMappingUpdateResponseDto> {
     return this.configMappingService.updateCreateTaskConfig(
       warehouseId,
       createTaskConfigDto,
@@ -81,7 +81,7 @@ export class ConfigMappingController {
   @ApiResponse({
     status: 200,
     description: 'Update task data mapping updated successfully',
-    type: WarehouseConfigUpdateResponseDto,
+    type: ConfigMappingUpdateResponseDto,
   })
   @ApiResponse({
     status: 400,
@@ -106,7 +106,7 @@ export class ConfigMappingController {
   async updateUpdateTaskConfig(
     @Param('warehouseId') warehouseId: string,
     @Body() updateTaskConfigDto: UpdateTaskConfigDto,
-  ): Promise<WarehouseConfigUpdateResponseDto> {
+  ): Promise<ConfigMappingUpdateResponseDto> {
     return this.configMappingService.updateUpdateTaskConfig(
       warehouseId,
       updateTaskConfigDto,
@@ -124,7 +124,7 @@ export class ConfigMappingController {
   @ApiResponse({
     status: 200,
     description: 'Cancel task data mapping updated successfully',
-    type: WarehouseConfigUpdateResponseDto,
+    type: ConfigMappingUpdateResponseDto,
   })
   @ApiResponse({
     status: 400,
@@ -149,7 +149,7 @@ export class ConfigMappingController {
   async updateCancelTaskConfig(
     @Param('warehouseId') warehouseId: string,
     @Body() cancelTaskConfigDto: CancelTaskConfigDto,
-  ): Promise<WarehouseConfigUpdateResponseDto> {
+  ): Promise<ConfigMappingUpdateResponseDto> {
     return this.configMappingService.updateCancelTaskConfig(
       warehouseId,
       cancelTaskConfigDto,
@@ -169,7 +169,7 @@ export class ConfigMappingController {
   @ApiResponse({
     status: 200,
     description: 'Get location data mapping updated successfully',
-    type: WarehouseConfigUpdateResponseDto,
+    type: ConfigMappingUpdateResponseDto,
   })
   @ApiResponse({
     status: 400,
@@ -194,7 +194,7 @@ export class ConfigMappingController {
   async updateGetLocationConfig(
     @Param('warehouseId') warehouseId: string,
     @Body() getLocationConfigDto: GetLocationConfigDto,
-  ): Promise<WarehouseConfigUpdateResponseDto> {
+  ): Promise<ConfigMappingUpdateResponseDto> {
     return this.configMappingService.updateGetLocationConfig(
       warehouseId,
       getLocationConfigDto,
@@ -202,7 +202,8 @@ export class ConfigMappingController {
   }
 
   @Get(':warehouseId')
-  @ApiOperation({ summary: 'Get warehouse data mapping' })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get configuration mapping for a warehouse' })
   @ApiParam({
     name: 'warehouseId',
     description: 'Warehouse ID',
@@ -210,8 +211,8 @@ export class ConfigMappingController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Warehouse data mapping retrieved successfully',
-    type: WarehouseConfigResponseDto,
+    description: 'Configuration mapping retrieved successfully',
+    type: ConfigMappingResponseDto,
   })
   @ApiResponse({
     status: 401,
@@ -228,9 +229,9 @@ export class ConfigMappingController {
     description: 'Unexpected internal server error',
     type: InternalServerErrorDto,
   })
-  async getWarehouseConfig(
+  async getConfigMapping(
     @Param('warehouseId') warehouseId: string,
-  ): Promise<WarehouseConfigResponseDto> {
-    return this.configMappingService.getWarehouseConfig(warehouseId);
+  ): Promise<ConfigMappingResponseDto> {
+    return this.configMappingService.getConfigMapping(warehouseId);
   }
 }
