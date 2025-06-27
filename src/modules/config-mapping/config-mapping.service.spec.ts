@@ -2,17 +2,17 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { NotFoundException } from '@nestjs/common';
-import { WarehouseConfigService } from './warehouse-config.service';
+import { ConfigMappingService } from './config-mapping.service';
 import { Warehouse } from '../robot-job/entities/warehouse.entity';
 import {
   CreateTaskConfigDto,
   UpdateTaskConfigDto,
   CancelTaskConfigDto,
   GetLocationConfigDto,
-} from './dto/warehouse-config.dto';
+} from './dto/config-mapping.dto';
 
-describe('WarehouseConfigService', () => {
-  let service: WarehouseConfigService;
+describe('ConfigMappingService', () => {
+  let service: ConfigMappingService;
   let mockWarehouseRepository: jest.Mocked<Repository<Warehouse>>;
 
   const mockWarehouse = {
@@ -35,7 +35,7 @@ describe('WarehouseConfigService', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        WarehouseConfigService,
+        ConfigMappingService,
         {
           provide: getRepositoryToken(Warehouse),
           useValue: mockRepository,
@@ -43,7 +43,7 @@ describe('WarehouseConfigService', () => {
       ],
     }).compile();
 
-    service = module.get<WarehouseConfigService>(WarehouseConfigService);
+    service = module.get<ConfigMappingService>(ConfigMappingService);
     mockWarehouseRepository = module.get(getRepositoryToken(Warehouse));
   });
 

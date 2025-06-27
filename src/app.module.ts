@@ -4,7 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { OschestratorModule } from './modules/oschestrator/oschestrator.module';
 import { LocationsModule } from './modules/locations/locations.module';
-import { WarehouseConfigModule } from './modules/warehouse-config/warehouse-config.module';
+import { ConfigMappingModule } from './modules/config-mapping/config-mapping.module';
 import { getDBConfig } from './config/db.config';
 
 @Module({
@@ -18,7 +18,7 @@ import { getDBConfig } from './config/db.config';
     RobotJobModule,
     OschestratorModule,
     LocationsModule,
-    WarehouseConfigModule,
+    ConfigMappingModule,
   ],
   controllers: [],
   providers: [],

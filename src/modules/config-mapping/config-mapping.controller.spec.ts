@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { WarehouseConfigController } from './warehouse-config.controller';
-import { WarehouseConfigService } from './warehouse-config.service';
+import { ConfigMappingController } from './config-mapping.controller';
+import { ConfigMappingService } from './config-mapping.service';
 import {
   CreateTaskConfigDto,
   UpdateTaskConfigDto,
@@ -8,11 +8,11 @@ import {
   GetLocationConfigDto,
   WarehouseConfigResponseDto,
   WarehouseConfigUpdateResponseDto,
-} from './dto/warehouse-config.dto';
+} from './dto/config-mapping.dto';
 
-describe('WarehouseConfigController', () => {
-  let controller: WarehouseConfigController;
-  let service: WarehouseConfigService;
+describe('ConfigMappingController', () => {
+  let controller: ConfigMappingController;
+  let service: ConfigMappingService;
 
   const mockWarehouseConfig: WarehouseConfigResponseDto = {
     warehouse_id: 'test-warehouse-1',
@@ -70,19 +70,17 @@ describe('WarehouseConfigController', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [WarehouseConfigController],
+      controllers: [ConfigMappingController],
       providers: [
         {
-          provide: WarehouseConfigService,
+          provide: ConfigMappingService,
           useValue: mockWarehouseConfigService,
         },
       ],
     }).compile();
 
-    controller = module.get<WarehouseConfigController>(
-      WarehouseConfigController,
-    );
-    service = module.get<WarehouseConfigService>(WarehouseConfigService);
+    controller = module.get<ConfigMappingController>(ConfigMappingController);
+    service = module.get<ConfigMappingService>(ConfigMappingService);
   });
 
   afterEach(() => {

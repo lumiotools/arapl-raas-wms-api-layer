@@ -13,10 +13,10 @@ import {
   GetLocationConfigDto,
   WarehouseConfigResponseDto,
   WarehouseConfigUpdateResponseDto,
-} from './dto/warehouse-config.dto';
+} from './dto/config-mapping.dto';
 
 @Injectable()
-export class WarehouseConfigService {
+export class ConfigMappingService {
   constructor(
     @InjectRepository(Warehouse)
     private warehouseRepository: Repository<Warehouse>,

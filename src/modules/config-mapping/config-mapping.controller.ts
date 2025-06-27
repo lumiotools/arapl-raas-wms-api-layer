@@ -8,7 +8,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
-import { WarehouseConfigService } from './warehouse-config.service';
+import { ConfigMappingService } from './config-mapping.service';
 import {
   CreateTaskConfigDto,
   UpdateTaskConfigDto,
@@ -16,14 +16,12 @@ import {
   GetLocationConfigDto,
   WarehouseConfigResponseDto,
   WarehouseConfigUpdateResponseDto,
-} from './dto/warehouse-config.dto';
+} from './dto/config-mapping.dto';
 
 @ApiTags('Configuration Mapping')
-@Controller('warehouse-config')
-export class WarehouseConfigController {
-  constructor(
-    private readonly warehouseConfigService: WarehouseConfigService,
-  ) {}
+@Controller('config-mapping')
+export class ConfigMappingController {
+  constructor(private readonly configMappingService: ConfigMappingService) {}
 
   @Post(':warehouseId/create-task-data-mapping')
   @HttpCode(HttpStatus.OK)
@@ -46,7 +44,7 @@ export class WarehouseConfigController {
     @Param('warehouseId') warehouseId: string,
     @Body() createTaskConfigDto: CreateTaskConfigDto,
   ): Promise<WarehouseConfigUpdateResponseDto> {
-    return this.warehouseConfigService.updateCreateTaskConfig(
+    return this.configMappingService.updateCreateTaskConfig(
       warehouseId,
       createTaskConfigDto,
     );
@@ -73,7 +71,7 @@ export class WarehouseConfigController {
     @Param('warehouseId') warehouseId: string,
     @Body() updateTaskConfigDto: UpdateTaskConfigDto,
   ): Promise<WarehouseConfigUpdateResponseDto> {
-    return this.warehouseConfigService.updateUpdateTaskConfig(
+    return this.configMappingService.updateUpdateTaskConfig(
       warehouseId,
       updateTaskConfigDto,
     );
@@ -100,7 +98,7 @@ export class WarehouseConfigController {
     @Param('warehouseId') warehouseId: string,
     @Body() cancelTaskConfigDto: CancelTaskConfigDto,
   ): Promise<WarehouseConfigUpdateResponseDto> {
-    return this.warehouseConfigService.updateCancelTaskConfig(
+    return this.configMappingService.updateCancelTaskConfig(
       warehouseId,
       cancelTaskConfigDto,
     );
@@ -129,7 +127,7 @@ export class WarehouseConfigController {
     @Param('warehouseId') warehouseId: string,
     @Body() getLocationConfigDto: GetLocationConfigDto,
   ): Promise<WarehouseConfigUpdateResponseDto> {
-    return this.warehouseConfigService.updateGetLocationConfig(
+    return this.configMappingService.updateGetLocationConfig(
       warehouseId,
       getLocationConfigDto,
     );
@@ -150,6 +148,6 @@ export class WarehouseConfigController {
   async getWarehouseConfig(
     @Param('warehouseId') warehouseId: string,
   ): Promise<WarehouseConfigResponseDto> {
-    return this.warehouseConfigService.getWarehouseConfig(warehouseId);
+    return this.configMappingService.getWarehouseConfig(warehouseId);
   }
 }
