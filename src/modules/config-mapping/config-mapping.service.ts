@@ -17,207 +17,160 @@ import {
   DeleteConfigQueryDto,
   DeleteConfigResponseDto,
 } from './dto/config-mapping.dto';
-import * as fs from 'fs';
-import * as path from 'path';
+import { CreateTaskConfigRootDto } from './dto/create-task-config.dto';
+import { UpdateTaskConfigRootDto } from './dto/update-task-config.dto';
+import { CancelTaskConfigRootDto } from './dto/cancel-task-config.dto';
+import { GetEmptyLocationConfigRootDto } from './dto/get-empty-location-config.dto';
+import { Validator } from 'class-validator';
+import { plainToInstance } from 'class-transformer';
 
 @Injectable()
 export class ConfigMappingService {
   constructor(
     @InjectRepository(Warehouse)
     private warehouseRepository: Repository<Warehouse>,
+    private validator: Validator,
   ) {}
 
-  // Load reference config from @/config_mapping
-  private loadReferenceConfig(configType: string): any {
-    // Try multiple possible paths for the config file
-    const possiblePaths = [
-      // Development path (from src directory)
-      path.join(__dirname, '../../config_mapping/cli', `${configType}.json`),
-      // Production path (from dist directory)
-      path.join(
-        __dirname,
-        '../../../src/config_mapping/cli',
-        `${configType}.json`,
-      ),
-      // Alternative production path
-      path.join(process.cwd(), 'src/config_mapping/cli', `${configType}.json`),
-      // Root directory path
-      path.join(process.cwd(), 'config_mapping/cli', `${configType}.json`),
-    ];
+  // Helper method to format validation errors in a user-friendly way
+  private formatValidationErrors(errors: any[]): string {
+    const formattedErrors: string[] = [];
 
-    let configContent: string;
-    let lastError: Error | null = null;
+    const processError = (error: any, path: string = '') => {
+      const currentPath = path ? `${path}.${error.property}` : error.property;
 
-    for (const configPath of possiblePaths) {
-      try {
-        configContent = fs.readFileSync(configPath, 'utf8');
-        return JSON.parse(configContent);
-      } catch (error) {
-        lastError = error as Error;
-        // Continue to next path
+      if (error.constraints) {
+        // Handle whitelist validation errors (extra properties)
+        if (error.constraints.whitelistValidation) {
+          formattedErrors.push(
+            `Extra property "${error.property}" is not allowed at path "${currentPath}"`,
+          );
+        } else {
+          // Handle other validation errors
+          Object.values(error.constraints).forEach((constraint: string) => {
+            formattedErrors.push(`${constraint} at path "${currentPath}"`);
+          });
+        }
       }
+
+      // Process nested errors
+      if (error.children && error.children.length > 0) {
+        error.children.forEach((child: any) => {
+          processError(child, currentPath);
+        });
+      }
+    };
+
+    errors.forEach((error) => processError(error));
+
+    if (formattedErrors.length === 0) {
+      return 'Validation failed with unknown errors';
     }
 
-    // If we get here, none of the paths worked
-    throw new Error(
-      `Failed to load reference config for ${configType}. Tried paths: ${possiblePaths.join(', ')}. Last error: ${lastError?.message}`,
-    );
+    return formattedErrors.join('\n');
   }
 
-  // Compare config structures, ignoring path and default values
-  private compareConfigStructures(
-    userConfig: any,
-    referenceConfig: any,
-    configPath: string = '',
-  ): void {
-    // Check if both are objects
-    if (typeof userConfig !== 'object' || typeof referenceConfig !== 'object') {
-      throw new Error(
-        `Type mismatch at ${configPath}: expected object, got ${typeof userConfig}`,
-      );
-    }
-
-    // Check if both are null
-    if (userConfig === null && referenceConfig === null) {
-      return;
-    }
-
-    // Check if one is null and the other isn't
-    if (userConfig === null || referenceConfig === null) {
-      throw new Error(
-        `Null mismatch at ${configPath}: user config is ${userConfig === null ? 'null' : 'object'}, reference is ${referenceConfig === null ? 'null' : 'object'}`,
-      );
-    }
-
-    // Check object_type
-    if (userConfig.object_type !== referenceConfig.object_type) {
-      throw new Error(
-        `object_type mismatch at ${configPath}: expected "${referenceConfig.object_type}", got "${userConfig.object_type}"`,
-      );
-    }
-
-    // For path-type configs, only check object_type (ignore path and default)
-    if (referenceConfig.path) {
-      return;
-    }
-
-    // For array-type configs
-    if (userConfig.object_type === 'array') {
-      if (!userConfig.source || !referenceConfig.source) {
-        throw new Error(`Array config missing source at ${configPath}`);
-      }
-      if (!userConfig.map || !referenceConfig.map) {
-        throw new Error(`Array config missing map at ${configPath}`);
-      }
-      // Recursively validate the map structure
-      this.compareConfigStructures(
-        userConfig.map,
-        referenceConfig.map,
-        `${configPath}.map`,
-      );
-      return;
-    }
-
-    // For object-type configs, check all fields except path and default
-    const userKeys = Object.keys(userConfig).filter(
-      (key) => key !== 'path' && key !== 'default',
-    );
-    const referenceKeys = Object.keys(referenceConfig).filter(
-      (key) => key !== 'path' && key !== 'default',
-    );
-
-    // Check if all required fields from reference exist in user config
-    for (const key of referenceKeys) {
-      if (!userKeys.includes(key)) {
-        throw new Error(`Missing field "${key}" at ${configPath}`);
-      }
-    }
-
-    // Check if user config has extra fields not in reference
-    for (const key of userKeys) {
-      if (!referenceKeys.includes(key)) {
-        throw new Error(`Extra field "${key}" not allowed at ${configPath}`);
-      }
-    }
-
-    // Recursively validate nested objects
-    for (const key of userKeys) {
-      const userValue = userConfig[key];
-      const referenceValue = referenceConfig[key];
-
-      if (
-        typeof userValue === 'object' &&
-        userValue !== null &&
-        typeof referenceValue === 'object' &&
-        referenceValue !== null
-      ) {
-        this.compareConfigStructures(
-          userValue,
-          referenceValue,
-          `${configPath}.${key}`,
-        );
-      }
-    }
-  }
-
-  // Validate create task config structure against reference
+  // Validate create task config structure using DTO
   private async validateCreateTaskConfig(config: any): Promise<void> {
     try {
-      const referenceConfig = this.loadReferenceConfig('create_task');
-      this.compareConfigStructures(
-        config,
-        referenceConfig,
-        'create_task_config',
-      );
+      const structuredDto = plainToInstance(CreateTaskConfigRootDto, config);
+      const validationErrors = await this.validator.validate(structuredDto, {
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        forbidUnknownValues: true,
+      });
+
+      if (validationErrors.length > 0) {
+        const formattedErrors = this.formatValidationErrors(validationErrors);
+        throw new BadRequestException(
+          `Create task config validation failed:\n${formattedErrors}`,
+        );
+      }
     } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
       throw new BadRequestException(
         `Create task config validation failed: ${error.message}`,
       );
     }
   }
 
-  // Validate update task config structure against reference
+  // Validate update task config structure using DTO
   private async validateUpdateTaskConfig(config: any): Promise<void> {
     try {
-      const referenceConfig = this.loadReferenceConfig('update_task');
-      this.compareConfigStructures(
-        config,
-        referenceConfig,
-        'update_task_config',
-      );
+      const structuredDto = plainToInstance(UpdateTaskConfigRootDto, config);
+      const validationErrors = await this.validator.validate(structuredDto, {
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        forbidUnknownValues: true,
+      });
+
+      if (validationErrors.length > 0) {
+        const formattedErrors = this.formatValidationErrors(validationErrors);
+        throw new BadRequestException(
+          `Update task config validation failed:\n${formattedErrors}`,
+        );
+      }
     } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
       throw new BadRequestException(
         `Update task config validation failed: ${error.message}`,
       );
     }
   }
 
-  // Validate cancel task config structure against reference
+  // Validate cancel task config structure using DTO
   private async validateCancelTaskConfig(config: any): Promise<void> {
     try {
-      const referenceConfig = this.loadReferenceConfig('cancel_task');
-      this.compareConfigStructures(
-        config,
-        referenceConfig,
-        'cancel_task_config',
-      );
+      const structuredDto = plainToInstance(CancelTaskConfigRootDto, config);
+      const validationErrors = await this.validator.validate(structuredDto, {
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        forbidUnknownValues: true,
+      });
+
+      if (validationErrors.length > 0) {
+        const formattedErrors = this.formatValidationErrors(validationErrors);
+        throw new BadRequestException(
+          `Cancel task config validation failed:\n${formattedErrors}`,
+        );
+      }
     } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
       throw new BadRequestException(
         `Cancel task config validation failed: ${error.message}`,
       );
     }
   }
 
-  // Validate get location config structure against reference
+  // Validate get location config structure using DTO
   private async validateGetLocationConfig(config: any): Promise<void> {
     try {
-      const referenceConfig = this.loadReferenceConfig('get_empty_location');
-      this.compareConfigStructures(
+      const structuredDto = plainToInstance(
+        GetEmptyLocationConfigRootDto,
         config,
-        referenceConfig,
-        'get_location_config',
       );
+      const validationErrors = await this.validator.validate(structuredDto, {
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        forbidUnknownValues: true,
+      });
+
+      if (validationErrors.length > 0) {
+        const formattedErrors = this.formatValidationErrors(validationErrors);
+        throw new BadRequestException(
+          `Get location config validation failed:\n${formattedErrors}`,
+        );
+      }
     } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
       throw new BadRequestException(
         `Get location config validation failed: ${error.message}`,
       );
