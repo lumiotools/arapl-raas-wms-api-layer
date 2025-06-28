@@ -221,7 +221,7 @@ export class RobotJobController {
     type: InternalServerErrorDto,
   })
   @Post(':warehouse_id/tasks')
-  async unifiedCreateTask(
+  async createTask(
     @Param('warehouse_id') warehouseId: string,
     @Body() body: any,
     @Req() request: Request,
@@ -339,7 +339,7 @@ export class RobotJobController {
     type: InternalServerErrorDto,
   })
   @Patch(':warehouse_id/tasks')
-  async unifiedUpdateTask(
+  async updateTask(
     @Param('warehouse_id') warehouseId: string,
     @Body() body: any,
     @Req() request: Request,
