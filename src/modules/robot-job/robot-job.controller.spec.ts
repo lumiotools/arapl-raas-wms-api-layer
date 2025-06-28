@@ -118,7 +118,7 @@ describe('RobotJobController', () => {
     });
   });
 
-  describe('unifiedCreateTask', () => {
+  describe('createTask', () => {
     const warehouseId = 'WH_001';
     const mockRequest = {
       taskConfigs: { create_task: 'test_config' },
@@ -201,7 +201,7 @@ describe('RobotJobController', () => {
     it('should create task with valid structured data', async () => {
       mockRobotJobService.createTask.mockResolvedValue(successResponse);
 
-      const result = await controller.unifiedCreateTask(
+      const result = await controller.createTask(
         warehouseId,
         validTaskDto,
         mockRequest,
@@ -220,7 +220,7 @@ describe('RobotJobController', () => {
         successResponse,
       );
 
-      const result = await controller.unifiedCreateTask(
+      const result = await controller.createTask(
         warehouseId,
         invalidStructuredData,
         mockRequest,
@@ -239,11 +239,7 @@ describe('RobotJobController', () => {
       const requestWithoutConfig = { taskConfigs: null } as any as Request;
 
       await expect(
-        controller.unifiedCreateTask(
-          warehouseId,
-          invalidData,
-          requestWithoutConfig,
-        ),
+        controller.createTask(warehouseId, invalidData, requestWithoutConfig),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -254,7 +250,7 @@ describe('RobotJobController', () => {
       };
       mockRobotJobService.createTask.mockResolvedValue(errorResponse);
 
-      const result = await controller.unifiedCreateTask(
+      const result = await controller.createTask(
         warehouseId,
         validTaskDto,
         mockRequest,
@@ -270,12 +266,12 @@ describe('RobotJobController', () => {
       );
 
       await expect(
-        controller.unifiedCreateTask(warehouseId, validTaskDto, mockRequest),
+        controller.createTask(warehouseId, validTaskDto, mockRequest),
       ).rejects.toThrow(BadRequestException);
     });
   });
 
-  describe('unifiedUpdateTask', () => {
+  describe('updateTask', () => {
     const warehouseId = 'WH_001';
     const mockRequest = {
       taskConfigs: { update_task: 'update_config' },
@@ -314,7 +310,7 @@ describe('RobotJobController', () => {
     it('should update task with valid structured data', async () => {
       mockRobotJobService.updateTask.mockResolvedValue(successResponse);
 
-      const result = await controller.unifiedUpdateTask(
+      const result = await controller.updateTask(
         warehouseId,
         validUpdateDto,
         mockRequest,
@@ -333,7 +329,7 @@ describe('RobotJobController', () => {
         successResponse,
       );
 
-      const result = await controller.unifiedUpdateTask(
+      const result = await controller.updateTask(
         warehouseId,
         invalidData,
         mockRequest,
@@ -357,7 +353,7 @@ describe('RobotJobController', () => {
       mockRobotJobService.updateTask.mockResolvedValue(errorResponse);
 
       await expect(
-        controller.unifiedUpdateTask(warehouseId, validUpdateDto, mockRequest),
+        controller.updateTask(warehouseId, validUpdateDto, mockRequest),
       ).rejects.toThrow(BadRequestException);
       expect(service.updateTask).toHaveBeenCalledWith(
         warehouseId,
@@ -370,11 +366,7 @@ describe('RobotJobController', () => {
       const requestWithoutConfig = { taskConfigs: null } as any as Request;
 
       await expect(
-        controller.unifiedUpdateTask(
-          warehouseId,
-          invalidData,
-          requestWithoutConfig,
-        ),
+        controller.updateTask(warehouseId, invalidData, requestWithoutConfig),
       ).rejects.toThrow(BadRequestException);
     });
   });
