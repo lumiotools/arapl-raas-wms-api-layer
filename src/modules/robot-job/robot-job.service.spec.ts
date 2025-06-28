@@ -1,1101 +1,710 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository, UsingJoinTableIsNotAllowedError } from 'typeorm';
+import { Repository } from 'typeorm';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
+import { Validator } from 'class-validator';
 import { RobotJobService } from './robot-job.service';
 import { BatchJob } from './entities/batch_task.entity';
 import { Task } from './entities/task.entity';
 import { Location } from './entities/locations.entity';
-import * as fs from 'fs/promises';
-import { batch_type, TaskGenerationReq, TaskGenerationRes, TaskType, Wait } from './dto/Task_Generation.dto';
+import { Warehouse } from './entities/warehouse.entity';
+import {
+  TaskGenerationReq,
+  TaskGenerationRes,
+  TaskType,
+  LocationType,
+  LocationAction,
+  batch_type,
+  WaitType,
+  WaitCondition,
+} from './dto/Task_Generation.dto';
+import { TaskUpdateReq, TaskUpdateRes } from './dto/Task_Update.dto';
+import { CancelReq, BatchCancelRes, TaskCancelRes } from './dto/Cancel.dto';
+import {
+  GetLocationReq,
+  GetLocationRes,
+  LocationStatus,
+} from './dto/GetLocation.dto';
+import { UpdateWebhookReq, UpdateWebhookRes } from './dto/UpdateWebhook.dto';
 
 describe('RobotJobService', () => {
   let service: RobotJobService;
   let batchJobRepository: Repository<BatchJob>;
   let taskRepository: Repository<Task>;
   let locationRepository: Repository<Location>;
-  const create_task_config = 'src/config_mapping/test/create_task.json';
+  let warehouseRepository: Repository<Warehouse>;
+  let validator: Validator;
+
+  const mockBatchJobRepository = {
+    findOne: jest.fn(),
+    create: jest.fn(),
+    save: jest.fn(),
+    update: jest.fn(),
+    find: jest.fn(),
+    remove: jest.fn(),
+  };
+
+  const mockTaskRepository = {
+    find: jest.fn(),
+    create: jest.fn(),
+    save: jest.fn(),
+    update: jest.fn(),
+    findOne: jest.fn(),
+    remove: jest.fn(),
+  };
+
+  const mockLocationRepository = {
+    findOne: jest.fn(),
+    update: jest.fn(),
+    find: jest.fn(),
+  };
+
+  const mockWarehouseRepository = {
+    findOne: jest.fn(),
+    save: jest.fn(),
+  };
+
+  const mockValidator = {
+    validate: jest.fn(),
+  };
 
   beforeEach(async () => {
-    const batchJobRepoMock = {
-      findOne: jest.fn(),
-      update: jest.fn(),
-      save: jest.fn(),
-      create: jest.fn(),
-      // Add any other methods used in RobotJobService for BatchJob
-    };
-    const taskRepoMock = {
-      findOne: jest.fn(),
-      update: jest.fn(),
-      save: jest.fn(),
-      create: jest.fn(),
-      // Add any other methods used in RobotJobService for Task
-    };
-    const locationRepoMock = {
-      findOne: jest.fn(),
-      update: jest.fn(),
-      save: jest.fn(),
-      create: jest.fn(),
-      // Add any other methods used in RobotJobService for Location
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RobotJobService,
         {
           provide: getRepositoryToken(BatchJob),
-          useValue: batchJobRepoMock,
+          useValue: mockBatchJobRepository,
         },
         {
           provide: getRepositoryToken(Task),
-          useValue: taskRepoMock,
+          useValue: mockTaskRepository,
         },
         {
           provide: getRepositoryToken(Location),
-          useValue: locationRepoMock,
-        }
+          useValue: mockLocationRepository,
+        },
+        {
+          provide: getRepositoryToken(Warehouse),
+          useValue: mockWarehouseRepository,
+        },
+        {
+          provide: Validator,
+          useValue: mockValidator,
+        },
       ],
     }).compile();
 
     service = module.get<RobotJobService>(RobotJobService);
-    batchJobRepository = module.get<Repository<BatchJob>>(getRepositoryToken(BatchJob));
+    batchJobRepository = module.get<Repository<BatchJob>>(
+      getRepositoryToken(BatchJob),
+    );
     taskRepository = module.get<Repository<Task>>(getRepositoryToken(Task));
-    locationRepository = module.get<Repository<Location>>(getRepositoryToken(Location));
+    locationRepository = module.get<Repository<Location>>(
+      getRepositoryToken(Location),
+    );
+    warehouseRepository = module.get<Repository<Warehouse>>(
+      getRepositoryToken(Warehouse),
+    );
+    validator = module.get<Validator>(Validator);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
-  
+  describe('getTasksByBatchId', () => {
+    const warehouseId = 'WH_001';
+    const batchId = 'BATCH_123';
 
-  describe('createUnstructuredTask', () => {
-    it('createUnstructuredTask: config file not found - throw an error', async () => {
-      jest.spyOn(fs, 'readFile').mockRejectedValueOnce(new Error('File not found'));
-      const expectedResponse = {
-        "status": "error",
-        "message": `Configuration file create_task.json' not found.`
-      }
-      try {
-        await service.createUnstructuredTask('test-warehouse', 'test-batch-job','create_task', {});
-      } catch (error) {
-        expect(error.message).toBe('File not found');
-      }
+    const mockBatchJob = {
+      id: 'batch-uuid-1',
+      batch_job_id: batchId,
+      warehouse_id: warehouseId,
+      status: 'pending',
+    };
+
+    const mockTasks = [
+      {
+        id: 'task-uuid-1',
+        task_id: 'TASK_001',
+        task_type: TaskType.CrossDocking,
+        batch_job_id: mockBatchJob.id,
+        status: 'pending',
+      },
+      {
+        id: 'task-uuid-2',
+        task_id: 'TASK_002',
+        task_type: TaskType.Picking,
+        batch_job_id: mockBatchJob.id,
+        status: 'pending',
+      },
+    ];
+
+    it('should return tasks for a valid batch ID', async () => {
+      mockBatchJobRepository.findOne.mockResolvedValue(mockBatchJob);
+      mockTaskRepository.find.mockResolvedValue(mockTasks);
+
+      const result = await service.getTasksByBatchId(warehouseId, batchId);
+
+      expect(batchJobRepository.findOne).toHaveBeenCalledWith({
+        where: { batch_job_id: batchId, warehouse_id: warehouseId },
+      });
+      expect(taskRepository.find).toHaveBeenCalledWith({
+        where: { batch_job_id: mockBatchJob.id },
+      });
+      expect(result).toEqual(mockTasks);
     });
 
-    it('createUnstructuredTask: Output of transformer is null', async () => {
-      const mockConfig = {
-          "object_type": "null",
-          "batch_job_id": {"object_type": "null", "path": "input.batch_job_id"},
-          "batch_priority": {"object_type": "null", "path": "input.batch_priority"},
-          "batch_type": {"object_type": "null", "path": "input.batch_type"},
-          "batch_frequency": {"object_type": "null", "path": "input.batch_frequency"},
-          "warehouse_id": {"object_type": "null", "path": "input.warehouse_id"},
-          "tasks": {
-            "object_type": "null",
-            "source": "input.tasks"
-            // other fields...
-          }
-        }
-        const mockInput = {
-          "batch_job_id": "BATCH-001",
-          "batch_priority": 1,
-          "batch_type": "Discrete",
-          "batch_frequency": null,
-          "warehouse_id": null,
-          "tasks": []
-        }
-      jest.spyOn(fs, 'readFile').mockResolvedValueOnce(JSON.stringify(mockConfig));
-      jest.spyOn(service, '_genericTaskTransformer').mockResolvedValueOnce(null);
-      const result = await service.createUnstructuredTask('test-warehouse', 'test-batch-job', 'create_task', mockInput);
+    it('should throw NotFoundException when batch job not found', async () => {
+      mockBatchJobRepository.findOne.mockResolvedValue(null);
 
+      await expect(
+        service.getTasksByBatchId(warehouseId, batchId),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('createTask', () => {
+    const warehouseId = 'WH_001';
+    const validCreateTaskDto: TaskGenerationReq = {
+      batch_job_id: 'BATCH_001',
+      batch_priority: 5,
+      batch_type: batch_type.Discrete,
+      tasks: [
+        {
+          task_id: 'TASK_001',
+          task_type: TaskType.CrossDocking,
+          start_location: {
+            location_id: 'LOC_001',
+            location_type: LocationType.Pallet,
+            location_action: LocationAction.Pick,
+            location_dimension: { length: 100, width: 50, height: 80 },
+          },
+          end_location: {
+            location_id: 'LOC_002',
+            location_type: LocationType.Pallet,
+            location_action: LocationAction.Drop,
+            location_dimension: { length: 100, width: 50, height: 80 },
+          },
+          cargos: [
+            {
+              cargo_code: 'CARGO_001',
+              cargo_type: 'Box',
+            },
+          ],
+        },
+      ],
+    };
+
+    const mockBatchJob = {
+      id: 'batch-uuid-1',
+      batch_job_id: 'BATCH_001',
+      warehouse_id: warehouseId,
+      status: 'pending',
+    };
+
+    const mockTask = {
+      id: 'task-uuid-1',
+      task_id: 'TASK_001',
+      batch_job: mockBatchJob,
+      status: 'pending',
+    };
+
+    it('should successfully create a batch and tasks', async () => {
+      mockBatchJobRepository.findOne.mockResolvedValue(null);
+      mockBatchJobRepository.create.mockReturnValue(mockBatchJob);
+      mockBatchJobRepository.save.mockResolvedValue(mockBatchJob);
+      mockTaskRepository.create.mockReturnValue(mockTask);
+      mockTaskRepository.save.mockResolvedValue(mockTask);
+
+      const result = await service.createTask(warehouseId, validCreateTaskDto);
+
+      expect(batchJobRepository.findOne).toHaveBeenCalledWith({
+        where: { batch_job_id: 'BATCH_001', warehouse_id: warehouseId },
+      });
+      expect(batchJobRepository.create).toHaveBeenCalled();
+      expect(batchJobRepository.save).toHaveBeenCalled();
+      expect(taskRepository.create).toHaveBeenCalled();
+      expect(taskRepository.save).toHaveBeenCalled();
       expect(result).toEqual({
-        status: 'error',
-        message: 'Transformation failed to produce a valid batch_job_id.'
+        batch_id: 'BATCH_001',
+        status: 'success',
       });
     });
-    it ('createUnstructuredTask: transformers output has batch_job_id as null', async () => {
-      const mockConfig = {
-          "object_type": "object",
-          "batch_job_id": {"object_type": "string", "path": "input.batch_job_id"},
-          "batch_priority": {"object_type": "number", "path": "input.batch_priority"},
-          "batch_type": {"object_type": "string", "path": "input.batch_type"},
-          "batch_frequency": {"object_type": "null", "path": "input.batch_frequency"},
-          "warehouse_id": {"object_type": "null", "path": "input.warehouse_id"},
-          "tasks": {
-            "object_type": "array",
-            // other fields...
-          }
-        }
-        const mockInput = {
-          "batch_job_id": null,
-          "batch_priority": 1,
-          "batch_type": "Discrete",
-          "batch_frequency": null,
-          "warehouse_id": null,
-          "tasks": []
-        }
-      jest.spyOn(fs, 'readFile').mockResolvedValueOnce(JSON.stringify(mockConfig));
-      jest.spyOn(service, '_genericTaskTransformer').mockResolvedValueOnce(null);
-      const result = await service.createUnstructuredTask('test-warehouse', 'test-batch-job', 'create_task', mockInput);
 
-      expect(result).toEqual({
-        status: 'error',
-        message: 'Transformation failed to produce a valid batch_job_id.'
+    it('should generate batch_job_id if not provided', async () => {
+      const dtoWithoutBatchId = { ...validCreateTaskDto };
+      delete dtoWithoutBatchId.batch_job_id;
+
+      mockBatchJobRepository.findOne.mockResolvedValue(null);
+      mockBatchJobRepository.create.mockReturnValue(mockBatchJob);
+      mockBatchJobRepository.save.mockResolvedValue(mockBatchJob);
+      mockTaskRepository.create.mockReturnValue(mockTask);
+      mockTaskRepository.save.mockResolvedValue(mockTask);
+
+      const result = await service.createTask(warehouseId, dtoWithoutBatchId);
+
+      expect(result.status).toBe('success');
+      expect(result.batch_id).toMatch(/^Batch-\d+$/);
+    });
+
+    it('should throw BadRequestException when no tasks provided', async () => {
+      const dtoWithoutTasks = { ...validCreateTaskDto, tasks: [] };
+
+      await expect(
+        service.createTask(warehouseId, dtoWithoutTasks),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw ConflictException when batch already exists', async () => {
+      mockBatchJobRepository.findOne.mockResolvedValue(mockBatchJob);
+
+      await expect(
+        service.createTask(warehouseId, validCreateTaskDto),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('should throw BadRequestException for continuous batch without frequency', async () => {
+      const continuousBatchDto = {
+        ...validCreateTaskDto,
+        batch_type: batch_type.Continuous,
+      };
+
+      mockBatchJobRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.createTask(warehouseId, continuousBatchDto),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should handle wait condition validation and continue with batch creation', async () => {
+      const taskWithWait = {
+        ...validCreateTaskDto,
+        tasks: [
+          {
+            ...validCreateTaskDto.tasks[0],
+            wait: {
+              wait_type: WaitType.Conditional,
+              wait_condition: WaitCondition.Time,
+              start_location_wait_time: 0,
+              end_location_wait_time: 0,
+            },
+          },
+        ],
+      };
+
+      mockBatchJobRepository.findOne.mockResolvedValue(null);
+      mockBatchJobRepository.create.mockReturnValue(mockBatchJob);
+      mockBatchJobRepository.save.mockResolvedValue(mockBatchJob);
+      mockTaskRepository.create.mockReturnValue(mockTask);
+      mockTaskRepository.save.mockResolvedValue(mockTask);
+
+      // The service logs errors and continues batch creation
+      const result = await service.createTask(warehouseId, taskWithWait);
+
+      expect(result.status).toBe('success');
+      expect(result.batch_id).toBe('BATCH_001');
+    });
+  });
+
+  describe('updateLocation', () => {
+    const mockLocation = {
+      location_id: 'LOC_001',
+    } as any;
+
+    it('should update location successfully', async () => {
+      mockLocationRepository.findOne.mockResolvedValue(mockLocation);
+      mockLocationRepository.update.mockResolvedValue(undefined);
+
+      await service.updateLocation(mockLocation, false);
+
+      expect(locationRepository.findOne).toHaveBeenCalledWith({
+        where: { location_id: 'LOC_001' },
       });
+      expect(locationRepository.update).toHaveBeenCalledWith(
+        { location_id: 'LOC_001' },
+        { isEmpty: false },
+      );
+    });
+
+    it('should throw error when location not found', async () => {
+      mockLocationRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.updateLocation(mockLocation, false)).rejects.toThrow(
+        'Location with id LOC_001 does not exist',
+      );
+    });
+
+    it('should throw error when location_id is missing', async () => {
+      const locationWithoutId = { ...mockLocation };
+      delete locationWithoutId.location_id;
+
+      await expect(
+        service.updateLocation(locationWithoutId, false),
+      ).rejects.toThrow("Location or location ID doesn't exists.");
     });
   });
 
-  describe('transformer',()=>{
-    it('transformer: all object_types are null, response should be null', async () => {
-      const mapping = {
-        "object_type": "null",
-        "batch_job_id": {"object_type": "null", "path": "input.batch_job_id"},
-        "batch_priority": {"object_type": "null", "path": "input.batch_priority"},
-        "batch_type": {"object_type": "null", "path": "input.batch_type"},
-        "batch_frequency": {"object_type": "null", "path": "input.batch_frequency"},
-        "warehouse_id": {"object_type": "null", "path": "input.warehouse_id"},
-        "tasks": {
-          "object_type": "null",
-          "source": "input.tasks",
-          "map": {
-            "object_type": "null",
-            "task_id": {"object_type": "null", "path": "op.task_id"},
-            "task_type": {"object_type": "null", "path": "op.type"},
-            "task_pallet_id": {"object_type": "null", "path": "op.task_pallet_id"},
-            "task_dependency": {"object_type": "null", "path": "op.task_dependency"},
-            "start_location": {
-              "object_type": "null",
-              "location_id": {"object_type": "null", "path": "op.start_location.location_id"},
-              "location_action": {"object_type": "null", "path": "op.start_location.location_action"},
-              "location_zone": {"object_type": "null", "path": "op.start_location.location_zone"},
-              "location_dimension": {
-                "object_type": "null",
-                "length": {"object_type": "null", "path": "op.start_location.location_dimension.length"},
-                "width": {"object_type": "null", "path": "op.start_location.location_dimension.width"},
-                "height": {"object_type": "null", "path": "op.start_location.location_dimension.height"}
-              },
-              "location_attribute": {
-                "object_type": "null",
-                "attribute_name": {"object_type": "null", "path": "op.start_location.location_attribute.attribute_name"},
-                "attribute_value": {"object_type": "null", "path": "op.start_location.location_attribute.attribute_value"}
-              }
-            },
-            "end_location": {
-              "object_type": "null",
-              "location_id": {"object_type": "null", "path": "op.end_location.location_id"},
-              "location_action": {"object_type": "null", "path": "op.end_location.location_action"},
-              "location_zone": {"object_type": "null", "path": "op.end_location.location_zone"},
-              "location_dimension": {
-                "object_type": "null",
-                "length": {"object_type": "null", "path": "op.end_location.location_dimension.length"},
-                "width": {"object_type": "null", "path": "op.end_location.location_dimension.width"},
-                "height": {"object_type": "null", "path": "op.end_location.location_dimension.height"}
-              },
-              "location_attribute": {
-                "object_type": "null",
-                "attribute_name": {"object_type": "null", "path": "op.end_location.location_attribute.attribute_name"},
-                "attribute_value": {"object_type": "null", "path": "op.end_location.location_attribute.attribute_value"}
-              }
-            },
-            "wait_time": {
-              "object_type": "null",
-              "wait_type": {"object_type": "null", "path": "op.wait_time.wait_type"},
-              "start_location_wait_time": {"object_type": "null", "path": "op.wait_time.start_location_wait_time"},
-              "end_location_wait_time": {"object_type": "null", "path": "op.wait_time.end_location_wait_time"}
-            },
-            "cargos": {
-              "object_type": "null",
-              "source": "op.cargos",
-              "map": {
-                "object_type": "null",
-                "cargo_code": {"object_type": "null", "path": "item.cargo_code"},
-                "cargo_type": {"object_type": "null", "path": "item.cargo_type"},
-                "cargo_dimension": {
-                  "object_type": "null",
-                  "length": {"object_type": "null", "path": "item.cargo_dimension.length"},
-                  "width": {"object_type": "null", "path": "item.cargo_dimension.width"},
-                  "height": {"object_type": "null", "path": "item.cargo_dimension.height"}
-                },
-                "cargo_weight": {"object_type": "null", "path": "item.cargo_weight"},
-                "cargo_attributes": {
-                  "object_type": "null",
-                  "attribute_name": {"object_type": "null", "path": "item.cargo_attributes.attribute_name"},
-                  "attribute_value": {"object_type": "null", "path": "item.cargo_attributes.attribute_value"}
-                }
-              }
-            }
-          }
-        }
-      }
+  describe('checkLocation', () => {
+    const mockLocation = {
+      location_id: 'LOC_001',
+      isEmpty: true,
+    } as any;
 
-      const input = {
-        "batch_job_id": "BATCH-20240617-001",
-        "batch_priority": 2,
-        "batch_type": "Discrete",
-        "batch_frequency": null,
-        "warehouse_id": null,
-        "tasks": [
-          {
-            "task_id": "TASK-001",
-            "type": "Pick",
-            "task_pallet_id": "PALLET-001",
-            "task_dependency": null,
-            "start_location": {
-              "location_id": "LOC-001",
-              "location_action": "Pick",
-              "location_zone": "ZONE-1",
-              "location_dimension": {
-                "length": null,
-                "width": null,
-                "height": null
-              },
-              "location_attribute": {
-                "attribute_name": "Temperature",
-                "attribute_value": "Cold"
-              }
-            },
-            "end_location": {
-              "location_id": "LOC-002",
-              "location_action": "Drop",
-              "location_zone": "ZONE-2",
-              "location_dimension": {
-                "length": 100,
-                "width": 80,
-                "height": 60
-              },
-              "location_attribute": {
-                "attribute_name": "Humidity",
-                "attribute_value": "Low"
-              }
-            },
-            "wait_time": {
-              "wait_type": null,
-              "start_location_wait_time": null,
-              "end_location_wait_time": null
-            },
-            "cargos": [
-              {
-                "cargo_code": "CARGO-001",
-                "cargo_type": "Box",
-                "cargo_dimension": {
-                  "length": null,
-                  "width": null,
-                  "height": null
-                },
-                "cargo_weight": 15.5,
-                "cargo_attributes": {
-                  "attribute_name": null,
-                  "attribute_value": null
-                }
-              }
-            ]
-          }
-        ]
-      }
+    it('should pass validation when location state matches expected', async () => {
+      mockLocationRepository.findOne.mockResolvedValue(mockLocation);
 
-      const transformed = await service._genericTaskTransformer(mapping, input);
-      
-      expect(transformed).toEqual(null);
+      await expect(
+        service.checkLocation(mockLocation, true),
+      ).resolves.not.toThrow();
     });
 
-    it('transforer: all object types are null, except the first one, all fields should be null', async ()=>{
-      const mapping = {
-        "object_type": "object",
-        "batch_job_id": {"object_type": "null", "path": "input.batch_job_id"},
-        "batch_priority": {"object_type": "null", "path": "input.batch_priority"},
-        "batch_type": {"object_type": "null", "path": "input.batch_type"},
-        "batch_frequency": {"object_type": "null", "path": "input.batch_frequency"},
-        "warehouse_id": {"object_type": "null", "path": "input.warehouse_id"},
-        "tasks": {
-          "object_type": "null",
-          "source": "input.tasks",
-          "map": {
-            "object_type": "null",
-            "task_id": {"object_type": "null", "path": "op.task_id"},
-            "task_type": {"object_type": "null", "path": "op.type"},
-            "task_pallet_id": {"object_type": "null", "path": "op.task_pallet_id"},
-            "task_dependency": {"object_type": "null", "path": "op.task_dependency"},
-            "start_location": {
-              "object_type": "null",
-              "location_id": {"object_type": "null", "path": "op.start_location.location_id"},
-              "location_action": {"object_type": "null", "path": "op.start_location.location_action"},
-              "location_zone": {"object_type": "null", "path": "op.start_location.location_zone"},
-              "location_dimension": {
-                "object_type": "null",
-                "length": {"object_type": "null", "path": "op.start_location.location_dimension.length"},
-                "width": {"object_type": "null", "path": "op.start_location.location_dimension.width"},
-                "height": {"object_type": "null", "path": "op.start_location.location_dimension.height"}
-              },
-              "location_attribute": {
-                "object_type": "null",
-                "attribute_name": {"object_type": "null", "path": "op.start_location.location_attribute.attribute_name"},
-                "attribute_value": {"object_type": "null", "path": "op.start_location.location_attribute.attribute_value"}
-              }
-            },
-            "end_location": {
-              "object_type": "null",
-              "location_id": {"object_type": "null", "path": "op.end_location.location_id"},
-              "location_action": {"object_type": "null", "path": "op.end_location.location_action"},
-              "location_zone": {"object_type": "null", "path": "op.end_location.location_zone"},
-              "location_dimension": {
-                "object_type": "null",
-                "length": {"object_type": "null", "path": "op.end_location.location_dimension.length"},
-                "width": {"object_type": "null", "path": "op.end_location.location_dimension.width"},
-                "height": {"object_type": "null", "path": "op.end_location.location_dimension.height"}
-              },
-              "location_attribute": {
-                "object_type": "null",
-                "attribute_name": {"object_type": "null", "path": "op.end_location.location_attribute.attribute_name"},
-                "attribute_value": {"object_type": "null", "path": "op.end_location.location_attribute.attribute_value"}
-              }
-            },
-            "wait_time": {
-              "object_type": "null",
-              "wait_type": {"object_type": "null", "path": "op.wait_time.wait_type"},
-              "start_location_wait_time": {"object_type": "null", "path": "op.wait_time.start_location_wait_time"},
-              "end_location_wait_time": {"object_type": "null", "path": "op.wait_time.end_location_wait_time"}
-            },
-            "cargos": {
-              "object_type": "null",
-              "source": "op.cargos",
-              "map": {
-                "object_type": "null",
-                "cargo_code": {"object_type": "null", "path": "item.cargo_code"},
-                "cargo_type": {"object_type": "null", "path": "item.cargo_type"},
-                "cargo_dimension": {
-                  "object_type": "null",
-                  "length": {"object_type": "null", "path": "item.cargo_dimension.length"},
-                  "width": {"object_type": "null", "path": "item.cargo_dimension.width"},
-                  "height": {"object_type": "null", "path": "item.cargo_dimension.height"}
-                },
-                "cargo_weight": {"object_type": "null", "path": "item.cargo_weight"},
-                "cargo_attributes": {
-                  "object_type": "null",
-                  "attribute_name": {"object_type": "null", "path": "item.cargo_attributes.attribute_name"},
-                  "attribute_value": {"object_type": "null", "path": "item.cargo_attributes.attribute_value"}
-                }
-              }
-            }
-          }
-        }
-      }
+    it('should throw error when location state does not match expected', async () => {
+      mockLocationRepository.findOne.mockResolvedValue(mockLocation);
 
-      const input = {
-        "batch_job_id": "BATCH-20240617-001",
-        "batch_priority": 2,
-        "batch_type": "Discrete",
-        "batch_frequency": null,
-        "warehouse_id": null,
-        "tasks": [
-          {
-            "task_id": "TASK-001",
-            "type": "Pick",
-            "task_pallet_id": "PALLET-001",
-            "task_dependency": null,
-            "start_location": {
-              "location_id": "LOC-001",
-              "location_action": "Pick",
-              "location_zone": "ZONE-1",
-              "location_dimension": {
-                "length": null,
-                "width": null,
-                "height": null
-              },
-              "location_attribute": {
-                "attribute_name": "Temperature",
-                "attribute_value": "Cold"
-              }
-            },
-            "end_location": {
-              "location_id": "LOC-002",
-              "location_action": "Drop",
-              "location_zone": "ZONE-2",
-              "location_dimension": {
-                "length": 100,
-                "width": 80,
-                "height": 60
-              },
-              "location_attribute": {
-                "attribute_name": "Humidity",
-                "attribute_value": "Low"
-              }
-            },
-            "wait_time": {
-              "wait_type": null,
-              "start_location_wait_time": null,
-              "end_location_wait_time": null
-            },
-            "cargos": [
-              {
-                "cargo_code": "CARGO-001",
-                "cargo_type": "Box",
-                "cargo_dimension": {
-                  "length": null,
-                  "width": null,
-                  "height": null
-                },
-                "cargo_weight": 15.5,
-                "cargo_attributes": {
-                  "attribute_name": null,
-                  "attribute_value": null
-                }
-              }
-            ]
-          }
-        ]
-      }
-
-      const expectedResponse = {
-        "batch_job_id": null,
-        "batch_priority": null,
-        "batch_type": null,
-        "batch_frequency": null,
-        "warehouse_id": null,
-        "tasks": null
-      }
-
-      const transformed  = await service._genericTaskTransformer(mapping, input);
-
-      expect(transformed).toEqual(expectedResponse);
-
+      await expect(service.checkLocation(mockLocation, false)).rejects.toThrow(
+        'Location with id LOC_001 is not in the expected state. Expected: false, Actual: true',
+      );
     });
 
+    it('should throw error when location not found', async () => {
+      mockLocationRepository.findOne.mockResolvedValue(null);
 
-    it('transformer: extract batch_job_id from a list of batch_jobs', async ()=>{
-      const mapping = {
-        "object_type": "object",
-        "batch_job_id": {"object_type": "string", "path":"input.batch_jobs[0].batch_job_id"}, 
-        "batch_priority": {"object_type": "number", "path": "input.batch_priority"},
-        "batch_type": {"object_type": "string", "path": "input.batch_type"},
-        "batch_frequency": {"object_type": "null", "path": "input.batch_frequency"},
-        "warehouse_id": {"object_type": "null", "path": "input.warehouse_id"},
-        "tasks": {
-          "object_type": "array",
-          "source": "input.tasks",
-          "map": {
-            "object_type": "object",
-            "task_id": {"object_type":"string", "path": "op.task_id"},
-            "task_type": {"object_type":"string", "path": "op.type"},
-            "task_pallet_id": {"object_type":"string", "path": "op.task_pallet_id"},
-            "task_dependency": {"object_type":"null", "path": "op.task_dependency"},
-
-            "start_location": {
-              "object_type": "object",
-              "location_id": {"object_type": "string", "path": "op.start_location.location_id"},
-              "location_action": {"object_type": "string", "path": "op.start_location.location_action"},
-              "location_zone": {"object_type": "string", "path": "op.start_location.location_zone"},
-              "location_dimension": {
-                "object_type": "object",
-                "length": {"object_type": "null", "path": "op.start_location.location_dimension.length"},
-                "width": {"object_type": "null", "path": "op.start_location.location_dimension.width"},
-                "height": {"object_type": "null", "path": "op.start_location.location_dimension.height"}
-              },
-              "location_attribute": {
-                "object_type": "object",
-                "attribute_name": {"object_type": "string", "path": "op.start_location.location_attribute.attribute_name"},
-                "attribute_value": {"object_type": "string", "path": "op.start_location.location_attribute.attribute_value"}
-              }
-            },
-
-            "end_location": {
-              "object_type": "object",
-              "location_id": {"object_type": "string", "path": "op.end_location.location_id"},
-              "location_action": {"object_type": "string", "path": "op.end_location.location_action"},
-              "location_zone": {"object_type": "string", "path": "op.end_location.location_zone"},
-              "location_dimension": {
-                "object_type": "object",
-                "length": {"object_type": "number", "path": "op.end_location.location_dimension.length"},
-                "width": {"object_type": "number", "path": "op.end_location.location_dimension.width"},
-                "height": {"object_type": "number", "path": "op.end_location.location_dimension.height"}
-              },
-              "location_attribute": {
-                "object_type": "object",
-                "attribute_name": {"object_type": "string", "path": "op.end_location.location_attribute.attribute_name"},
-                "attribute_value": {"object_type": "string", "path": "op.end_location.location_attribute.attribute_value"}
-              }
-            },
-            "wait_time": {
-              "object_type": "object",
-              "wait_type": {"object_type": "null", "path": "op.wait_time.wait_type"},
-              "start_location_wait_time": {"object_type": "null", "path": "op.wait_time.start_location_wait_time"},
-              "end_location_wait_time": {"object_type": "null", "path": "op.wait_time.end_location_wait_time"}
-            },
-            "cargos": {
-              "object_type": "array",
-              "source": "op.cargos",
-              "map": {
-                "object_type": "object",
-                "cargo_code": {"object_type": "string", "path": "item.cargo_code"},
-                "cargo_type": {"object_type": "string", "path": "item.cargo_type"},
-                "cargo_dimension": {
-                  "object_type": "object",
-                  "length": {"object_type": "null", "path": "item.cargo_dimension.length"},
-                  "width": {"object_type": "null", "path": "item.cargo_dimension.width"},
-                  "height": {"object_type": "null", "path": "item.cargo_dimension.height"}
-                },
-                "cargo_weight": {"object_type": "number", "path": "item.cargo_weight"},
-                "cargo_attributes": {
-                  "object_type": "object",
-                  "attribute_name": {"object_type": "null", "path": "item.cargo_attributes.attribute_name"},
-                  "attribute_value": {"object_type": "null", "path": "item.cargo_attributes.attribute_value"}
-                }
-              }
-            }
-          }
-        }
-      }
-
-      const input = {
-        "batch_jobs": [{"batch_job_id": "BATCH-20240617-001"}, {"batch_job_id": "BATCH-20240617-002"}],
-        "batch_priority": 2,
-        "batch_type": "Discrete",
-        "batch_frequency": null,
-        "warehouse_id": null,
-        "tasks": [
-          {
-            "task_id": "TASK-001",
-            "type": "Pick",
-            "task_pallet_id": "PALLET-001",
-            "task_dependency": null,
-            "start_location": {
-              "location_id": "LOC-001",
-              "location_action": "Pick",
-              "location_zone": "ZONE-1",
-              "location_dimension": {
-                "length": null,
-                "width": null,
-                "height": null
-              },
-              "location_attribute": {
-                "attribute_name": "Temperature",
-                "attribute_value": "Cold"
-              }
-            },
-            "end_location": {
-              "location_id": "LOC-002",
-              "location_action": "Drop",
-              "location_zone": "ZONE-2",
-              "location_dimension": {
-                "length": 100,
-                "width": 80,
-                "height": 60
-              },
-              "location_attribute": {
-                "attribute_name": "Humidity",
-                "attribute_value": "Low"
-              }
-            },
-            "wait_time": {
-              "wait_type": null,
-              "start_location_wait_time": null,
-              "end_location_wait_time": null
-            },
-            "cargos": [
-              {
-                "cargo_code": "CARGO-001",
-                "cargo_type": "Box",
-                "cargo_dimension": {
-                  "length": null,
-                  "width": null,
-                  "height": null
-                },
-                "cargo_weight": 15.5,
-                "cargo_attributes": {
-                  "attribute_name": null,
-                  "attribute_value": null
-                }
-              }
-            ]
-          }
-        ]
-      }
-
-      const expectedResponse = {
-        "batch_job_id": "BATCH-20240617-001",
-        "batch_priority": 2,
-        "batch_type": "Discrete",
-        "batch_frequency": null,
-        "warehouse_id": null,
-        "tasks": [
-          {
-            "task_id": "TASK-001",
-            "task_type": "Pick",
-            "task_pallet_id": "PALLET-001",
-            "task_dependency": null,
-            "start_location": {
-              "location_id": "LOC-001",
-              "location_action": "Pick",
-              "location_zone": "ZONE-1",
-              "location_dimension": {
-                "length": null,
-                "width": null,
-                "height": null
-              },
-              "location_attribute": {
-                "attribute_name": "Temperature",
-                "attribute_value": "Cold"
-              }
-            },
-            "end_location": {
-              "location_id": "LOC-002",
-              "location_action": "Drop",
-              "location_zone": "ZONE-2",
-              "location_dimension": {
-                "length": 100,
-                "width": 80,
-                "height": 60
-              },
-              "location_attribute": {
-                "attribute_name": "Humidity",
-                "attribute_value": "Low"
-              }
-            },
-            "wait_time": {
-              "wait_type": null,
-              "start_location_wait_time": null,
-              "end_location_wait_time": null
-            },
-            "cargos": [
-              {
-                "cargo_code": "CARGO-001",
-                "cargo_type": "Box",
-                "cargo_dimension": {
-                  "length": null,
-                  "width": null,
-                  "height": null
-                },
-                "cargo_weight": 15.5,
-                "cargo_attributes": {
-                  "attribute_name": null,
-                  "attribute_value": null
-                }
-              }
-            ]
-          }
-        ]
-      }
-
-      const transformed = await service._genericTaskTransformer(mapping, input);
-      expect(transformed).toEqual(expectedResponse);
-
+      await expect(service.checkLocation(mockLocation, true)).rejects.toThrow(
+        'Location with id LOC_001 does not exist',
+      );
     });
-
-    it ("transformer: start_location and endlocation are not present as objects, they are part of task object",async ()=>{
-      const mapping = {
-        "object_type": "object",
-        "batch_job_id": {"object_type": "string", "path":"input.batch_jobs[0].batch_job_id"}, 
-        "batch_priority": {"object_type": "number", "path": "input.batch_priority"},
-        "batch_type": {"object_type": "string", "path": "input.batch_type"},
-        "batch_frequency": {"object_type": "null", "path": "input.batch_frequency"},
-        "warehouse_id": {"object_type": "null", "path": "input.warehouse_id"},
-        "tasks": {
-          "object_type": "array",
-          "source": "input.tasks",
-          "map": {
-            "object_type": "object",
-            "task_id": {"object_type":"string", "path": "op.task_id"},
-            "task_type": {"object_type":"string", "path": "op.type"},
-            "task_pallet_id": {"object_type":"string", "path": "op.task_pallet_id"},
-            "task_dependency": {"object_type":"null", "path": "op.task_dependency"},
-
-            "start_location_id": {"object_type": "string", "path": "op.start_location.location_id"},
-            "start_location_action": {"object_type": "string", "path": "op.start_location.location_action"},
-            "start_location_zone": {"object_type": "string", "path": "op.start_location.location_zone"},
-            "start_location_dimension": {
-              "object_type": "object",
-              "length": {"object_type": "null", "path": "op.start_location.location_dimension.length"},
-              "width": {"object_type": "null", "path": "op.start_location.location_dimension.width"},
-              "height": {"object_type": "null", "path": "op.start_location.location_dimension.height"}
-            },
-            "start_location_attribute": {
-              "object_type": "object",
-              "attribute_name": {"object_type": "string", "path": "op.start_location.location_attribute.attribute_name"},
-              "attribute_value": {"object_type": "string", "path": "op.start_location.location_attribute.attribute_value"}
-            },
-
-            "end_location_id": {"object_type": "string", "path": "op.end_location.location_id"},
-            "end_location_action": {"object_type": "string", "path": "op.end_location.location_action"},
-            "end_location_zone": {"object_type": "string", "path": "op.end_location.location_zone"},
-            "end_location_dimension": {
-              "object_type": "object",
-              "length": {"object_type": "number", "path": "op.end_location.location_dimension.length"},
-              "width": {"object_type": "number", "path": "op.end_location.location_dimension.width"},
-              "height": {"object_type": "number", "path": "op.end_location.location_dimension.height"}
-            },
-            "end_location_attribute": {
-              "object_type": "object",
-              "attribute_name": {"object_type": "string", "path": "op.end_location.location_attribute.attribute_name"},
-              "attribute_value": {"object_type": "string", "path": "op.end_location.location_attribute.attribute_value"}
-            },
-
-            "wait_time": {
-              "object_type": "object",
-              "wait_type": {"object_type": "null", "path": "op.wait_time.wait_type"},
-              "start_location_wait_time": {"object_type": "null", "path": "op.wait_time.start_location_wait_time"},
-              "end_location_wait_time": {"object_type": "null", "path": "op.wait_time.end_location_wait_time"}
-            },
-            "cargos": {
-              "object_type": "array",
-              "source": "op.cargos",
-              "map": {
-                "object_type": "object",
-                "cargo_code": {"object_type": "string", "path": "item.cargo_code"},
-                "cargo_type": {"object_type": "string", "path": "item.cargo_type"},
-                "cargo_dimension": {
-                  "object_type": "object",
-                  "length": {"object_type": "null", "path": "item.cargo_dimension.length"},
-                  "width": {"object_type": "null", "path": "item.cargo_dimension.width"},
-                  "height": {"object_type": "null", "path": "item.cargo_dimension.height"}
-                },
-                "cargo_weight": {"object_type": "number", "path": "item.cargo_weight"},
-                "cargo_attributes": {
-                  "object_type": "object",
-                  "attribute_name": {"object_type": "null", "path": "item.cargo_attributes.attribute_name"},
-                  "attribute_value": {"object_type": "null", "path": "item.cargo_attributes.attribute_value"}
-                }
-              }
-            }
-          }
-        }
-      }
-
-      const input = {
-        "batch_jobs": [{"batch_job_id": "BATCH-20240617-001"}, {"batch_job_id": "BATCH-20240617-002"}],
-        "batch_priority": 2,
-        "batch_type": "Discrete",
-        "batch_frequency": null,
-        "warehouse_id": null,
-        "tasks": [
-          {
-            "task_id": "TASK-001",
-            "type": "Pick",
-            "task_pallet_id": "PALLET-001",
-            "task_dependency": null,
-            "start_location": {
-              "location_id": "LOC-001",
-              "location_action": "Pick",
-              "location_zone": "ZONE-1",
-              "location_dimension": {
-                "length": null,
-                "width": null,
-                "height": null
-              },
-              "location_attribute": {
-                "attribute_name": "Temperature",
-                "attribute_value": "Cold"
-              }
-            },
-            "end_location": {
-              "location_id": "LOC-002",
-              "location_action": "Drop",
-              "location_zone": "ZONE-2",
-              "location_dimension": {
-                "length": 100,
-                "width": 80,
-                "height": 60
-              },
-              "location_attribute": {
-                "attribute_name": "Humidity",
-                "attribute_value": "Low"
-              }
-            },
-            "wait_time": {
-              "wait_type": null,
-              "start_location_wait_time": null,
-              "end_location_wait_time": null
-            },
-            "cargos": [
-              {
-                "cargo_code": "CARGO-001",
-                "cargo_type": "Box",
-                "cargo_dimension": {
-                  "length": null,
-                  "width": null,
-                  "height": null
-                },
-                "cargo_weight": 15.5,
-                "cargo_attributes": {
-                  "attribute_name": null,
-                  "attribute_value": null
-                }
-              }
-            ]
-          }
-        ]
-      }
-
-      const expectedResponse = {
-        "batch_job_id": "BATCH-20240617-001",
-        "batch_priority": 2,
-        "batch_type": "Discrete",
-        "batch_frequency": null,
-        "warehouse_id": null,
-        "tasks": [
-          {
-            "task_id": "TASK-001",
-            "task_type": "Pick",
-            "task_pallet_id": "PALLET-001",
-            "task_dependency": null,
-
-            "start_location_id": "LOC-001",
-            "start_location_action": "Pick",
-            "start_location_zone": "ZONE-1",
-            "start_location_dimension": {
-              "length": null,
-              "width": null,
-              "height": null
-            },
-            "start_location_attribute": {
-              "attribute_name": "Temperature",
-              "attribute_value": "Cold"
-            },
-            
-            "end_location_id": "LOC-002",
-            "end_location_action": "Drop",
-            "end_location_zone": "ZONE-2",
-            "end_location_dimension": {
-              "length": 100,
-              "width": 80,
-              "height": 60
-            },
-            "end_location_attribute": {
-              "attribute_name": "Humidity",
-              "attribute_value": "Low"
-            },
-
-            "wait_time": {
-              "wait_type": null,
-              "start_location_wait_time": null,
-              "end_location_wait_time": null
-            },
-            "cargos": [
-              {
-                "cargo_code": "CARGO-001",
-                "cargo_type": "Box",
-                "cargo_dimension": {
-                  "length": null,
-                  "width": null,
-                  "height": null
-                },
-                "cargo_weight": 15.5,
-                "cargo_attributes": {
-                  "attribute_name": null,
-                  "attribute_value": null
-                }
-              }
-            ]
-          }
-        ]
-      }
-
-      const transformed = await service._genericTaskTransformer(mapping, input);
-      expect(transformed).toEqual(expectedResponse);
-
-    });
-
-    it("transformer: start_location and endlocation present in list, first one should be start and second one should be end", async ()=>{
-      const mapping = {
-        "object_type": "object",
-        "batch_job_id": {"object_type": "string", "path":"input.batch_jobs[0].batch_job_id"}, 
-        "batch_priority": {"object_type": "number", "path": "input.batch_priority"},
-        "batch_type": {"object_type": "string", "path": "input.batch_type"},
-        "batch_frequency": {"object_type": "null", "path": "input.batch_frequency"},
-        "warehouse_id": {"object_type": "null", "path": "input.warehouse_id"},
-        "tasks": {
-          "object_type": "array",
-          "source": "input.tasks",
-          "map": {
-            "object_type": "object",
-            "task_id": {"object_type":"string", "path": "op.task_id"},
-            "task_type": {"object_type":"string", "path": "op.type"},
-            "task_pallet_id": {"object_type":"string", "path": "op.task_pallet_id"},
-            "task_dependency": {"object_type":"null", "path": "op.task_dependency"},
-
-            "location":{
-              "object_type": "array",
-              "source": "op.location",
-              "map":{
-                "object_type": "object",
-                "location_id": {"object_type": "string", "path": "item.location_id"},
-                "location_action": {"object_type": "string", "path": "item.location_action"},
-                "location_zone": {"object_type": "string", "path": "item.location_zone"},
-                "location_dimension": {
-                  "object_type": "object",
-                  "length": {"object_type": "number", "path": "item.location_dimension.length"},
-                  "width": {"object_type": "number", "path": "item.location_dimension.width"},
-                  "height": {"object_type": "number", "path": "item.location_dimension.height"}
-                },
-              }
-            },
-
-            "wait_time": {
-              "object_type": "object",
-              "wait_type": {"object_type": "null", "path": "op.wait_time.wait_type"},
-              "start_location_wait_time": {"object_type": "null", "path": "op.wait_time.start_location_wait_time"},
-              "end_location_wait_time": {"object_type": "null", "path": "op.wait_time.end_location_wait_time"}
-            },
-            "cargos": {
-              "object_type": "array",
-              "source": "op.cargos",
-              "map": {
-                "object_type": "object",
-                "cargo_code": {"object_type": "string", "path": "item.cargo_code"},
-                "cargo_type": {"object_type": "string", "path": "item.cargo_type"},
-                "cargo_dimension": {
-                  "object_type": "object",
-                  "length": {"object_type": "null", "path": "item.cargo_dimension.length"},
-                  "width": {"object_type": "null", "path": "item.cargo_dimension.width"},
-                  "height": {"object_type": "null", "path": "item.cargo_dimension.height"}
-                },
-                "cargo_weight": {"object_type": "number", "path": "item.cargo_weight"},
-                "cargo_attributes": {
-                  "object_type": "object",
-                  "attribute_name": {"object_type": "null", "path": "item.cargo_attributes.attribute_name"},
-                  "attribute_value": {"object_type": "null", "path": "item.cargo_attributes.attribute_value"}
-                }
-              }
-            }
-          }
-        }
-      }
-
-      const input = {
-        "batch_jobs": [{"batch_job_id": "BATCH-20240617-001"}, {"batch_job_id": "BATCH-20240617-002"}],
-        "batch_priority": 2,
-        "batch_type": "Discrete",
-        "batch_frequency": null,
-        "warehouse_id": null,
-        "tasks": [
-          {
-            "task_id": "TASK-001",
-            "type": "Pick",
-            "task_pallet_id": "PALLET-001",
-            "task_dependency": null,
-            "location": [
-              {
-                "location_id": "LOC-001",
-                "location_action": "Pick",
-                "location_zone": "ZONE-1",
-                "location_dimension": {
-                  "length": null,
-                  "width": null,
-                  "height": null
-                },
-                "location_attribute": {
-                  "attribute_name": "Temperature",
-                  "attribute_value": "Cold"
-                }
-              },
-              {
-                "location_id": "LOC-002",
-                "location_action": "Drop",
-                "location_zone": "ZONE-2",
-                "location_dimension": {
-                  "length": 100,
-                  "width": 80,
-                  "height": 60
-                },
-                "location_attribute": {
-                  "attribute_name": "Humidity",
-                  "attribute_value": "Low"
-                }
-              }
-            ],
-            "wait_time": {
-              "wait_type": null,
-              "start_location_wait_time": null,
-              "end_location_wait_time": null
-            },
-            "cargos": [
-              {
-                "cargo_code": "CARGO-001",
-                "cargo_type": "Box",
-                "cargo_dimension": {
-                  "length": null,
-                  "width": null,
-                  "height": null
-                },
-                "cargo_weight": 15.5,
-                "cargo_attributes": {
-                  "attribute_name": null,
-                  "attribute_value": null
-                }
-              }
-            ]
-          }
-        ]
-      }
-
-      const expectedResponse = {
-        "batch_job_id": "BATCH-20240617-001",
-        "batch_priority": 2,
-        "batch_type": "Discrete",
-        "batch_frequency": null,
-        "warehouse_id": null,
-        "tasks": [
-          {
-            "task_id": "TASK-001",
-            "task_type": "Pick",
-            "task_pallet_id": "PALLET-001",
-            "task_dependency": null,
-
-            "location":[
-              {
-                "location_id": "LOC-001",
-                "location_action": "Pick",
-                "location_zone": "ZONE-1",
-                "location_dimension": {
-                  "length": 0,
-                  "width": 0,
-                  "height": 0
-                }
-              },
-              {
-                "location_id": "LOC-002",
-                "location_action": "Drop",
-                "location_zone": "ZONE-2",
-                "location_dimension": {
-                  "length": 100,
-                  "width": 80,
-                  "height": 60
-                }
-              }
-            ],
-
-            "wait_time": {
-              "wait_type": null,
-              "start_location_wait_time": null,
-              "end_location_wait_time": null
-            },
-            "cargos": [
-              {
-                "cargo_code": "CARGO-001",
-                "cargo_type": "Box",
-                "cargo_dimension": {
-                  "length": null,
-                  "width": null,
-                  "height": null
-                },
-                "cargo_weight": 15.5,
-                "cargo_attributes": {
-                  "attribute_name": null,
-                  "attribute_value": null
-                }
-              }
-            ]
-          }
-        ]
-      }
-
-      const transformed = await service._genericTaskTransformer(mapping, input);
-      expect(transformed).toEqual(expectedResponse);
-    });
-
-
   });
-    
-  
+
+  describe('updateTask', () => {
+    const warehouseId = 'WH_001';
+    const validUpdateDto: TaskUpdateReq = {
+      batch_job_id: 'BATCH_001',
+      updates: [
+        {
+          task_id: 'TASK_001',
+          start_location: {
+            location_id: 'LOC_001',
+            location_dimension: { length: 100, width: 50, height: 80 },
+          },
+          end_location: {
+            location_id: 'LOC_002',
+            location_dimension: { length: 100, width: 50, height: 80 },
+          },
+          cargos: [
+            {
+              cargo_code: 'CARGO_001',
+              cargo_dimension: { length: 100, width: 50, height: 80 },
+            },
+          ],
+        },
+      ],
+    };
+
+    const mockBatchJob = {
+      id: 'batch-uuid-1',
+      batch_job_id: 'BATCH_001',
+      warehouse_id: warehouseId,
+      status: 'pending',
+    };
+
+    const mockTask = {
+      id: 'task-uuid-1',
+      task_id: 'TASK_001',
+      batch_job_id: mockBatchJob.id,
+      status: 'pending',
+      start_location: {
+        location_id: 'LOC_OLD_001',
+        location_dimension: { length: 80, width: 40, height: 60 },
+      },
+      end_location: {
+        location_id: 'LOC_OLD_002',
+        location_dimension: { length: 80, width: 40, height: 60 },
+      },
+      cargos: [
+        {
+          cargo_code: 'CARGO_001',
+          cargo_dimension: { length: 80, width: 40, height: 60 },
+          cargo_weight: 10,
+        },
+      ],
+    };
+
+    it('should successfully update tasks', async () => {
+      const mockWarehouse = { id: 'wh-1', warehouse_id: warehouseId };
+
+      mockWarehouseRepository.findOne.mockResolvedValue(mockWarehouse);
+      mockBatchJobRepository.findOne.mockResolvedValue(mockBatchJob);
+      mockTaskRepository.findOne.mockResolvedValue(mockTask);
+      mockTaskRepository.update.mockResolvedValue(undefined);
+
+      const result = await service.updateTask(warehouseId, validUpdateDto);
+
+      expect(warehouseRepository.findOne).toHaveBeenCalledWith({
+        where: { warehouse_id: warehouseId },
+      });
+      expect(result.status).toBe('success');
+      expect(result.batch_id).toBe('BATCH_001');
+    });
+
+    it('should throw NotFoundException when batch not found', async () => {
+      mockBatchJobRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.updateTask(warehouseId, validUpdateDto),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('cancelBatch', () => {
+    const warehouseId = 'WH_001';
+    const batchId = 'BATCH_001';
+    const cancelReq: CancelReq = {
+      reason: 'User requested cancellation',
+    };
+
+    const mockBatchJob = {
+      id: 'batch-uuid-1',
+      batch_job_id: batchId,
+      warehouse_id: warehouseId,
+      status: 'pending',
+    };
+
+    it('should successfully cancel a batch', async () => {
+      mockBatchJobRepository.findOne.mockResolvedValue(mockBatchJob);
+      mockBatchJobRepository.remove.mockResolvedValue(undefined);
+
+      const result = await service.cancelBatch(warehouseId, batchId, cancelReq);
+
+      expect(batchJobRepository.findOne).toHaveBeenCalledWith({
+        where: { batch_job_id: batchId, warehouse_id: warehouseId },
+      });
+      expect(mockBatchJobRepository.remove).toHaveBeenCalledWith(mockBatchJob);
+      expect(result.status).toBe('success');
+      expect(result.batch_id).toBe(batchId);
+    });
+
+    it('should throw NotFoundException when batch not found', async () => {
+      mockBatchJobRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.cancelBatch(warehouseId, batchId, cancelReq),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('cancelTask', () => {
+    const warehouseId = 'WH_001';
+    const batchId = 'BATCH_001';
+    const taskId = 'TASK_001';
+    const cancelReq: CancelReq = {
+      reason: 'Task no longer needed',
+    };
+
+    const mockBatchJob = {
+      id: 'batch-uuid-1',
+      batch_job_id: batchId,
+      warehouse_id: warehouseId,
+      status: 'pending',
+    };
+
+    const mockTask = {
+      id: 'task-uuid-1',
+      task_id: taskId,
+      batch_job_id: mockBatchJob.id,
+      status: 'pending',
+    };
+
+    it('should successfully cancel a task', async () => {
+      mockBatchJobRepository.findOne.mockResolvedValue(mockBatchJob);
+      mockTaskRepository.findOne.mockResolvedValue(mockTask);
+      mockTaskRepository.remove.mockResolvedValue(undefined);
+
+      const result = await service.cancelTask(
+        warehouseId,
+        batchId,
+        taskId,
+        cancelReq,
+      );
+
+      expect(taskRepository.findOne).toHaveBeenCalledWith({
+        where: {
+          task_id: taskId,
+          batch_job: { batch_job_id: batchId },
+        },
+        relations: ['batch_job'],
+      });
+      expect(mockTaskRepository.remove).toHaveBeenCalledWith(mockTask);
+      expect(result.status).toBe('success');
+      expect(result.task_id).toBe(taskId);
+    });
+
+    it('should throw NotFoundException when task not found', async () => {
+      mockBatchJobRepository.findOne.mockResolvedValue(mockBatchJob);
+      mockTaskRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.cancelTask(warehouseId, batchId, taskId, cancelReq),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('unstructureHelper', () => {
+    it('should extract value from nested object path', () => {
+      const input = {
+        data: {
+          items: [
+            { id: 1, name: 'Item 1' },
+            { id: 2, name: 'Item 2' },
+          ],
+        },
+      };
+
+      const [success, value, error] = service.unstructureHelper(
+        input,
+        'input.data.items[0].name',
+      );
+
+      expect(success).toBe(true);
+      expect(value).toBe('Item 1');
+      expect(error).toBeNull();
+    });
+
+    it('should return false for invalid path', () => {
+      const input = { data: { value: 'test' } };
+
+      const [success, value, error] = service.unstructureHelper(
+        input,
+        'input.data.nonexistent',
+      );
+
+      expect(success).toBe(false);
+      expect(value).toBeNull();
+      expect(error).toBe('nonexistent');
+    });
+
+    it('should handle null expression', () => {
+      const input = { data: 'test' };
+
+      const [success, value, error] = service.unstructureHelper(input, 'null');
+
+      expect(success).toBe(true);
+      expect(value).toBeNull();
+      expect(error).toBeNull();
+    });
+  });
+
+  describe('updateWebhook', () => {
+    const warehouseId = 'WH_001';
+    const updateWebhookDto: UpdateWebhookReq = {
+      webhook_url: 'https://example.com/webhook',
+    };
+
+    const mockWarehouse = {
+      id: 'warehouse-uuid-1',
+      warehouse_id: warehouseId,
+      webhook_url: null,
+    };
+
+    it('should successfully update webhook', async () => {
+      mockWarehouseRepository.findOne.mockResolvedValue(mockWarehouse);
+      mockWarehouseRepository.save.mockResolvedValue({
+        ...mockWarehouse,
+        webhook_url: updateWebhookDto.webhook_url,
+      });
+
+      const result = await service.updateWebhook(warehouseId, updateWebhookDto);
+
+      expect(warehouseRepository.findOne).toHaveBeenCalledWith({
+        where: { warehouse_id: warehouseId },
+      });
+      expect(result.status).toBe('success');
+    });
+
+    it('should throw NotFoundException when warehouse not found', async () => {
+      mockWarehouseRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.updateWebhook(warehouseId, updateWebhookDto),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('Edge Cases and Error Handling', () => {
+    it('should handle empty arrays gracefully', async () => {
+      const emptyTaskDto = {
+        batch_job_id: 'BATCH_001',
+        batch_priority: 5,
+        batch_type: batch_type.Discrete,
+        tasks: [],
+      };
+
+      await expect(service.createTask('WH_001', emptyTaskDto)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should handle malformed location data', async () => {
+      const invalidLocation = null as any;
+
+      await expect(
+        service.updateLocation(invalidLocation, true),
+      ).rejects.toThrow("Location or location ID doesn't exists.");
+    });
+
+    it('should handle concurrent batch creation attempts', async () => {
+      const taskDto: TaskGenerationReq = {
+        batch_job_id: 'BATCH_CONCURRENT',
+        batch_priority: 5,
+        batch_type: batch_type.Discrete,
+        tasks: [
+          {
+            task_id: 'TASK_001',
+            task_type: TaskType.CrossDocking,
+            start_location: {
+              location_id: 'LOC_001',
+              location_type: LocationType.Pallet,
+              location_action: LocationAction.Pick,
+              location_dimension: { length: 100, width: 50, height: 80 },
+            },
+            end_location: {
+              location_id: 'LOC_002',
+              location_type: LocationType.Pallet,
+              location_action: LocationAction.Drop,
+              location_dimension: { length: 100, width: 50, height: 80 },
+            },
+            cargos: [{ cargo_code: 'CARGO_001' }],
+          },
+        ],
+      };
+
+      // First call succeeds, second call should fail due to conflict
+      mockBatchJobRepository.findOne
+        .mockResolvedValueOnce(null) // First check - no existing batch
+        .mockResolvedValueOnce({
+          id: 'existing',
+          batch_job_id: 'BATCH_CONCURRENT',
+        }); // Second check - batch exists
+
+      const mockBatch = { id: 'batch-1', batch_job_id: 'BATCH_CONCURRENT' };
+      mockBatchJobRepository.create.mockReturnValue(mockBatch);
+      mockBatchJobRepository.save.mockResolvedValue(mockBatch);
+      mockTaskRepository.create.mockReturnValue({ id: 'task-1' });
+      mockTaskRepository.save.mockResolvedValue({ id: 'task-1' });
+
+      // First call should succeed
+      const result1 = await service.createTask('WH_001', taskDto);
+      expect(result1.status).toBe('success');
+
+      // Second call should fail
+      await expect(service.createTask('WH_001', taskDto)).rejects.toThrow(
+        ConflictException,
+      );
+    });
+  });
 });
