@@ -1,4 +1,4 @@
-import { IsString, ValidateNested } from 'class-validator';
+import { IsString, ValidateNested, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class StringConfigDto {
@@ -6,6 +6,8 @@ export class StringConfigDto {
   object_type: string;
   @IsString()
   path: string;
+  @IsOptional()
+  default?: any;
 }
 
 export class CancelTaskConfigRootDto {

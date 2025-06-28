@@ -1,4 +1,10 @@
-import { IsString, IsNumber, ValidateNested } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  ValidateNested,
+  IsOptional,
+  IsObject,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 // Primitive config DTOs
@@ -7,6 +13,7 @@ export class StringConfigDto {
   object_type: string;
   @IsString()
   path: string;
+  @IsOptional()
   default?: any;
 }
 
@@ -15,6 +22,7 @@ export class NumberConfigDto {
   object_type: string;
   @IsString()
   path: string;
+  @IsOptional()
   default?: any;
 }
 
@@ -50,30 +58,47 @@ export class GetEmptyLocationRequestDto {
   @Type(() => GetEmptyLocationRequestBodyDto)
   body: GetEmptyLocationRequestBodyDto;
 
-  @IsString()
-  // param1 and param2 are just string mappings, not objects
-  query_params: any;
+  @IsObject()
+  query_params: Record<string, string>;
 
-  @IsString()
-  path_params: any;
+  @IsObject()
+  path_params: Record<string, string>;
 }
 
-// Location Dimension DTO (for response)
-export class GetEmptyLocationDimensionDto {
+// Nested Number Wrapper DTO for location_dimension
+export class NumberWrapperDto {
   @IsString()
   object_type: string;
 
   @ValidateNested()
   @Type(() => NumberConfigDto)
-  length: NumberConfigDto;
+  length?: NumberConfigDto;
 
   @ValidateNested()
   @Type(() => NumberConfigDto)
-  width: NumberConfigDto;
+  width?: NumberConfigDto;
 
   @ValidateNested()
   @Type(() => NumberConfigDto)
-  height: NumberConfigDto;
+  height?: NumberConfigDto;
+}
+
+// Updated Location Dimension DTO
+export class GetEmptyLocationDimensionDto {
+  @IsString()
+  object_type: string;
+
+  @ValidateNested()
+  @Type(() => NumberWrapperDto)
+  length: NumberWrapperDto;
+
+  @ValidateNested()
+  @Type(() => NumberWrapperDto)
+  width: NumberWrapperDto;
+
+  @ValidateNested()
+  @Type(() => NumberWrapperDto)
+  height: NumberWrapperDto;
 }
 
 // Available Location Map DTO
@@ -136,6 +161,7 @@ export class GetEmptyLocationEndpointDto {
   url: string;
   @IsString()
   method: string;
+  @IsObject()
   headers: Record<string, string>;
 }
 

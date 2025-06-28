@@ -32,6 +32,44 @@ export class ConfigMappingService {
     private validator: Validator,
   ) {}
 
+  // Helper method to format validation errors in a user-friendly way
+  private formatValidationErrors(errors: any[]): string {
+    const formattedErrors: string[] = [];
+
+    const processError = (error: any, path: string = '') => {
+      const currentPath = path ? `${path}.${error.property}` : error.property;
+
+      if (error.constraints) {
+        // Handle whitelist validation errors (extra properties)
+        if (error.constraints.whitelistValidation) {
+          formattedErrors.push(
+            `Extra property "${error.property}" is not allowed at path "${currentPath}"`,
+          );
+        } else {
+          // Handle other validation errors
+          Object.values(error.constraints).forEach((constraint: string) => {
+            formattedErrors.push(`${constraint} at path "${currentPath}"`);
+          });
+        }
+      }
+
+      // Process nested errors
+      if (error.children && error.children.length > 0) {
+        error.children.forEach((child: any) => {
+          processError(child, currentPath);
+        });
+      }
+    };
+
+    errors.forEach((error) => processError(error));
+
+    if (formattedErrors.length === 0) {
+      return 'Validation failed with unknown errors';
+    }
+
+    return formattedErrors.join('\n');
+  }
+
   // Validate create task config structure using DTO
   private async validateCreateTaskConfig(config: any): Promise<void> {
     try {
@@ -43,8 +81,9 @@ export class ConfigMappingService {
       });
 
       if (validationErrors.length > 0) {
+        const formattedErrors = this.formatValidationErrors(validationErrors);
         throw new BadRequestException(
-          `Create task config validation failed: ${JSON.stringify(validationErrors)}`,
+          `Create task config validation failed:\n${formattedErrors}`,
         );
       }
     } catch (error) {
@@ -68,8 +107,9 @@ export class ConfigMappingService {
       });
 
       if (validationErrors.length > 0) {
+        const formattedErrors = this.formatValidationErrors(validationErrors);
         throw new BadRequestException(
-          `Update task config validation failed: ${JSON.stringify(validationErrors)}`,
+          `Update task config validation failed:\n${formattedErrors}`,
         );
       }
     } catch (error) {
@@ -93,8 +133,9 @@ export class ConfigMappingService {
       });
 
       if (validationErrors.length > 0) {
+        const formattedErrors = this.formatValidationErrors(validationErrors);
         throw new BadRequestException(
-          `Cancel task config validation failed: ${JSON.stringify(validationErrors)}`,
+          `Cancel task config validation failed:\n${formattedErrors}`,
         );
       }
     } catch (error) {
@@ -121,8 +162,9 @@ export class ConfigMappingService {
       });
 
       if (validationErrors.length > 0) {
+        const formattedErrors = this.formatValidationErrors(validationErrors);
         throw new BadRequestException(
-          `Get location config validation failed: ${JSON.stringify(validationErrors)}`,
+          `Get location config validation failed:\n${formattedErrors}`,
         );
       }
     } catch (error) {

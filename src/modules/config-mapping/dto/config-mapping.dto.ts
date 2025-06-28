@@ -32,7 +32,10 @@ export class CreateTaskConfigDto {
           object_type: 'object',
           task_id: { object_type: 'string', path: 'op.task_id' },
           task_type: { object_type: 'string', path: 'op.task_type' },
-          task_dependency: { object_type: 'null', path: 'op.task_dependency' },
+          task_dependency: {
+            object_type: 'string',
+            path: 'op.task_dependency',
+          },
 
           start_location: {
             object_type: 'object',
@@ -107,7 +110,7 @@ export class CreateTaskConfigDto {
               },
             },
             location_attribute: {
-              object_type: 'null',
+              object_type: 'object',
               attribute_name: {
                 object_type: 'string',
                 path: 'op.end_location.location_attribute.attribute_name',
@@ -119,7 +122,7 @@ export class CreateTaskConfigDto {
             },
           },
           wait: {
-            object_type: 'null',
+            object_type: 'object',
             wait_type: { object_type: 'string', path: 'op.wait.wait_type' },
             wait_condition: {
               object_type: 'string',
@@ -398,8 +401,14 @@ export class GetLocationConfigDto {
             path: 'input.location_status',
             default: 'All',
           },
-          location_zone: { object_type: 'string', path: 'input.location_zone' },
-          location_type: { object_type: 'string', path: 'input.location_type' },
+          location_zone: {
+            object_type: 'string',
+            path: 'input.location_zone',
+          },
+          location_type: {
+            object_type: 'string',
+            path: 'input.location_type',
+          },
           location_level: {
             object_type: 'string',
             path: 'input.location_level',
@@ -421,16 +430,22 @@ export class GetLocationConfigDto {
       response: {
         body: {
           object_type: 'object',
-          zone_id: { object_type: 'string', path: 'input.zones[1].id' },
+          zone_id: {
+            object_type: 'string',
+            path: 'input.zones[1].id',
+          },
           available_locations: {
             object_type: 'array',
             source: 'input.available_locations',
             map: {
               object_type: 'object',
-              location_id: { object_type: 'string', path: 'loc.location_id' },
+              location_id: {
+                object_type: 'string',
+                path: 'loc.location_id',
+              },
               location_dimension: {
                 object_type: 'object',
-                lenght: {
+                length: {
                   object_type: 'object',
                   length: {
                     object_type: 'number',

@@ -1,4 +1,10 @@
-import { IsString, IsNumber, IsBoolean, ValidateNested } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsBoolean,
+  ValidateNested,
+  IsOptional,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 // Primitive config DTOs
@@ -7,7 +13,7 @@ export class StringConfigDto {
   object_type: string;
   @IsString()
   path: string;
-  // default is optional and can be any type
+  @IsOptional()
   default?: any;
 }
 
@@ -16,6 +22,7 @@ export class NumberConfigDto {
   object_type: string;
   @IsString()
   path: string;
+  @IsOptional()
   default?: any;
 }
 
@@ -24,6 +31,7 @@ export class BooleanConfigDto {
   object_type: string;
   @IsString()
   path: string;
+  @IsOptional()
   default?: any;
 }
 
@@ -32,6 +40,8 @@ export class NullConfigDto {
   object_type: string;
   @IsString()
   path: string;
+  @IsOptional()
+  default?: any;
 }
 
 // Attribute DTO

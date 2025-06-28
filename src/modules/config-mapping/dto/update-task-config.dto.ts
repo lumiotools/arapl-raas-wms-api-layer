@@ -1,4 +1,9 @@
-import { IsString, IsNumber, ValidateNested } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  ValidateNested,
+  IsOptional,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 // Primitive config DTOs
@@ -7,6 +12,8 @@ export class StringConfigDto {
   object_type: string;
   @IsString()
   path: string;
+  @IsOptional()
+  default?: any;
 }
 
 export class NumberConfigDto {
@@ -14,6 +21,8 @@ export class NumberConfigDto {
   object_type: string;
   @IsString()
   path: string;
+  @IsOptional()
+  default?: any;
 }
 
 export class NullConfigDto {
@@ -21,6 +30,8 @@ export class NullConfigDto {
   object_type: string;
   @IsString()
   path: string;
+  @IsOptional()
+  default?: any;
 }
 
 // Cargo Dimension DTO
