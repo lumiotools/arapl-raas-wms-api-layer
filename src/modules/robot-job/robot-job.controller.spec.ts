@@ -7,7 +7,7 @@ import {
   TaskGenerationReq,
   TaskGenerationRes,
   TaskType,
-  LocationType,
+  LocationType as TaskLocationType,
   LocationAction,
   batch_type,
   WaitType,
@@ -15,7 +15,11 @@ import {
 } from './dto/Task_Generation.dto';
 import { TaskUpdateReq, TaskUpdateRes } from './dto/Task_Update.dto';
 import { CancelReq, BatchCancelRes, TaskCancelRes } from './dto/Cancel.dto';
-import { GetLocationRes, LocationStatus } from './dto/GetLocation.dto';
+import {
+  GetLocationRes,
+  LocationStatus,
+  LocationType,
+} from './dto/GetLocation.dto';
 import { GetTasksParamsDto, GetTasksResponseDto } from './dto/GetTasks.dto';
 import { UpdateWebhookReq, UpdateWebhookRes } from './dto/UpdateWebhook.dto';
 
@@ -123,13 +127,13 @@ describe('RobotJobController', () => {
           task_type: TaskType.CrossDocking,
           start_location: {
             location_id: 'LOC_001',
-            location_type: LocationType.Pallet,
+            location_type: TaskLocationType.Pallet,
             location_action: LocationAction.Pick,
             location_dimension: { length: 100, width: 50, height: 80 },
           },
           end_location: {
             location_id: 'LOC_002',
-            location_type: LocationType.Pallet,
+            location_type: TaskLocationType.Pallet,
             location_action: LocationAction.Drop,
             location_dimension: { length: 100, width: 50, height: 80 },
           },
@@ -197,11 +201,13 @@ describe('RobotJobController', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should not throw when service returns error status', async () => {
-      mockRobotJobService.createTask.mockResolvedValue({
+    // FIXED: Controller doesn't check createTask response status - it returns whatever service returns
+    it('should return error status without throwing when service returns error', async () => {
+      const errorResponse = {
         batch_id: 'BATCH_001',
         status: 'error: Invalid data',
-      });
+      };
+      mockRobotJobService.createTask.mockResolvedValue(errorResponse);
 
       const result = await controller.unifiedCreateTask(
         warehouseId,
@@ -209,8 +215,18 @@ describe('RobotJobController', () => {
         mockRequest,
       );
 
-      // Controller doesn't check createTask response status
+      expect(result).toEqual(errorResponse);
       expect(result.status).toBe('error: Invalid data');
+    });
+
+    it('should handle service exceptions', async () => {
+      mockRobotJobService.createTask.mockRejectedValue(
+        new BadRequestException('Service error'),
+      );
+
+      await expect(
+        controller.unifiedCreateTask(warehouseId, validTaskDto, mockRequest),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -286,16 +302,35 @@ describe('RobotJobController', () => {
       expect(result).toEqual(successResponse);
     });
 
-    it('should throw BadRequestException when service returns error', async () => {
-      mockRobotJobService.updateTask.mockResolvedValue({
+    // CORRECT: Controller DOES check update response status and throws on error
+    it('should throw BadRequestException when service returns error status', async () => {
+      const errorResponse = {
         batch_id: 'BATCH_001',
         status: 'error',
         message: 'Update failed',
         updated_at: '2024-01-01T00:00:00Z',
-      });
+      };
+      mockRobotJobService.updateTask.mockResolvedValue(errorResponse);
 
       await expect(
         controller.unifiedUpdateTask(warehouseId, validUpdateDto, mockRequest),
+      ).rejects.toThrow(BadRequestException);
+      expect(service.updateTask).toHaveBeenCalledWith(
+        warehouseId,
+        validUpdateDto,
+      );
+    });
+
+    it('should throw BadRequestException when no config and invalid structure', async () => {
+      const invalidData = { invalid: 'data' };
+      const requestWithoutConfig = { taskConfigs: null } as any as Request;
+
+      await expect(
+        controller.unifiedUpdateTask(
+          warehouseId,
+          invalidData,
+          requestWithoutConfig,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -357,6 +392,41 @@ describe('RobotJobController', () => {
         invalidData,
       );
       expect(result).toEqual(successResponse);
+    });
+
+    // CORRECT: Controller DOES check cancel response status and throws on error
+    it('should throw BadRequestException when service returns error status', async () => {
+      const errorResponse = {
+        batch_id: batchId,
+        status: 'error',
+        message: 'Cannot cancel batch',
+        cancelled_at: '2024-01-01T00:00:00Z',
+      };
+      mockRobotJobService.cancelBatch.mockResolvedValue(errorResponse);
+      const requestWithoutConfig = { taskConfigs: null } as any as Request;
+
+      await expect(
+        controller.cancelBatch(
+          warehouseId,
+          batchId,
+          cancelDto,
+          requestWithoutConfig,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when validation fails and no config', async () => {
+      const invalidData = { invalid: 'data' } as any;
+      const requestWithoutConfig = { taskConfigs: null } as any as Request;
+
+      await expect(
+        controller.cancelBatch(
+          warehouseId,
+          batchId,
+          invalidData,
+          requestWithoutConfig,
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -423,6 +493,28 @@ describe('RobotJobController', () => {
       );
       expect(result).toEqual(successResponse);
     });
+
+    // CORRECT: Controller DOES check task cancel response status and throws on error
+    it('should throw BadRequestException when service returns error status', async () => {
+      const errorResponse = {
+        task_id: taskId,
+        status: 'error',
+        message: 'Cannot cancel task',
+        cancelled_at: '2024-01-01T00:00:00Z',
+      };
+      mockRobotJobService.cancelTask.mockResolvedValue(errorResponse);
+      const requestWithoutConfig = { taskConfigs: null } as any as Request;
+
+      await expect(
+        controller.cancelTask(
+          warehouseId,
+          batchId,
+          taskId,
+          cancelDto,
+          requestWithoutConfig,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
   });
 
   describe('getEmptyLocations', () => {
@@ -431,9 +523,23 @@ describe('RobotJobController', () => {
       taskConfigs: { get_location: 'location_config' },
     } as any as Request;
 
-    const successResponse: GetLocationRes = {} as any;
+    const successResponse: GetLocationRes = {
+      zone_id: 'zone-1',
+      available_location_types: [
+        {
+          location_id: 'LOC-DROP-101',
+          location_dimension: {
+            length: 100,
+            width: 80,
+            height: 150,
+          },
+          location_type: LocationType.Pallet,
+          location_action: LocationAction.Drop,
+        },
+      ],
+    };
 
-    it('should get empty locations with query parameters', async () => {
+    it('should get empty locations with query parameters when config exists', async () => {
       mockRobotJobService.getLocations.mockResolvedValue(successResponse);
 
       const result = await controller.getEmptyLocations(
@@ -441,7 +547,7 @@ describe('RobotJobController', () => {
         mockRequest,
         LocationStatus.Empty,
         'ZONE_A',
-        LocationType.Pallet as any,
+        LocationType.Pallet,
         '1',
         10,
       );
@@ -474,6 +580,22 @@ describe('RobotJobController', () => {
       // Should return dummy response
       expect(result).toHaveProperty('zone_id');
       expect(result).toHaveProperty('available_location_types');
+      expect(result.zone_id).toBe('zone-1');
+      expect(Array.isArray(result.available_location_types)).toBe(true);
+    });
+
+    it('should handle service exceptions when config exists', async () => {
+      mockRobotJobService.getLocations.mockRejectedValue(
+        new NotFoundException('Warehouse not found'),
+      );
+
+      await expect(
+        controller.getEmptyLocations(
+          warehouseId,
+          mockRequest,
+          LocationStatus.Empty,
+        ),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -481,12 +603,17 @@ describe('RobotJobController', () => {
     const warehouseId = 'WH_001';
     const updateWebhookDto: UpdateWebhookReq = {
       webhook_url: 'https://example.com/webhook',
-    } as any;
+    };
 
     const successResponse: UpdateWebhookRes = {
       status: 'success',
       message: 'Webhook updated successfully',
-    } as any;
+      warehouse: {
+        warehouse_id: 'WH_001',
+        warehouse_name: 'Main Warehouse',
+        webhook_url: 'https://example.com/webhook',
+      },
+    };
 
     it('should update webhook successfully', async () => {
       mockRobotJobService.updateWebhook.mockResolvedValue(successResponse);
@@ -512,10 +639,21 @@ describe('RobotJobController', () => {
         controller.updateWebhook(warehouseId, updateWebhookDto),
       ).rejects.toThrow(BadRequestException);
     });
+
+    it('should throw BadRequestException for invalid webhook URL format', async () => {
+      const invalidWebhookDto = {
+        webhook_url: 'not-a-valid-url',
+      };
+
+      // Since validation happens in controller, this should throw before reaching service
+      await expect(
+        controller.updateWebhook(warehouseId, invalidWebhookDto),
+      ).rejects.toThrow(BadRequestException);
+    });
   });
 
   describe('Error Handling', () => {
-    it('should handle service exceptions properly', async () => {
+    it('should handle service exceptions properly in getTasks', async () => {
       const mockParams: GetTasksParamsDto = {
         warehouse_id: 'WH_001',
         batch_id: 'NONEXISTENT',
@@ -527,6 +665,21 @@ describe('RobotJobController', () => {
 
       await expect(controller.getTasks(mockParams)).rejects.toThrow(
         NotFoundException,
+      );
+    });
+
+    it('should handle unexpected service errors', async () => {
+      const mockParams: GetTasksParamsDto = {
+        warehouse_id: 'WH_001',
+        batch_id: 'BATCH_123',
+      };
+
+      mockRobotJobService.getTasksByBatchId.mockRejectedValue(
+        new Error('Database connection failed'),
+      );
+
+      await expect(controller.getTasks(mockParams)).rejects.toThrow(
+        'Database connection failed',
       );
     });
   });
