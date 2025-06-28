@@ -5,6 +5,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
@@ -13,6 +14,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiParam,
+  ApiQuery,
   ApiSecurity,
 } from '@nestjs/swagger';
 import { ConfigMappingService } from './config-mapping.service';
@@ -24,6 +26,7 @@ import {
   ConfigMappingResponseDto,
   ConfigMappingUpdateResponseDto,
   DeleteConfigDto,
+  DeleteConfigQueryDto,
   DeleteConfigResponseDto,
   ConfigMappingBadRequestDto,
   ConfigMappingUnauthorizedDto,
@@ -253,6 +256,13 @@ export class ConfigMappingController {
     description: 'Warehouse ID',
     example: 'WH_001',
   })
+  @ApiQuery({
+    name: 'config_type',
+    description: 'Type of configuration to delete',
+    example: 'create_task',
+    enum: ['create_task', 'update_task', 'cancel_task', 'get_location'],
+    required: true,
+  })
   @ApiResponse({
     status: 200,
     description: 'Configuration deleted successfully',
@@ -280,8 +290,11 @@ export class ConfigMappingController {
   })
   async deleteConfig(
     @Param('warehouse_id') warehouseId: string,
-    @Body() deleteConfigDto: DeleteConfigDto,
+    @Query() deleteConfigQueryDto: DeleteConfigQueryDto,
   ): Promise<DeleteConfigResponseDto> {
-    return this.configMappingService.deleteConfig(warehouseId, deleteConfigDto);
+    return this.configMappingService.deleteConfig(
+      warehouseId,
+      deleteConfigQueryDto,
+    );
   }
 }

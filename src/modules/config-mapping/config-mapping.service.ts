@@ -14,6 +14,7 @@ import {
   ConfigMappingResponseDto,
   ConfigMappingUpdateResponseDto,
   DeleteConfigDto,
+  DeleteConfigQueryDto,
   DeleteConfigResponseDto,
 } from './dto/config-mapping.dto';
 import * as fs from 'fs';
@@ -569,7 +570,7 @@ export class ConfigMappingService {
 
   async deleteConfig(
     warehouseId: string,
-    deleteConfigDto: DeleteConfigDto,
+    deleteConfigQueryDto: DeleteConfigQueryDto,
   ): Promise<DeleteConfigResponseDto> {
     const warehouse = await this.warehouseRepository.findOne({
       where: { warehouse_id: warehouseId },
@@ -579,7 +580,7 @@ export class ConfigMappingService {
       throw new NotFoundException(`Warehouse with ID ${warehouseId} not found`);
     }
 
-    const { config_type } = deleteConfigDto;
+    const { config_type } = deleteConfigQueryDto;
     let configField: keyof Warehouse;
     let configName: string;
 

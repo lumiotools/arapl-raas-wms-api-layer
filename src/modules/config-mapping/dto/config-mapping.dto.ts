@@ -5,7 +5,7 @@ import {
   IsObject,
   IsBoolean,
 } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiQuery } from '@nestjs/swagger';
 
 export class CreateTaskConfigDto {
   @ApiProperty({
@@ -516,6 +516,17 @@ export class ConfigMappingUpdateResponseDto {
 }
 
 export class DeleteConfigDto {
+  @ApiProperty({
+    description: 'Type of configuration to delete',
+    example: 'create_task',
+    enum: ['create_task', 'update_task', 'cancel_task', 'get_location'],
+  })
+  @IsString()
+  @IsNotEmpty()
+  config_type: 'create_task' | 'update_task' | 'cancel_task' | 'get_location';
+}
+
+export class DeleteConfigQueryDto {
   @ApiProperty({
     description: 'Type of configuration to delete',
     example: 'create_task',
