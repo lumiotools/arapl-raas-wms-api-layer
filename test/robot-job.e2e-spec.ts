@@ -1184,49 +1184,208 @@ describe('RobotJobController (e2e)', () => {
         .expect(401);
     });
 
-    // TODO: Add config mapping tests for GET requests when needed
-    // GET requests typically work differently than POST/PATCH with body transformation
-    // describe('Config Mapping Scenarios', () => {
-    //   beforeEach(async () => {
-    //     // Set up config mapping for get location
-    //     const configMappingGetLocation = {
-    //       object_type: 'object',
-    //       location_status: {
-    //         object_type: 'string',
-    //         path: 'input.status_filter',
-    //         default: 'Empty',
-    //       },
-    //       location_zone: { object_type: 'string', path: 'input.zone_filter' },
-    //       location_type: { object_type: 'string', path: 'input.type_filter' },
-    //       location_level: { object_type: 'string', path: 'input.level_filter' },
-    //       location_limit: {
-    //         object_type: 'number',
-    //         path: 'input.max_results',
-    //         default: 10,
-    //       },
-    //     };
+    describe('Config Mapping Scenarios', () => {
+      beforeEach(async () => {
+        // Set up config mapping for get location
+        const configMappingGetLocation = {
+          endpoint: {
+            url: 'https://api.example.com/locations/:warehouse',
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: 'Bearer test-token',
+            },
+          },
+          request: {
+            path_params: {
+              warehouse: 'input.warehouse_id',
+            },
+            query_params: {
+              status: 'input.location_status',
+              zone: 'input.location_zone',
+              type: 'input.location_type',
+              level: 'input.location_level',
+              limit: 'input.location_limit',
+            },
+            body: {
+              object_type: 'object',
+              location_status: {
+                object_type: 'string',
+                path: 'input.location_status',
+                default: 'Empty',
+              },
+              location_zone: {
+                object_type: 'string',
+                path: 'input.location_zone',
+              },
+              location_type: {
+                object_type: 'string',
+                path: 'input.location_type',
+              },
+              location_level: {
+                object_type: 'string',
+                path: 'input.location_level',
+                default: 'All',
+              },
+              location_limit: {
+                object_type: 'number',
+                path: 'input.location_limit',
+                default: 10,
+              },
+            },
+          },
+          response: {
+            body: {
+              object_type: 'object',
+              zone_id: { object_type: 'string', path: 'output.zone_id' },
+              available_location_types: {
+                object_type: 'array',
+                source: 'output.locations',
+                map: {
+                  object_type: 'object',
+                  location_id: { object_type: 'string', path: 'loc.id' },
+                  location_type: { object_type: 'string', path: 'loc.type' },
+                  location_action: {
+                    object_type: 'string',
+                    path: 'loc.action',
+                  },
+                  location_dimension: {
+                    object_type: 'object',
+                    length: {
+                      object_type: 'number',
+                      path: 'loc.dimensions.length',
+                    },
+                    width: {
+                      object_type: 'number',
+                      path: 'loc.dimensions.width',
+                    },
+                    height: {
+                      object_type: 'number',
+                      path: 'loc.dimensions.height',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        };
 
-    //     // Update the warehouse with config mapping
-    //     await warehouseRepository.update(
-    //       { warehouse_id: testWarehouseId },
-    //       { get_location_config: configMappingGetLocation as any },
-    //     );
-    //   });
+        // Update the warehouse with config mapping
+        await warehouseRepository.update(
+          { warehouse_id: testWarehouseId },
+          { get_location_config: configMappingGetLocation as any },
+        );
+      });
 
-    //   it('should work with standard query parameters regardless of config mapping', async () => {
-    //     // GET requests typically don't use config mapping for transformation
-    //     // They work with query parameters directly
-    //     const response = await request(app.getHttpServer())
-    //       .get(`/robot-job/${testWarehouseId}/locations`)
-    //       .set('authorization', 'test-api-key')
-    //       .expect(200);
+      it('should return dummy data when config mapping is present but service returns dummy', async () => {
+        // Since the service currently returns dummy data regardless of config,
+        // we expect the same dummy response structure
+        const response = await request(app.getHttpServer())
+          .get(`/robot-job/${testWarehouseId}/locations`)
+          .set('authorization', 'test-api-key')
+          .expect(200);
 
-    //     expect(response.body).toMatchObject({
-    //       zone_id: expect.any(String),
-    //       available_location_types: expect.any(Array),
-    //     });
-    //   });
-    // });
+        expect(response.body).toMatchObject({
+          zone_id: expect.any(String),
+          available_location_types: expect.any(Array),
+        });
+        expect(response.body.zone_id).toBe('zone-1');
+        expect(response.body.available_location_types).toHaveLength(1);
+        expect(response.body.available_location_types[0]).toMatchObject({
+          location_id: 'LOC-DROP-101',
+          location_type: LocationType.Pallet,
+          location_action: LocationAction.Drop,
+        });
+      });
+
+      it('should handle query parameters with config mapping present', async () => {
+        const response = await request(app.getHttpServer())
+          .get(`/robot-job/${testWarehouseId}/locations`)
+          .query({
+            location_status: LocationStatus.Empty,
+            location_zone: 'ZONE_B',
+            location_limit: 5,
+          })
+          .set('authorization', 'test-api-key')
+          .expect(200);
+
+        // Even with query parameters, should return dummy data due to current service implementation
+        expect(response.body).toMatchObject({
+          zone_id: expect.any(String),
+          available_location_types: expect.any(Array),
+        });
+      });
+
+      it('should work with all query parameters when config mapping exists', async () => {
+        const response = await request(app.getHttpServer())
+          .get(`/robot-job/${testWarehouseId}/locations`)
+          .query({
+            location_status: LocationStatus.Occupied,
+            location_zone: 'ZONE_C',
+            location_type: LocationType.Pallet,
+            location_level: 'Level2',
+            location_limit: 15,
+          })
+          .set('authorization', 'test-api-key')
+          .expect(200);
+
+        expect(response.body).toMatchObject({
+          zone_id: expect.any(String),
+          available_location_types: expect.any(Array),
+        });
+      });
+
+      it('should still work when config mapping is removed', async () => {
+        // Remove config mapping to test fallback to dummy data
+        await warehouseRepository.update(
+          { warehouse_id: testWarehouseId },
+          { get_location_config: null as any },
+        );
+
+        const response = await request(app.getHttpServer())
+          .get(`/robot-job/${testWarehouseId}/locations`)
+          .set('authorization', 'test-api-key')
+          .expect(200);
+
+        // Should return the same dummy data when no config mapping exists
+        expect(response.body).toMatchObject({
+          zone_id: 'zone-1',
+          available_location_types: [
+            {
+              location_id: 'LOC-DROP-101',
+              location_dimension: {
+                length: 100,
+                width: 80,
+                height: 150,
+              },
+              location_type: LocationType.Pallet,
+              location_action: LocationAction.Drop,
+            },
+          ],
+        });
+      });
+
+      it('should handle edge case with empty query parameters and config mapping', async () => {
+        const response = await request(app.getHttpServer())
+          .get(`/robot-job/${testWarehouseId}/locations`)
+          .query({}) // Empty query object
+          .set('authorization', 'test-api-key')
+          .expect(200);
+
+        expect(response.body).toMatchObject({
+          zone_id: expect.any(String),
+          available_location_types: expect.any(Array),
+        });
+      });
+
+      afterEach(async () => {
+        // Clean up config mapping after each test
+        await warehouseRepository.update(
+          { warehouse_id: testWarehouseId },
+          { get_location_config: null as any },
+        );
+      });
+    });
   });
 
   describe('PUT /:warehouse_id/webhook (Update Webhook)', () => {
