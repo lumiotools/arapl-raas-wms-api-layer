@@ -898,7 +898,7 @@ export class RobotJobController {
       'Internal server error while updating location tracking settings',
     type: InternalServerErrorDto,
   })
-  @Patch(':warehouse_id/update_location_tracking')
+  @Patch(':warehouse_id/update-location-tracking')
   async updateLocationTracking(
     @Param('warehouse_id') warehouseId: string,
     @Body() updateLocationTrackingDto: UpdateLocationTrackingReq,

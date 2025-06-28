@@ -1461,6 +1461,93 @@ describe('RobotJobController (e2e)', () => {
     });
   });
 
+  describe('PATCH /:warehouse_id/update-location-tracking (Update Location Tracking)', () => {
+    const updateLocationTrackingRequest = {
+      locations_customer_managed: true,
+    };
+
+    it('should update location tracking successfully', async () => {
+      const response = await request(app.getHttpServer())
+        .patch(`/robot-job/${testWarehouseId}/update-location-tracking`)
+        .set('authorization', 'test-api-key')
+        .send(updateLocationTrackingRequest)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        status: 'success',
+        message: expect.stringContaining('updated'),
+        warehouse: {
+          warehouse_id: testWarehouseId,
+          locations_customer_managed: true,
+        },
+      });
+
+      // Verify location tracking was updated in database
+      const updatedWarehouse = await warehouseRepository.findOne({
+        where: { warehouse_id: testWarehouseId },
+      });
+      expect(updatedWarehouse).toBeDefined();
+      expect(updatedWarehouse?.locations_customer_managed).toBe(true);
+    });
+
+    it('should update location tracking to false', async () => {
+      const updateToFalseRequest = {
+        locations_customer_managed: false,
+      };
+
+      const response = await request(app.getHttpServer())
+        .patch(`/robot-job/${testWarehouseId}/update-location-tracking`)
+        .set('authorization', 'test-api-key')
+        .send(updateToFalseRequest)
+        .expect(200);
+
+      expect(response.body.warehouse.locations_customer_managed).toBe(false);
+
+      // Verify location tracking was updated in database
+      const updatedWarehouse = await warehouseRepository.findOne({
+        where: { warehouse_id: testWarehouseId },
+      });
+      expect(updatedWarehouse?.locations_customer_managed).toBe(false);
+    });
+
+    it('should return 400 for invalid request body', async () => {
+      const invalidRequest = {
+        locations_customer_managed: 'not-a-boolean',
+      };
+
+      await request(app.getHttpServer())
+        .patch(`/robot-job/${testWarehouseId}/update-location-tracking`)
+        .set('authorization', 'test-api-key')
+        .send(invalidRequest)
+        .expect(400);
+    });
+
+    it('should return 400 for missing required field', async () => {
+      const invalidRequest = {};
+
+      await request(app.getHttpServer())
+        .patch(`/robot-job/${testWarehouseId}/update-location-tracking`)
+        .set('authorization', 'test-api-key')
+        .send(invalidRequest)
+        .expect(400);
+    });
+
+    it('should return 404 for non-existent warehouse', async () => {
+      await request(app.getHttpServer())
+        .patch(`/robot-job/NON_EXISTENT_WAREHOUSE/update-location-tracking`)
+        .set('authorization', 'test-api-key')
+        .send(updateLocationTrackingRequest)
+        .expect(401);
+    });
+
+    it('should return 401 for missing authorization', async () => {
+      await request(app.getHttpServer())
+        .patch(`/robot-job/${testWarehouseId}/update-location-tracking`)
+        .send(updateLocationTrackingRequest)
+        .expect(401);
+    });
+  });
+
   describe('Error Handling', () => {
     it('should return 401 for invalid warehouse_id format', async () => {
       await request(app.getHttpServer())
