@@ -11,7 +11,6 @@ import {
   LocationAction,
   batch_type,
   WaitType,
-  WaitCondition,
 } from './dto/Task_Generation.dto';
 import { TaskUpdateReq, TaskUpdateRes } from './dto/Task_Update.dto';
 import { CancelReq, BatchCancelRes, TaskCancelRes } from './dto/Cancel.dto';
@@ -20,7 +19,7 @@ import {
   LocationStatus,
   LocationType,
 } from './dto/GetLocation.dto';
-import { GetTasksParamsDto, GetTasksResponseDto } from './dto/GetTasks.dto';
+import { GetTasksParamsDto } from './dto/GetTasks.dto';
 import { UpdateWebhookReq, UpdateWebhookRes } from './dto/UpdateWebhook.dto';
 
 describe('RobotJobController', () => {
@@ -201,7 +200,6 @@ describe('RobotJobController', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    // FIXED: Controller doesn't check createTask response status - it returns whatever service returns
     it('should return error status without throwing when service returns error', async () => {
       const errorResponse = {
         batch_id: 'BATCH_001',
@@ -302,7 +300,6 @@ describe('RobotJobController', () => {
       expect(result).toEqual(successResponse);
     });
 
-    // CORRECT: Controller DOES check update response status and throws on error
     it('should throw BadRequestException when service returns error status', async () => {
       const errorResponse = {
         batch_id: 'BATCH_001',
@@ -394,7 +391,6 @@ describe('RobotJobController', () => {
       expect(result).toEqual(successResponse);
     });
 
-    // CORRECT: Controller DOES check cancel response status and throws on error
     it('should throw BadRequestException when service returns error status', async () => {
       const errorResponse = {
         batch_id: batchId,
@@ -494,7 +490,6 @@ describe('RobotJobController', () => {
       expect(result).toEqual(successResponse);
     });
 
-    // CORRECT: Controller DOES check task cancel response status and throws on error
     it('should throw BadRequestException when service returns error status', async () => {
       const errorResponse = {
         task_id: taskId,
