@@ -11,6 +11,9 @@ import {
   LocationAction,
   batch_type,
   WaitType,
+  FallbackAction,
+  WaitCondition,
+  WaitStatus,
 } from './dto/Task_Generation.dto';
 import { TaskUpdateReq, TaskUpdateRes } from './dto/Task_Update.dto';
 import { CancelReq, BatchCancelRes, TaskCancelRes } from './dto/Cancel.dto';
@@ -117,29 +120,68 @@ describe('RobotJobController', () => {
     } as any as Request;
 
     const validTaskDto: TaskGenerationReq = {
-      batch_job_id: 'BATCH_001',
+      batch_job_id: 'job12345',
       batch_priority: 5,
       batch_type: batch_type.Discrete,
+      batch_frequency: 1,
       tasks: [
         {
-          task_id: 'TASK_001',
+          task_id: 'task001',
           task_type: TaskType.CrossDocking,
+          task_dependency: 'abc',
           start_location: {
-            location_id: 'LOC_001',
-            location_type: TaskLocationType.Pallet,
+            location_id: 'ST1-4-1-1',
+            location_type: TaskLocationType.Zone,
             location_action: LocationAction.Pick,
-            location_dimension: { length: 100, width: 50, height: 80 },
+            location_dimension: {
+              length: 10,
+              width: 5,
+              height: 5,
+            },
+            location_attribute: {
+              attribute_name: 'temperature',
+              attribute_value: 'cold',
+            },
           },
           end_location: {
-            location_id: 'LOC_002',
-            location_type: TaskLocationType.Pallet,
+            location_id: 'DZ1-6-1-6',
+            location_type: TaskLocationType.Zone,
             location_action: LocationAction.Drop,
-            location_dimension: { length: 100, width: 50, height: 80 },
+            location_dimension: {
+              length: 8,
+              width: 4,
+              height: 4,
+            },
+            location_attribute: {
+              attribute_name: 'weight_capacity',
+              attribute_value: 'high',
+            },
+          },
+          wait: {
+            wait_type: WaitType.Trigger,
+            wait_condition: WaitCondition.Time,
+            start_location_wait_time: 10,
+            end_location_wait_time: 5,
+            wait_status: WaitStatus.NotStarted,
+            fallback_action: FallbackAction.Error,
+            timeout: 1800,
+            start_location_available_wait: false,
+            end_location_available_wait: false,
           },
           cargos: [
             {
-              cargo_code: 'CARGO_001',
-              cargo_type: 'Box',
+              cargo_code: 'cargo001',
+              cargo_type: 'Fragile',
+              cargo_weight: 15,
+              cargo_dimension: {
+                length: 3,
+                width: 3,
+                height: 3,
+              },
+              cargo_attributes: {
+                attribute_name: 'fragility',
+                attribute_value: 'high',
+              },
             },
           ],
         },
