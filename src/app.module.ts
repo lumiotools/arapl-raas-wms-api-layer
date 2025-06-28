@@ -3,6 +3,7 @@ import { RobotJobModule } from './modules/robot-job/robot-job.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { OschestratorModule } from './modules/oschestrator/oschestrator.module';
+import { ConfigMappingModule } from './modules/config-mapping/config-mapping.module';
 import { getDBConfig } from './config/db.config';
 
 @Module({
@@ -15,6 +16,7 @@ import { getDBConfig } from './config/db.config';
     }),
     RobotJobModule,
     OschestratorModule,
+    ConfigMappingModule,
   ],
   controllers: [],
   providers: [],

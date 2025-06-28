@@ -31,10 +31,19 @@ import {
 import { NotFoundDto } from './dto/NotFound.dto';
 import { BadRequestDto } from './dto/BadRequest.dto';
 import { UnauthorizedDto } from './dto/Unauthorized.dto';
+import { ForbiddenDto } from './dto/Forbidden.dto';
 import { InternalServerErrorDto } from './dto/InternalServerError.dto';
 import { ConflictDto } from './dto/Conflict.dto';
+import { config } from 'process';
 import { GetTasksParamsDto, GetTasksResponseDto } from './dto/GetTasks.dto';
+import { UpdateWebhookReq, UpdateWebhookRes } from './dto/UpdateWebhook.dto';
 import {
+  UpdateLocationTrackingReq,
+  UpdateLocationTrackingRes,
+} from './dto/UpdateLocationTracking.dto';
+import {
+  ApiTags,
+  ApiHeader,
   ApiSecurity,
   ApiOperation,
   ApiResponse,
@@ -147,7 +156,7 @@ export class RobotJobController {
     type: InternalServerErrorDto,
   })
   @Post(':warehouse_id/tasks')
-  async unifiedCreateTask(
+  async createTask(
     @Param('warehouse_id') warehouseId: string,
     @Body() body: any,
     @Req() request: Request,
@@ -215,7 +224,7 @@ export class RobotJobController {
     type: InternalServerErrorDto,
   })
   @Patch(':warehouse_id/tasks')
-  async unifiedUpdateTask(
+  async updateTask(
     @Param('warehouse_id') warehouseId: string,
     @Body() body: any,
     @Req() request: Request,
@@ -328,6 +337,7 @@ export class RobotJobController {
       const result = await this.robotJobService.cancelBatch(
         warehouseId,
         batchId,
+        batchDto,
       );
       if (result.status !== 'success') {
         throw new BadRequestException(result.message);
@@ -377,6 +387,7 @@ export class RobotJobController {
     description: 'Unauthorized request due to invalid or missing API key',
     type: UnauthorizedDto,
   })
+  
   @ApiResponse({
     status: 404,
     description: 'Batch or task not found in the given warehouse',
@@ -423,6 +434,7 @@ export class RobotJobController {
         warehouseId,
         batchId,
         taskId,
+        singleTaskDto,
       );
       if (result.status !== 'success') {
         throw new BadRequestException(result.message);
@@ -433,7 +445,7 @@ export class RobotJobController {
     throw new BadRequestException('Invalid Request Body Found.');
   }
 
-  @ApiOperation({ summary: 'Get available locations in a warehouse' })
+  @ApiOperation({ summary: 'Get available empty locations in a warehouse' })
   @ApiParam({
     name: 'warehouse_id',
     type: String,
@@ -546,5 +558,116 @@ export class RobotJobController {
 
       return dummy;
     }
+  }
+
+  @ApiOperation({ summary: 'Update webhook URL for a warehouse' })
+  @ApiParam({
+    name: 'warehouse_id',
+    type: String,
+    description: 'Unique identifier of the warehouse',
+    example: 'WH_001',
+  })
+  @ApiBody({
+    type: UpdateWebhookReq,
+    description: 'Webhook update request body',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Webhook URL updated successfully',
+    type: UpdateWebhookRes,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request body or webhook URL format',
+    type: BadRequestDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - invalid or missing API key',
+    type: UnauthorizedDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Warehouse not found',
+    type: NotFoundDto,
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error while updating webhook',
+    type: InternalServerErrorDto,
+  })
+  @Patch(':warehouse_id/update-webhook')
+  async updateWebhook(
+    @Param('warehouse_id') warehouseId: string,
+    @Body() updateWebhookDto: UpdateWebhookReq,
+  ): Promise<UpdateWebhookRes> {
+    const structuredDto = plainToInstance(UpdateWebhookReq, updateWebhookDto);
+    const validationErrors = await this.validator.validate(structuredDto);
+
+    if (validationErrors.length > 0) {
+      throw new BadRequestException('Invalid webhook URL format');
+    }
+
+    return await this.robotJobService.updateWebhook(warehouseId, structuredDto);
+  }
+
+  @ApiOperation({
+    summary: 'Update location tracking settings for a warehouse',
+  })
+  @ApiParam({
+    name: 'warehouse_id',
+    type: String,
+    description: 'Unique identifier of the warehouse',
+    example: 'WH_001',
+  })
+  @ApiBody({
+    type: UpdateLocationTrackingReq,
+    description: 'Location tracking update request body',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Location tracking settings updated successfully',
+    type: UpdateLocationTrackingRes,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request body',
+    type: BadRequestDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - invalid or missing API key',
+    type: UnauthorizedDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Warehouse not found',
+    type: NotFoundDto,
+  })
+  @ApiResponse({
+    status: 500,
+    description:
+      'Internal server error while updating location tracking settings',
+    type: InternalServerErrorDto,
+  })
+  @Patch(':warehouse_id/update-location-tracking')
+  async updateLocationTracking(
+    @Param('warehouse_id') warehouseId: string,
+    @Body() updateLocationTrackingDto: UpdateLocationTrackingReq,
+  ): Promise<UpdateLocationTrackingRes> {
+    const structuredDto = plainToInstance(
+      UpdateLocationTrackingReq,
+      updateLocationTrackingDto,
+    );
+    const validationErrors = await this.validator.validate(structuredDto);
+
+    if (validationErrors.length > 0) {
+      throw new BadRequestException('Invalid location tracking settings');
+    }
+
+    return await this.robotJobService.updateLocationTracking(
+      warehouseId,
+      structuredDto,
+    );
   }
 }

@@ -90,3 +90,23 @@ npm run build
 ```bash
 npm run start
 ```
+
+---
+
+## Testing
+
+### Unit Tests
+
+Run unit tests:
+
+```bash
+npm run test
+```
+
+### End-to-End Tests
+
+Run end-to-end tests:
+
+```bash
+npm run test:e2e
+```

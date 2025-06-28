@@ -20,6 +20,9 @@ export class Warehouse {
   @Column({ type: 'boolean' })
   locations_customer_managed: boolean;
 
+  @Column({ type: 'varchar', nullable: true })
+  webhook_url: string | null;
+
   // Task configuration mappings stored as JSON
   @Column({ type: 'json', nullable: true })
   create_task_config: any;
