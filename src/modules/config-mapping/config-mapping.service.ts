@@ -17,8 +17,12 @@ import {
   DeleteConfigQueryDto,
   DeleteConfigResponseDto,
 } from './dto/config-mapping.dto';
-import * as fs from 'fs';
-import * as path from 'path';
+import {
+  CREATE_TASK_REFERENCE_CONFIG,
+  UPDATE_TASK_REFERENCE_CONFIG,
+  CANCEL_TASK_REFERENCE_CONFIG,
+  GET_LOCATION_REFERENCE_CONFIG,
+} from './dto/config-validation.dto';
 
 @Injectable()
 export class ConfigMappingService {
@@ -26,43 +30,6 @@ export class ConfigMappingService {
     @InjectRepository(Warehouse)
     private warehouseRepository: Repository<Warehouse>,
   ) {}
-
-  // Load reference config from @/config_mapping
-  private loadReferenceConfig(configType: string): any {
-    // Try multiple possible paths for the config file
-    const possiblePaths = [
-      // Development path (from src directory)
-      path.join(__dirname, '../../config_mapping/cli', `${configType}.json`),
-      // Production path (from dist directory)
-      path.join(
-        __dirname,
-        '../../../src/config_mapping/cli',
-        `${configType}.json`,
-      ),
-      // Alternative production path
-      path.join(process.cwd(), 'src/config_mapping/cli', `${configType}.json`),
-      // Root directory path
-      path.join(process.cwd(), 'config_mapping/cli', `${configType}.json`),
-    ];
-
-    let configContent: string;
-    let lastError: Error | null = null;
-
-    for (const configPath of possiblePaths) {
-      try {
-        configContent = fs.readFileSync(configPath, 'utf8');
-        return JSON.parse(configContent);
-      } catch (error) {
-        lastError = error as Error;
-        // Continue to next path
-      }
-    }
-
-    // If we get here, none of the paths worked
-    throw new Error(
-      `Failed to load reference config for ${configType}. Tried paths: ${possiblePaths.join(', ')}. Last error: ${lastError?.message}`,
-    );
-  }
 
   // Compare config structures, ignoring path and default values
   private compareConfigStructures(
@@ -163,10 +130,9 @@ export class ConfigMappingService {
   // Validate create task config structure against reference
   private async validateCreateTaskConfig(config: any): Promise<void> {
     try {
-      const referenceConfig = this.loadReferenceConfig('create_task');
       this.compareConfigStructures(
         config,
-        referenceConfig,
+        CREATE_TASK_REFERENCE_CONFIG,
         'create_task_config',
       );
     } catch (error) {
@@ -179,10 +145,9 @@ export class ConfigMappingService {
   // Validate update task config structure against reference
   private async validateUpdateTaskConfig(config: any): Promise<void> {
     try {
-      const referenceConfig = this.loadReferenceConfig('update_task');
       this.compareConfigStructures(
         config,
-        referenceConfig,
+        UPDATE_TASK_REFERENCE_CONFIG,
         'update_task_config',
       );
     } catch (error) {
@@ -195,10 +160,9 @@ export class ConfigMappingService {
   // Validate cancel task config structure against reference
   private async validateCancelTaskConfig(config: any): Promise<void> {
     try {
-      const referenceConfig = this.loadReferenceConfig('cancel_task');
       this.compareConfigStructures(
         config,
-        referenceConfig,
+        CANCEL_TASK_REFERENCE_CONFIG,
         'cancel_task_config',
       );
     } catch (error) {
@@ -211,10 +175,9 @@ export class ConfigMappingService {
   // Validate get location config structure against reference
   private async validateGetLocationConfig(config: any): Promise<void> {
     try {
-      const referenceConfig = this.loadReferenceConfig('get_empty_location');
       this.compareConfigStructures(
         config,
-        referenceConfig,
+        GET_LOCATION_REFERENCE_CONFIG,
         'get_location_config',
       );
     } catch (error) {
