@@ -515,8 +515,33 @@ export class ConfigMappingUpdateResponseDto {
   sample_data: any;
 }
 
+export class DeleteConfigDto {
+  @ApiProperty({
+    description: 'Type of configuration to delete',
+    example: 'create_task',
+    enum: ['create_task', 'update_task', 'cancel_task', 'get_location'],
+  })
+  @IsString()
+  @IsNotEmpty()
+  config_type: 'create_task' | 'update_task' | 'cancel_task' | 'get_location';
+}
+
+export class DeleteConfigResponseDto {
+  @ApiProperty({ description: 'Success status' })
+  @IsBoolean()
+  success: boolean;
+
+  @ApiProperty({ description: 'Success message' })
+  @IsString()
+  message: string;
+
+  @ApiProperty({ description: 'Deleted configuration type' })
+  @IsString()
+  deleted_config_type: string;
+}
+
 // Error Response DTOs
-export class BadRequestDto {
+export class ConfigMappingBadRequestDto {
   @ApiProperty({ example: 400 })
   statusCode: number;
 
@@ -527,7 +552,7 @@ export class BadRequestDto {
   message: string;
 }
 
-export class UnauthorizedDto {
+export class ConfigMappingUnauthorizedDto {
   @ApiProperty({ example: 401 })
   statusCode: number;
 
@@ -538,7 +563,7 @@ export class UnauthorizedDto {
   message: string;
 }
 
-export class NotFoundDto {
+export class ConfigMappingNotFoundDto {
   @ApiProperty({ example: 404 })
   statusCode: number;
 
@@ -549,7 +574,7 @@ export class NotFoundDto {
   message: string;
 }
 
-export class InternalServerErrorDto {
+export class ConfigMappingInternalServerErrorDto {
   @ApiProperty({ example: 500 })
   statusCode: number;
 

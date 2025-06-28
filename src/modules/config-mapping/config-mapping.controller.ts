@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Delete,
   Body,
   Param,
   HttpCode,
@@ -22,10 +23,12 @@ import {
   GetLocationConfigDto,
   ConfigMappingResponseDto,
   ConfigMappingUpdateResponseDto,
-  BadRequestDto,
-  UnauthorizedDto,
-  NotFoundDto,
-  InternalServerErrorDto,
+  DeleteConfigDto,
+  DeleteConfigResponseDto,
+  ConfigMappingBadRequestDto,
+  ConfigMappingUnauthorizedDto,
+  ConfigMappingNotFoundDto,
+  ConfigMappingInternalServerErrorDto,
 } from './dto/config-mapping.dto';
 
 @ApiTags('Configuration Mapping')
@@ -50,22 +53,22 @@ export class ConfigMappingController {
   @ApiResponse({
     status: 400,
     description: 'Invalid configuration - validation failed',
-    type: BadRequestDto,
+    type: ConfigMappingBadRequestDto,
   })
   @ApiResponse({
     status: 401,
     description: 'Authentication token missing or invalid',
-    type: UnauthorizedDto,
+    type: ConfigMappingUnauthorizedDto,
   })
   @ApiResponse({
     status: 404,
     description: 'Warehouse not found',
-    type: NotFoundDto,
+    type: ConfigMappingNotFoundDto,
   })
   @ApiResponse({
     status: 500,
     description: 'Unexpected internal server error',
-    type: InternalServerErrorDto,
+    type: ConfigMappingInternalServerErrorDto,
   })
   async updateCreateTaskConfig(
     @Param('warehouse_id') warehouseId: string,
@@ -93,22 +96,22 @@ export class ConfigMappingController {
   @ApiResponse({
     status: 400,
     description: 'Invalid configuration - validation failed',
-    type: BadRequestDto,
+    type: ConfigMappingBadRequestDto,
   })
   @ApiResponse({
     status: 401,
     description: 'Authentication token missing or invalid',
-    type: UnauthorizedDto,
+    type: ConfigMappingUnauthorizedDto,
   })
   @ApiResponse({
     status: 404,
     description: 'Warehouse not found',
-    type: NotFoundDto,
+    type: ConfigMappingNotFoundDto,
   })
   @ApiResponse({
     status: 500,
     description: 'Unexpected internal server error',
-    type: InternalServerErrorDto,
+    type: ConfigMappingInternalServerErrorDto,
   })
   async updateUpdateTaskConfig(
     @Param('warehouse_id') warehouseId: string,
@@ -136,22 +139,22 @@ export class ConfigMappingController {
   @ApiResponse({
     status: 400,
     description: 'Invalid configuration - validation failed',
-    type: BadRequestDto,
+    type: ConfigMappingBadRequestDto,
   })
   @ApiResponse({
     status: 401,
     description: 'Authentication token missing or invalid',
-    type: UnauthorizedDto,
+    type: ConfigMappingUnauthorizedDto,
   })
   @ApiResponse({
     status: 404,
     description: 'Warehouse not found',
-    type: NotFoundDto,
+    type: ConfigMappingNotFoundDto,
   })
   @ApiResponse({
     status: 500,
     description: 'Unexpected internal server error',
-    type: InternalServerErrorDto,
+    type: ConfigMappingInternalServerErrorDto,
   })
   async updateCancelTaskConfig(
     @Param('warehouse_id') warehouseId: string,
@@ -181,22 +184,22 @@ export class ConfigMappingController {
   @ApiResponse({
     status: 400,
     description: 'Invalid configuration - validation failed',
-    type: BadRequestDto,
+    type: ConfigMappingBadRequestDto,
   })
   @ApiResponse({
     status: 401,
     description: 'Authentication token missing or invalid',
-    type: UnauthorizedDto,
+    type: ConfigMappingUnauthorizedDto,
   })
   @ApiResponse({
     status: 404,
     description: 'Warehouse not found',
-    type: NotFoundDto,
+    type: ConfigMappingNotFoundDto,
   })
   @ApiResponse({
     status: 500,
     description: 'Unexpected internal server error',
-    type: InternalServerErrorDto,
+    type: ConfigMappingInternalServerErrorDto,
   })
   async updateGetLocationConfig(
     @Param('warehouse_id') warehouseId: string,
@@ -224,21 +227,61 @@ export class ConfigMappingController {
   @ApiResponse({
     status: 401,
     description: 'Authentication token missing or invalid',
-    type: UnauthorizedDto,
+    type: ConfigMappingUnauthorizedDto,
   })
   @ApiResponse({
     status: 404,
     description: 'Warehouse not found',
-    type: NotFoundDto,
+    type: ConfigMappingNotFoundDto,
   })
   @ApiResponse({
     status: 500,
     description: 'Unexpected internal server error',
-    type: InternalServerErrorDto,
+    type: ConfigMappingInternalServerErrorDto,
   })
   async getConfigMapping(
     @Param('warehouse_id') warehouseId: string,
   ): Promise<ConfigMappingResponseDto> {
     return this.configMappingService.getConfigMapping(warehouseId);
+  }
+
+  @Delete(':warehouse_id/config')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete configuration mapping for a warehouse' })
+  @ApiParam({
+    name: 'warehouse_id',
+    description: 'Warehouse ID',
+    example: 'WH_001',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Configuration deleted successfully',
+    type: DeleteConfigResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid configuration type or validation failed',
+    type: ConfigMappingBadRequestDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Authentication token missing or invalid',
+    type: ConfigMappingUnauthorizedDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Warehouse or configuration not found',
+    type: ConfigMappingNotFoundDto,
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Unexpected internal server error',
+    type: ConfigMappingInternalServerErrorDto,
+  })
+  async deleteConfig(
+    @Param('warehouse_id') warehouseId: string,
+    @Body() deleteConfigDto: DeleteConfigDto,
+  ): Promise<DeleteConfigResponseDto> {
+    return this.configMappingService.deleteConfig(warehouseId, deleteConfigDto);
   }
 }

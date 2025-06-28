@@ -13,6 +13,8 @@ import {
   GetLocationConfigDto,
   ConfigMappingResponseDto,
   ConfigMappingUpdateResponseDto,
+  DeleteConfigDto,
+  DeleteConfigResponseDto,
 } from './dto/config-mapping.dto';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -563,5 +565,61 @@ export class ConfigMappingService {
       return path.substring(5); // Remove "item." prefix but keep the rest
     }
     return null;
+  }
+
+  async deleteConfig(
+    warehouseId: string,
+    deleteConfigDto: DeleteConfigDto,
+  ): Promise<DeleteConfigResponseDto> {
+    const warehouse = await this.warehouseRepository.findOne({
+      where: { warehouse_id: warehouseId },
+    });
+
+    if (!warehouse) {
+      throw new NotFoundException(`Warehouse with ID ${warehouseId} not found`);
+    }
+
+    const { config_type } = deleteConfigDto;
+    let configField: keyof Warehouse;
+    let configName: string;
+
+    // Map config_type to the corresponding database field
+    switch (config_type) {
+      case 'create_task':
+        configField = 'create_task_config';
+        configName = 'Create task';
+        break;
+      case 'update_task':
+        configField = 'update_task_config';
+        configName = 'Update task';
+        break;
+      case 'cancel_task':
+        configField = 'cancel_task_config';
+        configName = 'Cancel task';
+        break;
+      case 'get_location':
+        configField = 'get_location_config';
+        configName = 'Get location';
+        break;
+      default:
+        throw new BadRequestException(`Invalid config type: ${config_type}`);
+    }
+
+    // Check if the configuration exists
+    if (!warehouse[configField]) {
+      throw new NotFoundException(
+        `${configName} configuration not found for warehouse ${warehouseId}`,
+      );
+    }
+
+    // Delete the configuration by setting it to null
+    warehouse[configField] = null;
+    await this.warehouseRepository.save(warehouse);
+
+    return {
+      success: true,
+      message: `${configName} configuration deleted successfully`,
+      deleted_config_type: config_type,
+    };
   }
 }

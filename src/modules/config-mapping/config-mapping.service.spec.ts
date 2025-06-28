@@ -1604,4 +1604,203 @@ describe('ConfigMappingService', () => {
       expect(result.sample_data).toBeDefined();
     });
   });
+
+  describe('deleteConfig', () => {
+    it('should delete create task configuration successfully', async () => {
+      const warehouseId = 'WH_001';
+      const deleteConfigDto = { config_type: 'create_task' as const };
+
+      const mockWarehouse = {
+        warehouse_id: warehouseId,
+        warehouse_name: 'Test Warehouse',
+        create_task_config: { test: 'config' },
+        update_task_config: null,
+        cancel_task_config: null,
+        get_location_config: null,
+      };
+
+      jest
+        .spyOn(service['warehouseRepository'], 'findOne')
+        .mockResolvedValue(mockWarehouse as any);
+      jest
+        .spyOn(service['warehouseRepository'], 'save')
+        .mockResolvedValue(mockWarehouse as any);
+
+      const result = await service.deleteConfig(warehouseId, deleteConfigDto);
+
+      expect(result).toEqual({
+        success: true,
+        message: 'Create task configuration deleted successfully',
+        deleted_config_type: 'create_task',
+      });
+      expect(service['warehouseRepository'].save).toHaveBeenCalledWith({
+        ...mockWarehouse,
+        create_task_config: null,
+      });
+    });
+
+    it('should delete update task configuration successfully', async () => {
+      const warehouseId = 'WH_001';
+      const deleteConfigDto = { config_type: 'update_task' as const };
+
+      const mockWarehouse = {
+        warehouse_id: warehouseId,
+        warehouse_name: 'Test Warehouse',
+        create_task_config: null,
+        update_task_config: { test: 'config' },
+        cancel_task_config: null,
+        get_location_config: null,
+      };
+
+      jest
+        .spyOn(service['warehouseRepository'], 'findOne')
+        .mockResolvedValue(mockWarehouse as any);
+      jest
+        .spyOn(service['warehouseRepository'], 'save')
+        .mockResolvedValue(mockWarehouse as any);
+
+      const result = await service.deleteConfig(warehouseId, deleteConfigDto);
+
+      expect(result).toEqual({
+        success: true,
+        message: 'Update task configuration deleted successfully',
+        deleted_config_type: 'update_task',
+      });
+      expect(service['warehouseRepository'].save).toHaveBeenCalledWith({
+        ...mockWarehouse,
+        update_task_config: null,
+      });
+    });
+
+    it('should delete cancel task configuration successfully', async () => {
+      const warehouseId = 'WH_001';
+      const deleteConfigDto = { config_type: 'cancel_task' as const };
+
+      const mockWarehouse = {
+        warehouse_id: warehouseId,
+        warehouse_name: 'Test Warehouse',
+        create_task_config: null,
+        update_task_config: null,
+        cancel_task_config: { test: 'config' },
+        get_location_config: null,
+      };
+
+      jest
+        .spyOn(service['warehouseRepository'], 'findOne')
+        .mockResolvedValue(mockWarehouse as any);
+      jest
+        .spyOn(service['warehouseRepository'], 'save')
+        .mockResolvedValue(mockWarehouse as any);
+
+      const result = await service.deleteConfig(warehouseId, deleteConfigDto);
+
+      expect(result).toEqual({
+        success: true,
+        message: 'Cancel task configuration deleted successfully',
+        deleted_config_type: 'cancel_task',
+      });
+      expect(service['warehouseRepository'].save).toHaveBeenCalledWith({
+        ...mockWarehouse,
+        cancel_task_config: null,
+      });
+    });
+
+    it('should delete get location configuration successfully', async () => {
+      const warehouseId = 'WH_001';
+      const deleteConfigDto = { config_type: 'get_location' as const };
+
+      const mockWarehouse = {
+        warehouse_id: warehouseId,
+        warehouse_name: 'Test Warehouse',
+        create_task_config: null,
+        update_task_config: null,
+        cancel_task_config: null,
+        get_location_config: { test: 'config' },
+      };
+
+      jest
+        .spyOn(service['warehouseRepository'], 'findOne')
+        .mockResolvedValue(mockWarehouse as any);
+      jest
+        .spyOn(service['warehouseRepository'], 'save')
+        .mockResolvedValue(mockWarehouse as any);
+
+      const result = await service.deleteConfig(warehouseId, deleteConfigDto);
+
+      expect(result).toEqual({
+        success: true,
+        message: 'Get location configuration deleted successfully',
+        deleted_config_type: 'get_location',
+      });
+      expect(service['warehouseRepository'].save).toHaveBeenCalledWith({
+        ...mockWarehouse,
+        get_location_config: null,
+      });
+    });
+
+    it('should throw NotFoundException when warehouse not found', async () => {
+      const warehouseId = 'WH_001';
+      const deleteConfigDto = { config_type: 'create_task' as const };
+
+      jest
+        .spyOn(service['warehouseRepository'], 'findOne')
+        .mockResolvedValue(null);
+
+      await expect(
+        service.deleteConfig(warehouseId, deleteConfigDto),
+      ).rejects.toThrow(
+        new NotFoundException(`Warehouse with ID ${warehouseId} not found`),
+      );
+    });
+
+    it('should throw NotFoundException when configuration does not exist', async () => {
+      const warehouseId = 'WH_001';
+      const deleteConfigDto = { config_type: 'create_task' as const };
+
+      const mockWarehouse = {
+        warehouse_id: warehouseId,
+        warehouse_name: 'Test Warehouse',
+        create_task_config: null,
+        update_task_config: null,
+        cancel_task_config: null,
+        get_location_config: null,
+      };
+
+      jest
+        .spyOn(service['warehouseRepository'], 'findOne')
+        .mockResolvedValue(mockWarehouse as any);
+
+      await expect(
+        service.deleteConfig(warehouseId, deleteConfigDto),
+      ).rejects.toThrow(
+        new NotFoundException(
+          `Create task configuration not found for warehouse ${warehouseId}`,
+        ),
+      );
+    });
+
+    it('should throw BadRequestException for invalid config type', async () => {
+      const warehouseId = 'WH_001';
+      const deleteConfigDto = { config_type: 'invalid_type' as any };
+
+      const mockWarehouse = {
+        warehouse_id: warehouseId,
+        warehouse_name: 'Test Warehouse',
+        create_task_config: null,
+        update_task_config: null,
+        cancel_task_config: null,
+        get_location_config: null,
+      };
+
+      jest
+        .spyOn(service['warehouseRepository'], 'findOne')
+        .mockResolvedValue(mockWarehouse as any);
+
+      await expect(
+        service.deleteConfig(warehouseId, deleteConfigDto),
+      ).rejects.toThrow(
+        new BadRequestException('Invalid config type: invalid_type'),
+      );
+    });
+  });
 });

@@ -8,7 +8,10 @@ import {
   GetLocationConfigDto,
   ConfigMappingResponseDto,
   ConfigMappingUpdateResponseDto,
+  DeleteConfigDto,
+  DeleteConfigResponseDto,
 } from './dto/config-mapping.dto';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 
 describe('ConfigMappingController', () => {
   let controller: ConfigMappingController;
@@ -47,12 +50,19 @@ describe('ConfigMappingController', () => {
     sample_data: { test: 'sample' },
   };
 
+  const mockDeleteConfigResponse: DeleteConfigResponseDto = {
+    success: true,
+    message: 'Create task configuration deleted successfully',
+    deleted_config_type: 'create_task',
+  };
+
   const mockConfigMappingService = {
     updateCreateTaskConfig: jest.fn(),
     updateUpdateTaskConfig: jest.fn(),
     updateCancelTaskConfig: jest.fn(),
     updateGetLocationConfig: jest.fn(),
     getConfigMapping: jest.fn(),
+    deleteConfig: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -290,6 +300,79 @@ describe('ConfigMappingController', () => {
         configWithNulls,
       );
       expect(result).toEqual(expectedResponse);
+    });
+  });
+
+  describe('deleteConfig', () => {
+    it('should delete configuration successfully', async () => {
+      const warehouseId = 'WH_001';
+      const deleteConfigDto: DeleteConfigDto = { config_type: 'create_task' };
+
+      mockConfigMappingService.deleteConfig.mockResolvedValue(
+        mockDeleteConfigResponse,
+      );
+
+      const result = await controller.deleteConfig(
+        warehouseId,
+        deleteConfigDto,
+      );
+
+      expect(service.deleteConfig).toHaveBeenCalledWith(
+        warehouseId,
+        deleteConfigDto,
+      );
+      expect(result).toEqual(mockDeleteConfigResponse);
+    });
+
+    it('should handle warehouse not found error', async () => {
+      const warehouseId = 'WH_001';
+      const deleteConfigDto: DeleteConfigDto = { config_type: 'create_task' };
+
+      mockConfigMappingService.deleteConfig.mockRejectedValue(
+        new NotFoundException(`Warehouse with ID ${warehouseId} not found`),
+      );
+
+      await expect(
+        controller.deleteConfig(warehouseId, deleteConfigDto),
+      ).rejects.toThrow(
+        new NotFoundException(`Warehouse with ID ${warehouseId} not found`),
+      );
+    });
+
+    it('should handle configuration not found error', async () => {
+      const warehouseId = 'WH_001';
+      const deleteConfigDto: DeleteConfigDto = { config_type: 'create_task' };
+
+      mockConfigMappingService.deleteConfig.mockRejectedValue(
+        new NotFoundException(
+          `Create task configuration not found for warehouse ${warehouseId}`,
+        ),
+      );
+
+      await expect(
+        controller.deleteConfig(warehouseId, deleteConfigDto),
+      ).rejects.toThrow(
+        new NotFoundException(
+          `Create task configuration not found for warehouse ${warehouseId}`,
+        ),
+      );
+    });
+
+    it('should handle invalid config type error', async () => {
+      const warehouseId = 'WH_001';
+      const deleteConfigDto: DeleteConfigDto = {
+        config_type: 'invalid_type' as any,
+      };
+
+      mockConfigMappingService.deleteConfig.mockRejectedValue(
+        new BadRequestException('Invalid config type: invalid_type'),
+      );
+
+      await expect(
+        controller.deleteConfig(warehouseId, deleteConfigDto),
+      ).rejects.toThrow(
+        new BadRequestException('Invalid config type: invalid_type'),
+      );
     });
   });
 });
