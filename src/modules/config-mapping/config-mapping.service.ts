@@ -17,170 +17,118 @@ import {
   DeleteConfigQueryDto,
   DeleteConfigResponseDto,
 } from './dto/config-mapping.dto';
-import {
-  CREATE_TASK_REFERENCE_CONFIG,
-  UPDATE_TASK_REFERENCE_CONFIG,
-  CANCEL_TASK_REFERENCE_CONFIG,
-  GET_LOCATION_REFERENCE_CONFIG,
-} from './dto/config-validation.dto';
+import { CreateTaskConfigRootDto } from './dto/create-task-config.dto';
+import { UpdateTaskConfigRootDto } from './dto/update-task-config.dto';
+import { CancelTaskConfigRootDto } from './dto/cancel-task-config.dto';
+import { GetEmptyLocationConfigRootDto } from './dto/get-empty-location-config.dto';
+import { Validator } from 'class-validator';
+import { plainToInstance } from 'class-transformer';
 
 @Injectable()
 export class ConfigMappingService {
   constructor(
     @InjectRepository(Warehouse)
     private warehouseRepository: Repository<Warehouse>,
+    private validator: Validator,
   ) {}
 
-  // Compare config structures, ignoring path and default values
-  private compareConfigStructures(
-    userConfig: any,
-    referenceConfig: any,
-    configPath: string = '',
-  ): void {
-    // Check if both are objects
-    if (typeof userConfig !== 'object' || typeof referenceConfig !== 'object') {
-      throw new Error(
-        `Type mismatch at ${configPath}: expected object, got ${typeof userConfig}`,
-      );
-    }
-
-    // Check if both are null
-    if (userConfig === null && referenceConfig === null) {
-      return;
-    }
-
-    // Check if one is null and the other isn't
-    if (userConfig === null || referenceConfig === null) {
-      throw new Error(
-        `Null mismatch at ${configPath}: user config is ${userConfig === null ? 'null' : 'object'}, reference is ${referenceConfig === null ? 'null' : 'object'}`,
-      );
-    }
-
-    // Check object_type
-    if (userConfig.object_type !== referenceConfig.object_type) {
-      throw new Error(
-        `object_type mismatch at ${configPath}: expected "${referenceConfig.object_type}", got "${userConfig.object_type}"`,
-      );
-    }
-
-    // For path-type configs, only check object_type (ignore path and default)
-    if (referenceConfig.path) {
-      return;
-    }
-
-    // For array-type configs
-    if (userConfig.object_type === 'array') {
-      if (!userConfig.source || !referenceConfig.source) {
-        throw new Error(`Array config missing source at ${configPath}`);
-      }
-      if (!userConfig.map || !referenceConfig.map) {
-        throw new Error(`Array config missing map at ${configPath}`);
-      }
-      // Recursively validate the map structure
-      this.compareConfigStructures(
-        userConfig.map,
-        referenceConfig.map,
-        `${configPath}.map`,
-      );
-      return;
-    }
-
-    // For object-type configs, check all fields except path and default
-    const userKeys = Object.keys(userConfig).filter(
-      (key) => key !== 'path' && key !== 'default',
-    );
-    const referenceKeys = Object.keys(referenceConfig).filter(
-      (key) => key !== 'path' && key !== 'default',
-    );
-
-    // Check if all required fields from reference exist in user config
-    for (const key of referenceKeys) {
-      if (!userKeys.includes(key)) {
-        throw new Error(`Missing field "${key}" at ${configPath}`);
-      }
-    }
-
-    // Check if user config has extra fields not in reference
-    for (const key of userKeys) {
-      if (!referenceKeys.includes(key)) {
-        throw new Error(`Extra field "${key}" not allowed at ${configPath}`);
-      }
-    }
-
-    // Recursively validate nested objects
-    for (const key of userKeys) {
-      const userValue = userConfig[key];
-      const referenceValue = referenceConfig[key];
-
-      if (
-        typeof userValue === 'object' &&
-        userValue !== null &&
-        typeof referenceValue === 'object' &&
-        referenceValue !== null
-      ) {
-        this.compareConfigStructures(
-          userValue,
-          referenceValue,
-          `${configPath}.${key}`,
-        );
-      }
-    }
-  }
-
-  // Validate create task config structure against reference
+  // Validate create task config structure using DTO
   private async validateCreateTaskConfig(config: any): Promise<void> {
     try {
-      this.compareConfigStructures(
-        config,
-        CREATE_TASK_REFERENCE_CONFIG,
-        'create_task_config',
-      );
+      const structuredDto = plainToInstance(CreateTaskConfigRootDto, config);
+      const validationErrors = await this.validator.validate(structuredDto, {
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        forbidUnknownValues: true,
+      });
+
+      if (validationErrors.length > 0) {
+        throw new BadRequestException(
+          `Create task config validation failed: ${JSON.stringify(validationErrors)}`,
+        );
+      }
     } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
       throw new BadRequestException(
         `Create task config validation failed: ${error.message}`,
       );
     }
   }
 
-  // Validate update task config structure against reference
+  // Validate update task config structure using DTO
   private async validateUpdateTaskConfig(config: any): Promise<void> {
     try {
-      this.compareConfigStructures(
-        config,
-        UPDATE_TASK_REFERENCE_CONFIG,
-        'update_task_config',
-      );
+      const structuredDto = plainToInstance(UpdateTaskConfigRootDto, config);
+      const validationErrors = await this.validator.validate(structuredDto, {
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        forbidUnknownValues: true,
+      });
+
+      if (validationErrors.length > 0) {
+        throw new BadRequestException(
+          `Update task config validation failed: ${JSON.stringify(validationErrors)}`,
+        );
+      }
     } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
       throw new BadRequestException(
         `Update task config validation failed: ${error.message}`,
       );
     }
   }
 
-  // Validate cancel task config structure against reference
+  // Validate cancel task config structure using DTO
   private async validateCancelTaskConfig(config: any): Promise<void> {
     try {
-      this.compareConfigStructures(
-        config,
-        CANCEL_TASK_REFERENCE_CONFIG,
-        'cancel_task_config',
-      );
+      const structuredDto = plainToInstance(CancelTaskConfigRootDto, config);
+      const validationErrors = await this.validator.validate(structuredDto, {
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        forbidUnknownValues: true,
+      });
+
+      if (validationErrors.length > 0) {
+        throw new BadRequestException(
+          `Cancel task config validation failed: ${JSON.stringify(validationErrors)}`,
+        );
+      }
     } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
       throw new BadRequestException(
         `Cancel task config validation failed: ${error.message}`,
       );
     }
   }
 
-  // Validate get location config structure against reference
+  // Validate get location config structure using DTO
   private async validateGetLocationConfig(config: any): Promise<void> {
     try {
-      this.compareConfigStructures(
+      const structuredDto = plainToInstance(
+        GetEmptyLocationConfigRootDto,
         config,
-        GET_LOCATION_REFERENCE_CONFIG,
-        'get_location_config',
       );
+      const validationErrors = await this.validator.validate(structuredDto, {
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        forbidUnknownValues: true,
+      });
+
+      if (validationErrors.length > 0) {
+        throw new BadRequestException(
+          `Get location config validation failed: ${JSON.stringify(validationErrors)}`,
+        );
+      }
     } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
       throw new BadRequestException(
         `Get location config validation failed: ${error.message}`,
       );
