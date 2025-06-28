@@ -24,6 +24,10 @@ import {
 } from './dto/GetLocation.dto';
 import { GetTasksParamsDto } from './dto/GetTasks.dto';
 import { UpdateWebhookReq, UpdateWebhookRes } from './dto/UpdateWebhook.dto';
+import {
+  UpdateLocationTrackingReq,
+  UpdateLocationTrackingRes,
+} from './dto/UpdateLocationTracking.dto';
 
 describe('RobotJobController', () => {
   let controller: RobotJobController;
@@ -41,6 +45,7 @@ describe('RobotJobController', () => {
     cancelUnstructuredTask: jest.fn(),
     getLocations: jest.fn(),
     updateWebhook: jest.fn(),
+    updateLocationTracking: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -718,6 +723,64 @@ describe('RobotJobController', () => {
       await expect(controller.getTasks(mockParams)).rejects.toThrow(
         'Database connection failed',
       );
+    });
+  });
+
+  describe('updateLocationTracking', () => {
+    const warehouseId = 'WH_001';
+    const updateLocationTrackingDto: UpdateLocationTrackingReq = {
+      locations_customer_managed: true,
+    };
+
+    const successResponse: UpdateLocationTrackingRes = {
+      status: 'success',
+      message: 'Location tracking settings updated successfully',
+      warehouse: {
+        warehouse_id: 'WH_001',
+        warehouse_name: 'Main Warehouse',
+        locations_customer_managed: true,
+      },
+    };
+
+    it('should update location tracking successfully', async () => {
+      mockRobotJobService.updateLocationTracking.mockResolvedValue(
+        successResponse,
+      );
+
+      const result = await controller.updateLocationTracking(
+        warehouseId,
+        updateLocationTrackingDto,
+      );
+
+      expect(service.updateLocationTracking).toHaveBeenCalledWith(
+        warehouseId,
+        updateLocationTrackingDto,
+      );
+      expect(result).toEqual(successResponse);
+    });
+
+    it('should handle location tracking update failure', async () => {
+      mockRobotJobService.updateLocationTracking.mockRejectedValue(
+        new BadRequestException('Invalid location tracking settings'),
+      );
+
+      await expect(
+        controller.updateLocationTracking(
+          warehouseId,
+          updateLocationTrackingDto,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException for invalid request body', async () => {
+      const invalidDto = {
+        locations_customer_managed: 'not-a-boolean',
+      } as any;
+
+      // Since validation happens in controller, this should throw before reaching service
+      await expect(
+        controller.updateLocationTracking(warehouseId, invalidDto),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

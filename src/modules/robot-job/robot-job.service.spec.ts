@@ -32,6 +32,10 @@ import {
   LocationType as GetLocationLocationType,
 } from './dto/GetLocation.dto';
 import { UpdateWebhookReq, UpdateWebhookRes } from './dto/UpdateWebhook.dto';
+import {
+  UpdateLocationTrackingReq,
+  UpdateLocationTrackingRes,
+} from './dto/UpdateLocationTracking.dto';
 
 describe('RobotJobService', () => {
   let service: RobotJobService;
@@ -1940,6 +1944,76 @@ describe('RobotJobService', () => {
       expect(result).toHaveProperty('zone_id');
       expect(result).toHaveProperty('available_location_types');
       expect(result.zone_id).toBe('zone-1');
+    });
+  });
+
+  describe('updateLocationTracking', () => {
+    const warehouseId = 'WH_001';
+    const updateLocationTrackingDto: UpdateLocationTrackingReq = {
+      locations_customer_managed: true,
+    };
+
+    const mockWarehouse = {
+      id: 'warehouse-uuid-1',
+      warehouse_id: warehouseId,
+      warehouse_name: 'Test Warehouse',
+      locations_customer_managed: false,
+    };
+
+    it('should successfully update location tracking settings', async () => {
+      mockWarehouseRepository.findOne.mockResolvedValue(mockWarehouse);
+      mockWarehouseRepository.save.mockResolvedValue({
+        ...mockWarehouse,
+        locations_customer_managed:
+          updateLocationTrackingDto.locations_customer_managed,
+      });
+
+      const result = await service.updateLocationTracking(
+        warehouseId,
+        updateLocationTrackingDto,
+      );
+
+      expect(mockWarehouseRepository.findOne).toHaveBeenCalledWith({
+        where: { warehouse_id: warehouseId },
+      });
+      expect(mockWarehouseRepository.save).toHaveBeenCalledWith({
+        ...mockWarehouse,
+        locations_customer_managed:
+          updateLocationTrackingDto.locations_customer_managed,
+      });
+      expect(result).toEqual({
+        status: 'success',
+        message: 'Location tracking settings updated successfully',
+        warehouse: {
+          warehouse_id: warehouseId,
+          warehouse_name: 'Test Warehouse',
+          locations_customer_managed:
+            updateLocationTrackingDto.locations_customer_managed,
+        },
+      });
+    });
+
+    it('should throw NotFoundException when warehouse not found', async () => {
+      mockWarehouseRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.updateLocationTracking(warehouseId, updateLocationTrackingDto),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(mockWarehouseRepository.findOne).toHaveBeenCalledWith({
+        where: { warehouse_id: warehouseId },
+      });
+    });
+
+    it('should handle database errors gracefully', async () => {
+      mockWarehouseRepository.findOne.mockResolvedValue(mockWarehouse);
+      mockWarehouseRepository.save.mockRejectedValue(
+        new Error('Database error'),
+      );
+
+      await expect(
+        service.updateLocationTracking(warehouseId, updateLocationTrackingDto),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

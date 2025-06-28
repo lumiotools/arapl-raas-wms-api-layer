@@ -42,6 +42,10 @@ import { plainToInstance } from 'class-transformer';
 import { Task as TaskEntity } from './entities/task.entity';
 import { Warehouse } from './entities/warehouse.entity';
 import { UpdateWebhookReq, UpdateWebhookRes } from './dto/UpdateWebhook.dto';
+import {
+  UpdateLocationTrackingReq,
+  UpdateLocationTrackingRes,
+} from './dto/UpdateLocationTracking.dto';
 
 @Injectable()
 export class RobotJobService {
@@ -1145,6 +1149,45 @@ export class RobotJobService {
       }
       throw new BadRequestException(
         `Failed to update webhook URL: ${error.message}`,
+      );
+    }
+  }
+
+  async updateLocationTracking(
+    warehouseId: string,
+    updateLocationTrackingDto: UpdateLocationTrackingReq,
+  ): Promise<UpdateLocationTrackingRes> {
+    try {
+      const warehouse = await this.WarehouseRepository.findOne({
+        where: { warehouse_id: warehouseId },
+      });
+
+      if (!warehouse) {
+        throw new NotFoundException(
+          `Warehouse with ID '${warehouseId}' not found.`,
+        );
+      }
+
+      // Update the locations_customer_managed field
+      warehouse.locations_customer_managed =
+        updateLocationTrackingDto.locations_customer_managed;
+      await this.WarehouseRepository.save(warehouse);
+
+      return {
+        status: 'success',
+        message: 'Location tracking settings updated successfully',
+        warehouse: {
+          warehouse_id: warehouse.warehouse_id,
+          warehouse_name: warehouse.warehouse_name,
+          locations_customer_managed: warehouse.locations_customer_managed,
+        },
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        `Failed to update location tracking settings: ${error.message}`,
       );
     }
   }

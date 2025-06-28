@@ -39,6 +39,10 @@ import { config } from 'process';
 import { GetTasksParamsDto, GetTasksResponseDto } from './dto/GetTasks.dto';
 import { UpdateWebhookReq, UpdateWebhookRes } from './dto/UpdateWebhook.dto';
 import {
+  UpdateLocationTrackingReq,
+  UpdateLocationTrackingRes,
+} from './dto/UpdateLocationTracking.dto';
+import {
   ApiTags,
   ApiHeader,
   ApiSecurity,
@@ -853,5 +857,65 @@ export class RobotJobController {
     }
 
     return await this.robotJobService.updateWebhook(warehouseId, structuredDto);
+  }
+
+  @ApiOperation({
+    summary: 'Update location tracking settings for a warehouse',
+  })
+  @ApiParam({
+    name: 'warehouse_id',
+    type: String,
+    description: 'Unique identifier of the warehouse',
+    example: 'WH_001',
+  })
+  @ApiBody({
+    type: UpdateLocationTrackingReq,
+    description: 'Location tracking update request body',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Location tracking settings updated successfully',
+    type: UpdateLocationTrackingRes,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request body',
+    type: BadRequestDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - invalid or missing API key',
+    type: UnauthorizedDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Warehouse not found',
+    type: NotFoundDto,
+  })
+  @ApiResponse({
+    status: 500,
+    description:
+      'Internal server error while updating location tracking settings',
+    type: InternalServerErrorDto,
+  })
+  @Patch(':warehouse_id/update_location_tracking')
+  async updateLocationTracking(
+    @Param('warehouse_id') warehouseId: string,
+    @Body() updateLocationTrackingDto: UpdateLocationTrackingReq,
+  ): Promise<UpdateLocationTrackingRes> {
+    const structuredDto = plainToInstance(
+      UpdateLocationTrackingReq,
+      updateLocationTrackingDto,
+    );
+    const validationErrors = await this.validator.validate(structuredDto);
+
+    if (validationErrors.length > 0) {
+      throw new BadRequestException('Invalid location tracking settings');
+    }
+
+    return await this.robotJobService.updateLocationTracking(
+      warehouseId,
+      structuredDto,
+    );
   }
 }
