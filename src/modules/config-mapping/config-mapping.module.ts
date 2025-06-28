@@ -4,11 +4,12 @@ import { ConfigMappingController } from './config-mapping.controller';
 import { ConfigMappingService } from './config-mapping.service';
 import { Warehouse } from '../robot-job/entities/warehouse.entity';
 import { AuthenticationMiddleware } from '../../middlewares/authentication.middleware';
+import { Validator } from 'class-validator';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Warehouse])],
   controllers: [ConfigMappingController],
-  providers: [ConfigMappingService, AuthenticationMiddleware],
+  providers: [ConfigMappingService, AuthenticationMiddleware, Validator],
   exports: [ConfigMappingService],
 })
 export class ConfigMappingModule implements NestModule {
