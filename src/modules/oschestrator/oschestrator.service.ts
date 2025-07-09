@@ -30,7 +30,7 @@ export class OschestratorService {
     ) { }
 
 
-    @Interval(60000) // Check every minute
+    @Interval(10000) // Check every minute
     async checkBatchTaskStatus(): Promise<void> {
         if (this.isCheckBatchJobStatus) {
             // currently checking batch job status, skip this cycle
@@ -96,7 +96,7 @@ export class OschestratorService {
                     await this.wms_webhook({tasks: [task], existingBatchJob: existingBatchJob});
 
                     // Simulate task processing time of 0.5 seconds
-                    await new Promise(resolve => setTimeout(resolve, 500));
+                    await new Promise(resolve => setTimeout(resolve, 10000));
 
                     task.status = 'completed';
                     await this.taskRepository.save(task);
