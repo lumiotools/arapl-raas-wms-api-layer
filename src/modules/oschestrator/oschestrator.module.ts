@@ -5,13 +5,14 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { Task } from '../robot-job/entities/task.entity';
 import { BatchJob } from '../robot-job/entities/batch_task.entity';
 import { Warehouse } from '../robot-job/entities/warehouse.entity';
+import { Robot } from '../robot-job/entities/robot.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TaskGenerationReq } from '../robot-job/dto/Task_Generation.dto';
 
 @Module({
   imports: [
     ScheduleModule.forRoot(),
-    TypeOrmModule.forFeature([Task, BatchJob, Warehouse, TaskGenerationReq]),
+    TypeOrmModule.forFeature([Task, BatchJob, Warehouse, Robot, TaskGenerationReq]),
   ],
   controllers: [OschestratorController],
   providers: [OschestratorService],

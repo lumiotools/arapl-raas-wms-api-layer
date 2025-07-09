@@ -11,10 +11,11 @@ import { AuthenticationMiddleware } from '../../middlewares/authentication.middl
 import { VersionMiddleware } from '../../middlewares/version.middleware';
 import { Validator } from 'class-validator';
 import { Warehouse } from './entities/warehouse.entity';
+import { Robot } from './entities/robot.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([BatchJob, Task, queueElementDto, Location, Warehouse])
+    TypeOrmModule.forFeature([BatchJob, Task, queueElementDto, Location, Warehouse, Robot])
   ],
   controllers: [RobotJobController],
   providers: [

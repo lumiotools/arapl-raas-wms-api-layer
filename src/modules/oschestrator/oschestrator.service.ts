@@ -5,6 +5,7 @@ import { Batch, Repository } from 'typeorm';
 import { Task } from '../robot-job/entities/task.entity';
 import { BatchJob } from '../robot-job/entities/batch_task.entity';
 import { Warehouse } from '../robot-job/entities/warehouse.entity';
+import { Robot } from '../robot-job/entities/robot.entity';
 import { TaskGenerationReq } from '../robot-job/dto/Task_Generation.dto';
 import { queueElementDto } from './dto/queue.dto';
 import axios from 'axios';
@@ -17,6 +18,9 @@ export class OschestratorService {
 
     private TaskQueue: Task[] = []
     private isCheckBatchJobStatus = false;
+    
+    // Track task-robot assignments (keep this in memory for performance)
+    private taskRobotAssignments = new Map<string, string>(); // taskId -> robotId
 
     constructor (
         @InjectRepository(Task)
@@ -27,7 +31,12 @@ export class OschestratorService {
 
         @InjectRepository(Warehouse)
         private readonly warehouseRepository: Repository<Warehouse>,
-    ) { }
+
+        @InjectRepository(Robot)
+        private readonly robotRepository: Repository<Robot>,
+    ) { 
+        this.initializeRobots();
+    }
 
 
     @Interval(10000) // Check every minute
@@ -37,37 +46,49 @@ export class OschestratorService {
             this.logger.warn('Already checking batch job status, skipping this cycle');
             return;
         }
-        try{
+        try {
             this.isCheckBatchJobStatus = true;
-            // find the first batch that is pendingg
-            const pendingBatchJob = await this.batchJobRepository.findOne({
-                where: { status: 'pending' },
+            // find all batches that are pending
+            const pendingBatchJobs = await this.batchJobRepository.find({
+                where: { status: 'pending' }
             });
-            if (pendingBatchJob) {
+            if (!pendingBatchJobs.length) {
+                this.logger.log('No pending batch jobs found.');
+                return;
+            }
+            for (const pendingBatchJob of pendingBatchJobs) {
                 await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate a delay of 1 second
-                // Found a pending batch job, process it
-                this.logger.log(`Found pending batch job: ${pendingBatchJob.batch_job_id}`);
+                this.logger.log(`Trying pending batch job: ${pendingBatchJob.batch_job_id}`);
                 const tasks = await this.taskRepository.find({
                     where: { batch_job: { batch_job_id: pendingBatchJob.batch_job_id }, status: 'pending' },
                 });
-                for (const task of tasks) {
-                    task.status = 'inqueue'; // Update task status to inqueue
-                    await this.taskRepository.save(task);
-                    this.TaskQueue.push(task);
+                if (!tasks.length) {
+                    this.logger.warn(`No pending tasks for batch ${pendingBatchJob.batch_job_id}`);
+                    continue;
                 }
+                // Check if we can assign a robot to the task (only one task per batch)
+                const task = tasks[0]; // Only one task per batch
+                const assignedRobotId = await this.assignRobotToTask(task);
+                this.logger.log(`Assigned robot ID: ${assignedRobotId} for task ${task.task_id}`);
+                if (!assignedRobotId) {
+                    this.logger.warn(`Cannot assign robot to task ${task.task_id}. Skipping batch ${pendingBatchJob.batch_job_id}`);
+                    continue; // Try next batch immediately
+                }
+                // Task can be assigned a robot, proceed with processing
+                task.status = 'inqueue'; // Update task status to inqueue
+                await this.taskRepository.save(task);
+                this.TaskQueue.push(task);
                 pendingBatchJob.status = 'inqueue'; // Update batch job status to inqueue
                 await this.batchJobRepository.save(pendingBatchJob);
-
                 await this.wms_webhook({tasks: tasks, existingBatchJob: pendingBatchJob});
-
                 const tasksToProcess : Task[] = [...this.TaskQueue];
                 this.TaskQueue.length = 0; // clear the TaskQueue after processing
                 await this.processTaskQueueInterval(tasksToProcess);
-                
                 this.logger.log(`All pending tasks for batch job ${pendingBatchJob.batch_job_id} have been updated to inqueue.`);
-            } else {
-                this.logger.log('No pending batch jobs found.');
+                // After processing a batch, stop and wait for next cron cycle
+                return;
             }
+            this.logger.log('No pending batch jobs could be processed this cycle.');
         }
         catch (error) {
             this.logger.error('Error checking batch job status:', error);
@@ -100,6 +121,10 @@ export class OschestratorService {
 
                     task.status = 'completed';
                     await this.taskRepository.save(task);
+                    
+                    // Robot remains assigned and unavailable until freed via external endpoint
+                    // The robot will only be freed through the setRobotAvailable endpoint
+                    
                     await this.wms_webhook({tasks: [task], existingBatchJob: existingBatchJob});
             }
 
@@ -119,6 +144,11 @@ export class OschestratorService {
         const tasks = queueElement.tasks;
         // Create a default pagination object
 
+        const robot = await this.robotRepository.findOne({
+            where: { current_task_id: tasks[0].task_id || "UNASSIGNED" }
+        })
+        const robot_id = robot?.robot_id || "UNASSIGNED";
+
         const defaultPagination = {
             "pagination":{
                 "current_page": 1,
@@ -132,7 +162,7 @@ export class OschestratorService {
             "tasks_status": tasks.map(task => ({
                 "task_id": task.task_id,
                 "status": task.status,
-                "robot_id": "ROBOT-001", // Placeholder for robot ID
+                "robot_id": robot_id, // Robot ID assigned to the task
                 "start_location": task.start_location, // Assuming start_location_id is a Location object
                 "end_location": task.end_location, // Assuming end_location_id is a Location object
                 "cargos":task.cargos
@@ -182,4 +212,334 @@ export class OschestratorService {
         
     }
 
+    // Robot Management Methods
+    
+    /**
+     * Get an available robot for task assignment (must have ended last task at inventory)
+     */
+    private async getAvailableRobot(): Promise<string | null> {
+        try {
+            const availableRobots = await this.robotRepository.find({
+                where: { available: true }
+            });
+            
+            if (availableRobots.length === 0) {
+                this.logger.log('No available robots found');
+                return null;
+            }
+            
+            // Check each available robot to see if its last task ended at inventory
+            for (const robot of availableRobots) {
+                const canAssignRobot = await this.canAssignRobotForNewTask(robot.robot_id);
+                if (canAssignRobot) {
+                    this.logger.log(`Found available robot that ended last task at inventory: ${robot.robot_id}`);
+                    return robot.robot_id;
+                }
+            }
+            
+            this.logger.warn('No available robots found that ended their last task at inventory');
+            return null;
+        } catch (error) {
+            this.logger.error('Error getting available robot:', error);
+            return null;
+        }
+    }
+    
+    /**
+     * Check if a robot can be assigned to a new task (last task must have ended at inventory)
+     */
+    private async canAssignRobotForNewTask(robotId: string): Promise<boolean> {
+        try {
+            // Get the robot from the database
+            const robot = await this.robotRepository.findOne({ where: { robot_id: robotId } });
+            if (!robot) {
+                this.logger.warn(`Robot ${robotId} not found in database`);
+                return false;
+            }
+            const lastTaskId = robot.last_task_id;
+            if (!lastTaskId) {
+                // No previous completed task found for this robot, can assign
+                this.logger.log(`Robot ${robotId} has no previous completed tasks, can be assigned`);
+                return true;
+            }
+            // Get the last task entity
+            const lastTaskEntity = await this.taskRepository.findOne({ where: { task_id: lastTaskId } });
+            if (!lastTaskEntity) {
+                this.logger.warn(`Could not find last task ${lastTaskId} for robot ${robotId}`);
+                return false;
+            }
+            // Check if the last task ended at an inventory location
+            const endLocation = lastTaskEntity.end_location;
+            const endedAtInventory = endLocation?.location_attribute?.attribute_value === 'inventory';
+            if (endedAtInventory) {
+                this.logger.log(`Robot ${robotId} last task ${lastTaskId} ended at inventory (${endLocation.location_attribute?.attribute_value}), can be assigned`);
+                return true;
+            } else {
+                this.logger.log(`Robot ${robotId} last task ${lastTaskId} did not end at inventory (ended at: ${endLocation?.location_attribute?.attribute_value || 'unknown'}), cannot be assigned`);
+                return false;
+            }
+        } catch (error) {
+            this.logger.error(`Error checking if robot ${robotId} can be assigned:`, error);
+            return false;
+        }
+    }
+    
+    /**
+     * Assign a robot to a task based on dependency logic
+     */
+    private async assignRobotToTask(task: Task): Promise<string | null> {
+        let assignedRobotId: string | null = null;
+        try {
+            // 1. If task has dependency, assign only the robot that was last assigned to the dependency task (if available)
+            if (task.task_dependency) {
+                // const dependencyRobotId = this.taskRobotAssignments.get(task.task_dependency);
+                const robot = await this.robotRepository.findOne({
+                    where: { last_task_id: task.task_dependency }
+                })
+                const dependencyRobotId = robot?.robot_id;
+                this.logger.log(`Task ${task.task_id} has dependency ${task.task_dependency}, dependency robot: ${dependencyRobotId}`);
+                if (dependencyRobotId) {
+                    const dependencyRobot = await this.robotRepository.findOne({ where: { robot_id: dependencyRobotId } });
+                    if (dependencyRobot?.available) {
+                        assignedRobotId = dependencyRobotId;
+                        this.logger.log(`Assigning robot ${assignedRobotId} to task ${task.task_id} (dependency logic)`);
+                    } else {
+                        this.logger.warn(`Dependency robot ${dependencyRobotId} is not available for task ${task.task_id}. Task will wait.`);
+                        return null;
+                    }
+                } else {
+                    this.logger.warn(`Dependency task ${task.task_dependency} has no robot assignment. Cannot assign robot to task ${task.task_id}`);
+                    return null;
+                }
+            } else {
+                // 2. If no dependency, assign any available robot whose last task ended at inventory or is null
+                const availableRobots = await this.robotRepository.find({ where: { available: true } });
+                for (const robot of availableRobots) {
+                    console.log(`robot: ${JSON.stringify(robot)}`);
+                    if (!robot.last_task_id) {
+                        // 3. If last_task_id is null, robot is free to be given to any task
+                        assignedRobotId = robot.robot_id;
+                        this.logger.log(`Assigning robot ${assignedRobotId} to task ${task.task_id} (no dependency, robot never assigned before)`);
+                        break;
+                    } else {
+                        // Check if last task ended at inventory
+                        const lastTask = await this.taskRepository.findOne({ where: { task_id: robot.last_task_id } });
+                        const endedAtInventory = lastTask?.end_location?.location_attribute?.attribute_value == 'inventory';
+
+                        console.log(`Robot ${robot.robot_id} last task ${robot.last_task_id} ended at inventory: ${endedAtInventory}`);
+                        if (endedAtInventory) {
+                            assignedRobotId = robot.robot_id;
+                            this.logger.log(`Assigning robot ${assignedRobotId} to task ${task.task_id} (no dependency, last task ended at inventory)`);
+                            break;
+                        }
+                    }
+                }
+                if (!assignedRobotId) {
+                    this.logger.warn(`No available robots for task ${task.task_id} (no dependency) - none meet assignment criteria`);
+                    return null;
+                }
+            }
+            if (assignedRobotId) {
+                await this.robotRepository.update(
+                    { robot_id: assignedRobotId },
+                    { available: false, current_task_id: task.task_id }
+                );
+                this.taskRobotAssignments.set(task.task_id, assignedRobotId);
+                this.logger.log(`Successfully assigned robot ${assignedRobotId} to task ${task.task_id}. Robot marked as unavailable in database.`);
+                return assignedRobotId;
+            }
+            return null;
+        } catch (error) {
+            this.logger.error(`Error assigning robot to task ${task.task_id}:`, error);
+            return null;
+        }
+    }
+    
+    /**
+     * Make a robot available manually (endpoint method)
+     */
+    async setRobotAvailable(robotId: string): Promise<boolean> {
+        try {
+            const robot = await this.robotRepository.findOne({
+                where: { robot_id: robotId }
+            });
+            
+            if (robot) {
+                // Find the last task assigned to this robot (from the in-memory map)
+                let lastTaskId: string | null = null;
+                // for (const [taskId, assignedRobotId] of Array.from(this.taskRobotAssignments.entries()).reverse()) {
+                //     if (assignedRobotId === robotId) {
+                //         lastTaskId = taskId;
+                //         break;
+                //     }
+                // }
+                lastTaskId = robot.current_task_id;
+                await this.robotRepository.update(
+                    { robot_id: robotId },
+                    { available: true, last_task_id: lastTaskId, current_task_id: null }
+                );
+                this.logger.log(`Robot ${robotId} set to available manually via database. Last task: ${lastTaskId}`);
+                return true;
+            }
+            
+            this.logger.warn(`Robot ${robotId} not found in database`);
+            return false;
+        } catch (error) {
+            this.logger.error(`Error setting robot ${robotId} to available:`, error);
+            return false;
+        }
+    }
+    
+    /**
+     * Get status of all robots
+     */
+    async getRobotStatuses(): Promise<{ robotId: string; available: boolean }[]> {
+        try {
+            const robots = await this.robotRepository.find();
+            return robots.map(robot => ({
+                robotId: robot.robot_id,
+                available: robot.available
+            }));
+        } catch (error) {
+            this.logger.error('Error getting robot statuses:', error);
+            return [];
+        }
+    }
+    
+    /**
+     * Get all task-robot assignments
+     */
+    getTaskRobotAssignments(): { taskId: string; robotId: string }[] {
+        return Array.from(this.taskRobotAssignments.entries()).map(([taskId, robotId]) => ({
+            taskId,
+            robotId
+        }));
+    }
+    
+    /**
+     * Free all robots (for debugging/emergency use)
+     */
+    async freeAllRobots(): Promise<void> {
+        try {
+            await this.robotRepository.update({}, { available: true });
+            this.logger.log('All robots have been freed via database update');
+        } catch (error) {
+            this.logger.error('Error freeing all robots:', error);
+        }
+    }
+    
+    /**
+     * Check if any robots are available
+     */
+    private async hasAvailableRobots(): Promise<boolean> {
+        try {
+            const availableRobot = await this.robotRepository.findOne({
+                where: { available: true }
+            });
+            return !!availableRobot;
+        } catch (error) {
+            this.logger.error('Error checking for available robots:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Initialize robots in database if they don't exist
+     */
+    private async initializeRobots(): Promise<void> {
+        try {
+            const robotIds = ['ROBOT-001', 'ROBOT-002'];
+            
+            for (const robotId of robotIds) {
+                const existingRobot = await this.robotRepository.findOne({
+                    where: { robot_id: robotId }
+                });
+                
+                if (!existingRobot) {
+                    const robot = this.robotRepository.create({
+                        robot_id: robotId,
+                        available: true
+                    });
+                    await this.robotRepository.save(robot);
+                    this.logger.log(`Initialized robot ${robotId} in database`);
+                }
+            }
+        } catch (error) {
+            this.logger.error('Error initializing robots:', error);
+        }
+    }
+
+    /**
+     * Get a robot that didn't end at inventory but can be assigned to a task that depends on its last task
+     */
+    private async getRobotWaitingForDependentTask(taskId: string): Promise<string | null> {
+        try {
+            const availableRobots = await this.robotRepository.find({
+                where: { available: true }
+            });
+            
+            // Check each available robot to see if this task depends on its last task
+            for (const robot of availableRobots) {
+                const lastTaskId = await this.getLastTaskForRobot(robot.robot_id);
+                
+                if (lastTaskId) {
+                    // Check if the current task depends on this robot's last task
+                    // We need to find if there's a dependency chain that connects this task to the robot's last task
+                    const isDependentOnLastTask = await this.isTaskDependentOnTask(taskId, lastTaskId);
+                    
+                    if (isDependentOnLastTask) {
+                        // Check if the robot's last task did NOT end at inventory
+                        const lastTaskEntity = await this.taskRepository.findOne({
+                            where: { task_id: lastTaskId }
+                        });
+                        
+                        if (lastTaskEntity) {
+                            const endLocation = lastTaskEntity.end_location;
+                            const endedAtInventory = endLocation?.location_attribute?.attribute_value === 'inventory';
+                            
+                            if (!endedAtInventory) {
+                                this.logger.log(`Robot ${robot.robot_id} last task ${lastTaskId} did not end at inventory and current task ${taskId} depends on it - can assign`);
+                                return robot.robot_id;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return null;
+        } catch (error) {
+            this.logger.error('Error getting robot waiting for dependent task:', error);
+            return null;
+        }
+    }
+    
+    /**
+     * Get the last completed task ID for a robot (from DB)
+     */
+    private async getLastTaskForRobot(robotId: string): Promise<string | null> {
+        try {
+            const robot = await this.robotRepository.findOne({ where: { robot_id: robotId } });
+            return robot?.last_task_id || null;
+        } catch (error) {
+            this.logger.error(`Error getting last task for robot ${robotId}:`, error);
+            return null;
+        }
+    }
+
+    /**
+     * Check if a task is dependent on another task (directly or through dependency chain)
+     */
+    private async isTaskDependentOnTask(taskId: string, dependencyTaskId: string): Promise<boolean> {
+        try {
+            const task = await this.taskRepository.findOne({ where: { task_id: taskId } });
+            if (task?.task_dependency === dependencyTaskId) {
+                return true;
+            }
+            // Could implement recursive dependency checking here if needed
+            return false;
+        } catch (error) {
+            this.logger.error(`Error checking if task ${taskId} depends on ${dependencyTaskId}:`, error);
+            return false;
+        }
+    }
 }
