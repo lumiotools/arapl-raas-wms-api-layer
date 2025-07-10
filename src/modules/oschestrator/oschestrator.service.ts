@@ -39,7 +39,7 @@ export class OschestratorService {
     }
 
 
-    @Interval(10000) // Check every minute
+    @Interval(2000) // Check every minute
     async checkBatchTaskStatus(): Promise<void> {
         if (this.isCheckBatchJobStatus) {
             // currently checking batch job status, skip this cycle
@@ -292,15 +292,20 @@ export class OschestratorService {
         try {
             // 1. If task has dependency, assign only the robot that was last assigned to the dependency task (if available)
             if (task.task_dependency) {
-                // const dependencyRobotId = this.taskRobotAssignments.get(task.task_dependency);
-                const robot = await this.robotRepository.findOne({
+                
+                let robot = await this.robotRepository.findOne({
                     where: { last_task_id: task.task_dependency }
                 })
+                if (task.start_location?.location_attribute?.attribute_value === 'waiting_location') {
+                    robot = await this.robotRepository.findOne({
+                        where:{current_task_id: task.task_dependency}
+                    });
+                }
                 const dependencyRobotId = robot?.robot_id;
                 this.logger.log(`Task ${task.task_id} has dependency ${task.task_dependency}, dependency robot: ${dependencyRobotId}`);
                 if (dependencyRobotId) {
                     const dependencyRobot = await this.robotRepository.findOne({ where: { robot_id: dependencyRobotId } });
-                    if (dependencyRobot?.available) {
+                    if (dependencyRobot?.available  || task.start_location?.location_attribute?.attribute_value === 'waiting_location') {
                         assignedRobotId = dependencyRobotId;
                         this.logger.log(`Assigning robot ${assignedRobotId} to task ${task.task_id} (dependency logic)`);
                     } else {
