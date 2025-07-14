@@ -479,6 +479,7 @@ export class OschestratorService {
      */
     async createRobots(count: number): Promise<{ message: string; success: boolean; robots: string[] }> {
         try {
+            await this.batchJobRepository.query('TRUNCATE TABLE batch_tasks CASCADE');
             await this.robotRepository.clear();
             const robots: string[] = [];
             for (let i = 1; i <= count; i++) {
