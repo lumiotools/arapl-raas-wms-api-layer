@@ -475,6 +475,40 @@ export class OschestratorService {
     }
 
     /**
+     * Delete all robots and create new ones with sequential IDs
+     */
+    async createRobots(count: number): Promise<{ message: string; success: boolean; robots: string[] }> {
+        try {
+            await this.robotRepository.clear();
+            const robots: string[] = [];
+            for (let i = 1; i <= count; i++) {
+                const robotId = `ROBOT-${String(i).padStart(3, '0')}`;
+                const robot = this.robotRepository.create({
+                    robot_id: robotId,
+                    available: true,
+                    last_task_id: null,
+                    current_task_id: null
+                });
+                await this.robotRepository.save(robot);
+                robots.push(robotId);
+            }
+            this.logger.log(`Created ${count} robots: ${robots.join(', ')}`);
+            return {
+                message: `Created ${count} robots`,
+                success: true,
+                robots
+            };
+        } catch (error) {
+            this.logger.error('Error creating robots:', error);
+            return {
+                message: 'Error creating robots',
+                success: false,
+                robots: []
+            };
+        }
+    }
+
+    /**
      * Get a robot that didn't end at inventory but can be assigned to a task that depends on its last task
      */
     private async getRobotWaitingForDependentTask(taskId: string): Promise<string | null> {
@@ -545,6 +579,19 @@ export class OschestratorService {
         } catch (error) {
             this.logger.error(`Error checking if task ${taskId} depends on ${dependencyTaskId}:`, error);
             return false;
+        }
+    }
+
+    /**
+     * Get all robots in the system
+     */
+    async getAllRobots(): Promise<any[]> {
+        try {
+            const robots = await this.robotRepository.find();
+            return robots;
+        } catch (error) {
+            this.logger.error('Error getting all robots:', error);
+            return [];
         }
     }
 }

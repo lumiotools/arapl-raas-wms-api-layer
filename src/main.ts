@@ -20,6 +20,13 @@ async function bootstrap() {
     'api-key', // name to reference in @ApiSecurity
   )
     .build();
+  
+  app.enableCors({
+    origin: '*', // Allow all origins
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    allowedHeaders: 'Content-Type, Authorization',
+    credentials: true, // Allow credentials
+  });
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api-docs', app, document); 

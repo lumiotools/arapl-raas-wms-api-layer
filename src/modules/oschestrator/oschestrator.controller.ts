@@ -76,4 +76,61 @@ export class OschestratorController {
       success: true,
     };
   }
+
+  @ApiOperation({ summary: 'Create robots (delete all and create new)' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        count: { type: 'number', example: 2 }
+      },
+      required: ['count']
+    },
+    description: 'Number of robots to create'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Robots created successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+        success: { type: 'boolean' },
+        robots: { type: 'array', items: { type: 'string' } }
+      }
+    }
+  })
+  @Post('robots/create')
+  async createRobots(@Body() body: { count: number }): Promise<{ message: string; success: boolean; robots: string[] }> {
+    const result = await this.oschestratorService.createRobots(body.count);
+    return result;
+  }
+
+  @ApiOperation({ summary: 'Get all robots in the system' })
+  @ApiResponse({
+    status: 200,
+    description: 'All robots retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        robots: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              robot_id: { type: 'string' },
+              available: { type: 'boolean' },
+              last_task_id: { type: 'string', nullable: true },
+              current_task_id: { type: 'string', nullable: true }
+            }
+          }
+        }
+      }
+    }
+  })
+  @Get('robots/all')
+  async getAllRobots(): Promise<{ robots: any[] }> {
+    const robots = await this.oschestratorService.getAllRobots();
+    return { robots };
+  }
 }
