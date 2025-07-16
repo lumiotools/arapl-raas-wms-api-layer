@@ -155,7 +155,10 @@ export class OschestratorService {
                 }
             } else {
                 // 2. If no dependency, assign any available robot whose last task ended at inventory or is null
-                const availableRobots = await this.robotRepository.find({ where: { available: true } });
+                const availableRobots = await this.robotRepository.find({ 
+                    where: { available: true },
+                    order: { robot_id: 'ASC' } // Fetch robots in order of IDs (ROBOT-009, ROBOT-010, etc.)
+                });
                 for (const robot of availableRobots) {
                     console.log(`robot: ${JSON.stringify(robot)}`);
                     if (!robot.last_task_id) {
