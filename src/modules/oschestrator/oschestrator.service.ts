@@ -323,7 +323,7 @@ export class OschestratorService {
                     await this.wms_webhook({tasks: [task], existingBatchJob: existingBatchJob});
 
                     // Simulate task processing time of 0.5 seconds
-                    await new Promise(resolve => setTimeout(resolve, 10000));
+                    await new Promise(resolve => setTimeout(resolve, 60000));
 
                     task.status = 'completed';
                     await this.taskRepository.save(task);
@@ -568,6 +568,27 @@ export class OschestratorService {
         }
     }
     
+    /**
+     * Delete all robots and truncate batch_tasks table (CASCADE)
+     */
+    async deleteAllRobotsAndBatches(): Promise<{ message: string; success: boolean }> {
+        try {
+            await this.robotRepository.clear();
+            await this.batchJobRepository.query('TRUNCATE TABLE batch_tasks CASCADE');
+            this.logger.log('All robots and batch_tasks deleted (TRUNCATE CASCADE)');
+            return {
+                message: 'All robots and batch_tasks deleted (TRUNCATE CASCADE)',
+                success: true
+            };
+        } catch (error) {
+            this.logger.error('Error deleting robots and batch_tasks:', error);
+            return {
+                message: 'Error deleting robots and batch_tasks',
+                success: false
+            };
+        }
+    }
+
     /**
      * Check if any robots are available
      */

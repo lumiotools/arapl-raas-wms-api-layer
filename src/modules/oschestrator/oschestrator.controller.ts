@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Get, Body, BadRequestException, Delete } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { OschestratorService } from './oschestrator.service';
 import { 
@@ -132,5 +132,24 @@ export class OschestratorController {
   async getAllRobots(): Promise<{ robots: any[] }> {
     const robots = await this.oschestratorService.getAllRobots();
     return { robots };
+  }
+
+
+  @ApiOperation({ summary: 'Delete all robots and truncate batch_tasks table (CASCADE)' })
+  @ApiResponse({
+    status: 200,
+    description: 'All robots and batch_tasks deleted successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+        success: { type: 'boolean' }
+      }
+    }
+  })
+  @Delete('robots/delete-all')
+  async deleteAllRobotsAndBatches(): Promise<{ message: string; success: boolean }> {
+    const result = await this.oschestratorService.deleteAllRobotsAndBatches();
+    return result;
   }
 }
