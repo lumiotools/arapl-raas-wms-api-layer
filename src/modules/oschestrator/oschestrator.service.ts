@@ -479,11 +479,24 @@ export class OschestratorService {
      */
     async createRobots(count: number): Promise<{ message: string; success: boolean; robots: string[] }> {
         try {
-            await this.batchJobRepository.query('TRUNCATE TABLE batch_tasks CASCADE');
-            await this.robotRepository.clear();
+            // await this.batchJobRepository.query('TRUNCATE TABLE batch_tasks CASCADE');
+            // await this.robotRepository.clear();
+            // Find the highest existing robot ID (e.g., ROBOT-009)
+            const highestRobot = await this.robotRepository
+                .createQueryBuilder('robot')
+                .orderBy('robot.robot_id', 'DESC')
+                .getOne();
+
+            let startIndex = 1;
+            if (highestRobot && /^ROBOT-\d+$/.test(highestRobot.robot_id)) {
+                // Extract the numeric part and increment
+                const lastNum = parseInt(highestRobot.robot_id.replace('ROBOT-', ''), 10);
+                startIndex = lastNum + 1;
+            }
+
             const robots: string[] = [];
-            for (let i = 1; i <= count; i++) {
-                const robotId = `ROBOT-${String(i).padStart(3, '0')}`;
+            for (let i = 0; i < count; i++) {
+                const robotId = `ROBOT-${String(startIndex + i).padStart(3, '0')}`;
                 const robot = this.robotRepository.create({
                     robot_id: robotId,
                     available: true,
