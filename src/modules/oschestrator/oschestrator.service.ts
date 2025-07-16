@@ -185,7 +185,7 @@ export class OschestratorService {
             if (assignedRobotId) {
                 // Atomically update robot status
                 const updateResult = await queryRunner.manager.update(Robot,
-                    { robot_id: assignedRobotId, available: true }, // Ensure it's still available
+                    { robot_id: assignedRobotId}, // Ensure it's still available
                     { available: false, current_task_id: task.task_id }
                 );
 
@@ -288,7 +288,7 @@ export class OschestratorService {
                 await this.wms_webhook({tasks: tasks, existingBatchJob: pendingBatchJob});
                 const tasksToProcess: Task[] = [...this.TaskQueue];
                 this.TaskQueue.length = 0;
-                await this.processTaskQueueInterval(tasksToProcess);
+                this.processTaskQueueInterval(tasksToProcess);
                 
                 return; // Process only one batch per cycle
             }
@@ -323,7 +323,7 @@ export class OschestratorService {
                     await this.wms_webhook({tasks: [task], existingBatchJob: existingBatchJob});
 
                     // Simulate task processing time of 0.5 seconds
-                    await new Promise(resolve => setTimeout(resolve, 60000));
+                    await new Promise(resolve => setTimeout(resolve, 10000));
 
                     task.status = 'completed';
                     await this.taskRepository.save(task);
