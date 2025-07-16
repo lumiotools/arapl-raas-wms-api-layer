@@ -10,7 +10,7 @@ export const getDBConfig = (
     local: {
       username: configService.get<string>('DB_USERNAME', 'postgres'),
       password: configService.get<string>('DB_PASSWORD'),
-      database: configService.get<string>('DB_DATABASE', 'wms_api_layer'),
+      database: configService.get<string>('DB_DATABASE', 'arapl_wms_layer'),
       // ssl: configService.get<boolean>('DB_SSL', false), // Optional SSL configuration
     },
   };
