@@ -77,9 +77,17 @@ export class OschestratorService {
                 // Task can be assigned a robot, proceed with processing
                 task.status = 'inqueue'; // Update task status to inqueue
                 await this.taskRepository.save(task);
-                this.TaskQueue.push(task);
-                pendingBatchJob.status = 'inqueue'; // Update batch job status to inqueue
-                await this.batchJobRepository.save(pendingBatchJob);
+                this.TaskQueue.push(task); 
+                const currentBatch = await this.batchJobRepository.findOne({
+                    where: { batch_job_id: pendingBatchJob.batch_job_id },
+                });
+                if (!currentBatch) {
+                    this.logger.warn(`Batch job ${pendingBatchJob.batch_job_id} does not exist or has been cancelled. Skipping.`);
+                    continue; // Skip to next batch
+                }
+                currentBatch.status = 'inqueue'; // Update batch status to inqueue
+                // Save the updated batch job
+                await this.batchJobRepository.save(currentBatch);
                 await this.wms_webhook({tasks: tasks, existingBatchJob: pendingBatchJob});
                 const tasksToProcess : Task[] = [...this.TaskQueue];
                 this.TaskQueue.length = 0; // clear the TaskQueue after processing
