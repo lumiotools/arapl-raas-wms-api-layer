@@ -22,10 +22,13 @@ async function bootstrap() {
     .build();
   
   app.enableCors({
-    origin: '*', // Allow all origins
+    origin: [
+      'https://arapl-raas-gtp-ui.vercel.app',
+      'https://arapl-raas-gtp.onrender.com'
+    ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     allowedHeaders: 'Content-Type, Authorization',
-    credentials: true, // Allow credentials
+    credentials: true,
   });
 
   const document = SwaggerModule.createDocument(app, config);
