@@ -120,9 +120,9 @@ export class OschestratorService {
                 .setLock('pessimistic_write')
                 .getMany();
 
-            if (availableRobots.length === 0) {
-                return null;
-            }
+            // if (availableRobots.length === 0) {
+            //     return null;
+            // }
 
             let assignedRobotId: string | null = null;
 
@@ -262,7 +262,10 @@ export class OschestratorService {
                     continue;
                 }
 
+
+
                 const task = tasks[0];
+                console.log(`Processing task: ${JSON.stringify(task)}`);
                 const assignedRobotId = await this.assignRobotToTaskWithLock(task, queryRunner);
                 
                 if (!assignedRobotId) {
