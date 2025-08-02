@@ -222,12 +222,14 @@ export class OschestratorService {
             return;
         }
         
+        // Set flag immediately and ensure it's always reset
+        this.isCheckBatchJobStatus = true;
+        
         const queryRunner = this.batchJobRepository.manager.connection.createQueryRunner();
-        await queryRunner.connect();
-        await queryRunner.startTransaction();
         
         try {
-            this.isCheckBatchJobStatus = true;
+            await queryRunner.connect();
+            await queryRunner.startTransaction();
             
             // Use SELECT FOR UPDATE to lock the batch
             const pendingBatchJobs = await queryRunner.manager
@@ -239,7 +241,7 @@ export class OschestratorService {
             if (!pendingBatchJobs.length) {
                 this.logger.log('No pending batch jobs found.');
                 await queryRunner.commitTransaction();
-                return;
+                return; // Flag will be reset in finally block
             }
 
             for (const pendingBatchJob of pendingBatchJobs) {
@@ -259,10 +261,8 @@ export class OschestratorService {
                         { batch_job_id: pendingBatchJob.batch_job_id }, 
                         { status: 'pending' }
                     );
-                    continue;
+                    continue; // Continue to next batch job
                 }
-
-
 
                 const task = tasks[0];
                 console.log(`Processing task: ${JSON.stringify(task)}`);
@@ -274,7 +274,7 @@ export class OschestratorService {
                         { batch_job_id: pendingBatchJob.batch_job_id }, 
                         { status: 'pending' }
                     );
-                    continue;
+                    continue; // Continue to next batch job
                 }
 
                 // Continue with processing...
@@ -296,7 +296,7 @@ export class OschestratorService {
                 this.TaskQueue.length = 0;
                 this.processTaskQueueInterval(tasksToProcess);
                 
-                return; // Process only one batch per cycle
+                return; // Process only one batch per cycle - flag will be reset in finally
             }
             
             await queryRunner.commitTransaction();
@@ -304,8 +304,9 @@ export class OschestratorService {
             await queryRunner.rollbackTransaction();
             this.logger.error('Error checking batch job status:', error);
         } finally {
+            // Always release the query runner and reset the flag
             await queryRunner.release();
-            this.isCheckBatchJobStatus = false;
+            this.isCheckBatchJobStatus = false; // ✅ Always reset the flag here
         }
     }
 
