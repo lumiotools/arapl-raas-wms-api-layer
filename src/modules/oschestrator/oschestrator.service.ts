@@ -120,13 +120,8 @@ export class OschestratorService {
                 .setLock('pessimistic_write')
                 .getMany();
 
-            // if (availableRobots.length === 0) {
-            //     return null;
-            // }
-
             let assignedRobotId: string | null = null;
 
-            try {
             // 1. If task has dependency, assign only the robot that was last assigned to the dependency task (if available)
             if (task.task_dependency) {
                 
@@ -208,11 +203,6 @@ export class OschestratorService {
             return null;
         }
     }
-    catch(error) {
-            this.logger.error(`Error assigning robot to task ${task.task_id}:`, error);
-            return null;
-        }
-    }
 
 
     @Interval(2000)
@@ -222,7 +212,7 @@ export class OschestratorService {
             return;
         }
         
-        // Set flag immediately and ensure it's always reset
+        // Set flag immediately
         this.isCheckBatchJobStatus = true;
         
         const queryRunner = this.batchJobRepository.manager.connection.createQueryRunner();
@@ -241,7 +231,7 @@ export class OschestratorService {
             if (!pendingBatchJobs.length) {
                 this.logger.log('No pending batch jobs found.');
                 await queryRunner.commitTransaction();
-                return; // Flag will be reset in finally block
+                return; // ✅ Flag will be reset in finally block
             }
 
             for (const pendingBatchJob of pendingBatchJobs) {
@@ -291,22 +281,44 @@ export class OschestratorService {
                 
                 // Process the task outside the transaction
                 this.TaskQueue.push(task);
-                await this.wms_webhook({tasks: tasks, existingBatchJob: pendingBatchJob});
-                const tasksToProcess: Task[] = [...this.TaskQueue];
-                this.TaskQueue.length = 0;
-                this.processTaskQueueInterval(tasksToProcess);
+                
+                // ✅ IMPORTANT: Use async/await properly here
+                try {
+                    await this.wms_webhook({tasks: tasks, existingBatchJob: pendingBatchJob});
+                    const tasksToProcess: Task[] = [...this.TaskQueue];
+                    this.TaskQueue.length = 0;
+                    
+                    // Don't await this - let it run in background
+                    this.processTaskQueueInterval(tasksToProcess).catch(error => {
+                        this.logger.error('Error in background task processing:', error);
+                    });
+                } catch (webhookError) {
+                    this.logger.error('Error in webhook call:', webhookError);
+                }
                 
                 return; // Process only one batch per cycle - flag will be reset in finally
             }
             
             await queryRunner.commitTransaction();
+            
         } catch (error) {
-            await queryRunner.rollbackTransaction();
             this.logger.error('Error checking batch job status:', error);
+            try {
+                await queryRunner.rollbackTransaction();
+            } catch (rollbackError) {
+                this.logger.error('Error rolling back transaction:', rollbackError);
+            }
         } finally {
-            // Always release the query runner and reset the flag
-            await queryRunner.release();
-            this.isCheckBatchJobStatus = false; // ✅ Always reset the flag here
+            // ✅ CRITICAL: Always release the query runner and reset the flag
+            try {
+                await queryRunner.release();
+            } catch (releaseError) {
+                this.logger.error('Error releasing query runner:', releaseError);
+            }
+            
+            // ✅ ALWAYS reset the flag here - this is the most important fix
+            this.isCheckBatchJobStatus = false;
+            this.logger.debug('Batch job status check completed, flag reset');
         }
     }
 
