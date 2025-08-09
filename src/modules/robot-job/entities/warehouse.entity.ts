@@ -35,4 +35,8 @@ export class Warehouse {
 
   @Column({ type: 'json', nullable: true })
   get_location_config: any;
+
+  // Whether this warehouse is allowed to use robot-related APIs
+  @Column({ type: 'boolean', default: false })
+  robot_access: boolean;
 }

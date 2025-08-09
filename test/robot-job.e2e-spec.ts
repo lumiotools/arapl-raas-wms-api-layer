@@ -17,7 +17,7 @@ import {
   WaitType,
 } from '../src/modules/robot-job/dto/Task_Generation.dto';
 import { TaskUpdateReq } from '../src/modules/robot-job/dto/Task_Update.dto';
-import { CancelReq } from '../src/modules/robot-job/dto/Cancel.dto';
+import { CancelBatchReq, CancelTaskReq } from '../src/modules/robot-job/dto/Cancel.dto';
 import { LocationStatus } from '../src/modules/robot-job/dto/GetLocation.dto';
 
 describe('RobotJobController (e2e)', () => {
@@ -871,7 +871,7 @@ describe('RobotJobController (e2e)', () => {
       });
     });
 
-    const cancelRequest: CancelReq = {
+  const cancelRequest: CancelBatchReq = {
       reason: 'Test cancellation',
       timestamp: '2025-01-01T10:00:00Z',
     };
@@ -1017,7 +1017,7 @@ describe('RobotJobController (e2e)', () => {
       });
     });
 
-    const cancelRequest: CancelReq = {
+  const cancelRequest: CancelTaskReq = {
       reason: 'Test task cancellation',
       timestamp: '2025-01-01T10:00:00Z',
     };

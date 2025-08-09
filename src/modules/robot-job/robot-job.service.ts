@@ -25,7 +25,7 @@ import { Any, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { BatchJob } from './entities/batch_task.entity';
 import { Task } from './entities/task.entity';
-import { CancelReq, BatchCancelRes, TaskCancelRes } from './dto/Cancel.dto';
+import { CancelBatchReq, CancelTaskReq, BatchCancelRes, TaskCancelRes } from './dto/Cancel.dto';
 import { Location } from './entities/locations.entity';
 import {
   GetLocationReq,
@@ -719,7 +719,7 @@ export class RobotJobService {
   async cancelBatch(
     warehouse_id: string,
     batch_id: string,
-    cancel_req: CancelReq,
+  cancel_req: CancelBatchReq,
   ): Promise<BatchCancelRes> {
     const batchJob = await this.BatchJobRepository.findOne({
       where: {
@@ -799,9 +799,9 @@ export class RobotJobService {
     warehouse_id: string,
     batch_id: string,
     task_id: string,
-    cancel_req: CancelReq,
+  cancel_req: CancelTaskReq,
   ): Promise<TaskCancelRes> {
-    const taskRepo: Task | null = await this.TaskRepository.findOne({
+  const taskRepo: Task | null = await this.TaskRepository.findOne({
       where: {
         task_id: task_id,
         batch_job: { batch_job_id: batch_id },
@@ -817,7 +817,14 @@ export class RobotJobService {
       });
     }
 
-    if (taskRepo.status !== 'pending') {
+    // Determine if force cancel is allowed: only when warehouse has robot_access
+    const warehouse = await this.WarehouseRepository.findOne({
+      where: { warehouse_id },
+      select: ['warehouse_id', 'robot_access'],
+    });
+    const force = !!cancel_req?.force && !!warehouse?.robot_access;
+
+    if (taskRepo.status !== 'pending' && !force) {
       throw new ConflictException({
         status: 'error',
         cancelled_at: new Date().toISOString(),
@@ -884,12 +891,12 @@ export class RobotJobService {
     warehouseId: string,
     batchId: string,
     config: any,
-    input: any,
+  input: any,
   ): Promise<BatchCancelRes> {
     try {
       const cancelRequest = await this._genericTaskTransformer(config, input);
 
-      const structuredDto = plainToInstance(CancelReq, cancelRequest);
+  const structuredDto = plainToInstance(CancelBatchReq, cancelRequest);
       const validationErrors = await this.validator.validate(structuredDto);
       if (validationErrors.length > 0) {
         throw new BadRequestException({
@@ -972,12 +979,12 @@ export class RobotJobService {
     batchId: string,
     taskId: string,
     config: any,
-    input: any,
+  input: any,
   ): Promise<TaskCancelRes> {
     try {
       const cancelRequest = await this._genericTaskTransformer(config, input);
 
-      const structuredDto = plainToInstance(CancelReq, cancelRequest);
+  const structuredDto = plainToInstance(CancelTaskReq, cancelRequest);
       const validationErrors = await this.validator.validate(structuredDto);
       if (validationErrors.length > 0) {
         throw new BadRequestException({
@@ -1190,5 +1197,13 @@ export class RobotJobService {
         `Failed to update location tracking settings: ${error.message}`,
       );
     }
+  }
+
+  async getIdleRobots(): Promise<string[]> {
+    // Temporary: return hardcoded UUIDs
+    return [
+      '3f8c1f70-6b63-4b54-8f2d-b6f3d134a7a9',
+      'a1d5c3e2-9b4f-4d6a-8f2c-7b8d9e0f1a2b',
+    ];
   }
 }
