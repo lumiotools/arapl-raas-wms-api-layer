@@ -288,7 +288,7 @@ export class RobotJobService {
       );
     }
 
-    const newBatchJob = this.BatchJobRepository.create({
+  const newBatchJob = this.BatchJobRepository.create({
       batch_job_id,
       warehouse_id: warehouseId,
       batch_priority: createRobotJobDto.batch_priority,
@@ -299,7 +299,11 @@ export class RobotJobService {
 
     await this.BatchJobRepository.save(newBatchJob);
 
-    for (const task of Tasks) {
+  // Determine robot access for warehouse
+  const warehouse = await this.WarehouseRepository.findOne({ where: { warehouse_id: warehouseId } });
+  const hasRobotAccess = !!warehouse?.robot_access;
+
+  for (const task of Tasks) {
       try {
         if (task.wait && task.wait.wait_type === WaitType.Conditional) {
           const wait = task.wait;
@@ -338,6 +342,7 @@ export class RobotJobService {
           end_location: task.end_location,
           wait_time: task.wait_time,
           cargos: task.cargos,
+          robot_id: hasRobotAccess ? (task.robot_id ?? null) : null,
           batch_job: newBatchJob,
           status: 'pending',
         });
@@ -510,7 +515,7 @@ export class RobotJobService {
         `Warehouse with ID '${warehouse_id}' not found.`,
       );
     }
-    const batchJob = await this.BatchJobRepository.findOne({
+  const batchJob = await this.BatchJobRepository.findOne({
       where: {
         batch_job_id: updateRobotJobDto.batch_job_id,
         warehouse_id: warehouse_id,
@@ -521,7 +526,8 @@ export class RobotJobService {
         `Batch job with ID '${updateRobotJobDto.batch_job_id}' not found in warehouse '${warehouse_id}'.`,
       );
     }
-    const tasks: UpdateTask[] = updateRobotJobDto.updates;
+  const tasks: UpdateTask[] = updateRobotJobDto.updates;
+  const hasRobotAccess = !!warehouse.robot_access;
     for (const task of tasks) {
       try {
         if (
@@ -571,6 +577,15 @@ export class RobotJobService {
         }
         taskRepo.task_dependency =
           task.task_dependency ?? taskRepo.task_dependency;
+
+        // Robot assignment
+        if (hasRobotAccess) {
+          if (typeof task.robot_id === 'string') {
+            taskRepo.robot_id = task.robot_id;
+          }
+        } else {
+          taskRepo.robot_id = null;
+        }
 
         // await this.updateLocation(taskRepo.start_location, true);
         // await this.updateLocation(taskRepo.end_location, true);
@@ -1199,11 +1214,11 @@ export class RobotJobService {
     }
   }
 
-  async getIdleRobots(): Promise<string[]> {
-    // Temporary: return hardcoded UUIDs
+  async getIdleRobots(): Promise<{ id: string; status: string }[]> {
+    // Temporary: return hardcoded robots with status
     return [
-      '3f8c1f70-6b63-4b54-8f2d-b6f3d134a7a9',
-      'a1d5c3e2-9b4f-4d6a-8f2c-7b8d9e0f1a2b',
+      { id: '550e8400-e29b-41d4-a716-446655440000', status: 'idle' },
+      { id: '8b7e5c9d-3a42-4f1d-9f1a-123456789abc', status: 'idle' },
     ];
   }
 }

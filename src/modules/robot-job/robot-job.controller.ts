@@ -124,18 +124,20 @@ export class RobotJobController {
   @Get(':warehouse_id/tasks/:batch_id')
   async getTasks(
     @Param() params: GetTasksParamsDto,
+    @Req() request: Request,
   ): Promise<GetTasksResponseDto> {
     const taskEntities = await this.robotJobService.getTasksByBatchId(
       params.warehouse_id,
       params.batch_id,
     );
 
-    const tasksForResponse = taskEntities.map((entity) => {
-      return {
-        ...entity,
-        wait: entity.wait_time,
-      };
-    });
+    const includeRobot = !!request.warehouse?.robot_access;
+    const tasksForResponse = taskEntities.map((entity) => ({
+      ...entity,
+      wait: entity.wait_time,
+      // Only expose robot_id when warehouse has robot access; override spread value
+      robot_id: includeRobot ? (entity.robot_id ?? undefined) : undefined,
+    }));
 
     return { tasks: tasksForResponse };
   }
@@ -922,23 +924,23 @@ export class RobotJobController {
     );
   }
 
-  @ApiOperation({ summary: 'Get list of idle robots (by ID)' })
+  @ApiOperation({ summary: 'Get list of robots (id and status)' })
   @ApiParam({
     name: 'warehouse_id',
     type: String,
     description: 'Warehouse identifier (reserved for future scoping)',
     example: 'WH_001',
   })
-  @ApiResponse({ status: 200, description: 'Idle robots returned', type: GetIdleRobotsRes })
+  @ApiResponse({ status: 200, description: 'Robots returned', type: GetIdleRobotsRes })
   @ApiResponse({ status: 401, description: 'Unauthorized', type: UnauthorizedDto })
   @ApiResponse({ status: 403, description: 'Forbidden - warehouse does not have robot access', type: ForbiddenDto })
-  @Get(':warehouse_id/robots/idle')
+  @Get(':warehouse_id/robots')
   async getIdleRobots(@Req() request: Request): Promise<GetIdleRobotsRes> {
     // Enforce robot access per warehouse
     if (!request.warehouse?.robot_access) {
   throw new ForbiddenException('Warehouse does not have robot access');
     }
-    const ids = await this.robotJobService.getIdleRobots();
-    return { robots: ids };
+  const robots = await this.robotJobService.getIdleRobots();
+  return { robots };
   }
 }

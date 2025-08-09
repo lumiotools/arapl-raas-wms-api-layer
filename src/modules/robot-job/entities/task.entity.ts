@@ -27,6 +27,9 @@ export class Task {
     @Column({ type: 'json' })
     cargos: Cargo[];
 
+    @Column({ type: 'varchar', nullable: true })
+    robot_id: string | null;
+
     @ManyToOne(() => BatchJob, batchJob => batchJob.id, {
         nullable: true,
         eager: true,

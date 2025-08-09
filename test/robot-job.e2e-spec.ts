@@ -198,6 +198,70 @@ describe('RobotJobController (e2e)', () => {
       expect(response.body.batch_id).toMatch(/^Batch-\d+/);
     });
 
+    it('should ignore robot_id on create when warehouse has no robot access', async () => {
+      const requestWithRobot: TaskGenerationReq = {
+        ...validTaskRequest,
+        tasks: [
+          {
+            ...validTaskRequest.tasks[0],
+            robot_id: '550e8400-e29b-41d4-a716-446655440000',
+          } as any,
+        ],
+      };
+
+      await request(app.getHttpServer())
+        .post(`/robot-job/${testWarehouseId}/tasks`)
+        .set('authorization', 'test-api-key')
+        .send(requestWithRobot)
+        .expect(201);
+
+      const getResp = await request(app.getHttpServer())
+        .get(`/robot-job/${testWarehouseId}/tasks/${testBatchId}`)
+        .set('authorization', 'test-api-key')
+        .expect(200);
+
+      const taskObj = getResp.body.tasks.find((t: any) => t.task_id === testTaskId);
+      expect(taskObj).toBeDefined();
+      expect('robot_id' in taskObj).toBe(false);
+
+      const stored = await taskRepository.findOne({ where: { task_id: testTaskId } });
+      expect(stored?.robot_id).toBeNull();
+    });
+
+    it('should persist and return robot_id on create when warehouse has robot access', async () => {
+      await warehouseRepository.update(
+        { warehouse_id: testWarehouseId },
+        { robot_access: true } as any,
+      );
+
+      const robotId = '550e8400-e29b-41d4-a716-446655440000';
+      const requestWithRobot: TaskGenerationReq = {
+        ...validTaskRequest,
+        tasks: [
+          {
+            ...validTaskRequest.tasks[0],
+            task_id: 'TEST_TASK_002',
+            robot_id: robotId,
+          } as any,
+        ],
+      };
+
+      await request(app.getHttpServer())
+        .post(`/robot-job/${testWarehouseId}/tasks`)
+        .set('authorization', 'test-api-key')
+        .send(requestWithRobot)
+        .expect(201);
+
+      const getResp = await request(app.getHttpServer())
+        .get(`/robot-job/${testWarehouseId}/tasks/${testBatchId}`)
+        .set('authorization', 'test-api-key')
+        .expect(200);
+
+      const taskObj = getResp.body.tasks.find((t: any) => t.task_id === 'TEST_TASK_002');
+      expect(taskObj).toBeDefined();
+      expect(taskObj.robot_id).toBe(robotId);
+    });
+
     it('should return 400 for invalid task structure', async () => {
       const invalidRequest = {
         ...validTaskRequest,
@@ -590,6 +654,73 @@ describe('RobotJobController (e2e)', () => {
         .get(`/robot-job/${testWarehouseId}/tasks/NON_EXISTENT_BATCH`)
         .set('authorization', 'test-api-key')
         .expect(404);
+    });
+
+    it('should ignore robot_id on update when warehouse has no robot access', async () => {
+      const updateWithRobot: TaskUpdateReq = {
+        batch_job_id: testBatchId,
+        updates: [
+          {
+            task_id: testTaskId,
+            start_location: { location_id: 'LOC_001', location_dimension: { length: 100, width: 50, height: 80 } },
+            end_location: { location_id: 'LOC_002', location_dimension: { length: 100, width: 50, height: 80 } },
+            cargos: [],
+            robot_id: '550e8400-e29b-41d4-a716-446655440000',
+          } as any,
+        ],
+      };
+
+      await request(app.getHttpServer())
+        .patch(`/robot-job/${testWarehouseId}/tasks`)
+        .set('authorization', 'test-api-key')
+        .send(updateWithRobot)
+        .expect(200);
+
+      const getResp = await request(app.getHttpServer())
+        .get(`/robot-job/${testWarehouseId}/tasks/${testBatchId}`)
+        .set('authorization', 'test-api-key')
+        .expect(200);
+      const taskObj = getResp.body.tasks.find((t: any) => t.task_id === testTaskId);
+      expect(taskObj).toBeDefined();
+      expect('robot_id' in taskObj).toBe(false);
+
+      const stored = await taskRepository.findOne({ where: { task_id: testTaskId } });
+      expect(stored?.robot_id).toBeNull();
+    });
+
+    it('should persist and return robot_id on update when warehouse has robot access', async () => {
+      await warehouseRepository.update(
+        { warehouse_id: testWarehouseId },
+        { robot_access: true } as any,
+      );
+
+      const robotId = '550e8400-e29b-41d4-a716-446655440000';
+      const updateWithRobot: TaskUpdateReq = {
+        batch_job_id: testBatchId,
+        updates: [
+          {
+            task_id: testTaskId,
+            start_location: { location_id: 'LOC_001', location_dimension: { length: 100, width: 50, height: 80 } },
+            end_location: { location_id: 'LOC_002', location_dimension: { length: 100, width: 50, height: 80 } },
+            cargos: [],
+            robot_id: robotId,
+          } as any,
+        ],
+      };
+
+      await request(app.getHttpServer())
+        .patch(`/robot-job/${testWarehouseId}/tasks`)
+        .set('authorization', 'test-api-key')
+        .send(updateWithRobot)
+        .expect(200);
+
+      const getResp = await request(app.getHttpServer())
+        .get(`/robot-job/${testWarehouseId}/tasks/${testBatchId}`)
+        .set('authorization', 'test-api-key')
+        .expect(200);
+      const taskObj = getResp.body.tasks.find((t: any) => t.task_id === testTaskId);
+      expect(taskObj).toBeDefined();
+      expect(taskObj.robot_id).toBe(robotId);
     });
 
     it('should return 401 for missing authorization', async () => {
@@ -1385,6 +1516,32 @@ describe('RobotJobController (e2e)', () => {
           { get_location_config: null as any },
         );
       });
+    });
+  });
+
+  describe('GET /:warehouse_id/robots (Robots listing)', () => {
+    it('should return 403 when warehouse has no robot access', async () => {
+      await request(app.getHttpServer())
+        .get(`/robot-job/${testWarehouseId}/robots`)
+        .set('authorization', 'test-api-key')
+        .expect(403);
+    });
+
+    it('should return robots when warehouse has robot access', async () => {
+      await warehouseRepository.update(
+        { warehouse_id: testWarehouseId },
+        { robot_access: true } as any,
+      );
+
+      const response = await request(app.getHttpServer())
+        .get(`/robot-job/${testWarehouseId}/robots`)
+        .set('authorization', 'test-api-key')
+        .expect(200);
+
+      expect(Array.isArray(response.body.robots)).toBe(true);
+      expect(response.body.robots.length).toBeGreaterThan(0);
+      expect(response.body.robots[0]).toHaveProperty('id');
+      expect(response.body.robots[0]).toHaveProperty('status');
     });
   });
 
