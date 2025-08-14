@@ -6,10 +6,12 @@ const AuthRequest = {
     'password': 'admin',
 }
 
-const AUTH_URL = 'https://api.araplraas.com/operator/v1/auth/login';
+
 
 export async function authenticate() {
     try {
+        const AUTH_URL = process.env.FMS_BASE_URL+'/operator/v1/auth/login';
+        console.log(`Auth url:`, AUTH_URL);
         const response = await fetch(AUTH_URL, {
             method: 'POST',
             headers: {

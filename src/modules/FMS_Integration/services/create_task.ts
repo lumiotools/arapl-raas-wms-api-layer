@@ -46,7 +46,9 @@ export async function createTask(payload: struct_fms_create_task): Promise<TaskG
             },
             body: JSON.stringify(RequestBody)
         });
+        console.log(`Request Body: ${JSON.stringify(RequestBody)}`);
         console.log("token: ",Token);
+        console.log(`response: ${JSON.stringify(response)}`);
         if (!response.ok) {
             const errorText = await response.text();
             throw new Error(`Failed to create task: ${response.status} ${errorText}`);

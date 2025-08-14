@@ -1,0 +1,46 @@
+{
+    "endpoint":{
+        "url": "https://api.araplraas.com/wms-integration-wrapper/robot-job/:warehouse_id/tasks/:warehouse_id/locations",
+        "method": "GET",
+        "headers": {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer <token>"
+        }
+    },
+    "request":{
+        "body": {
+        },
+        "query_params": {
+            "location_status": "input.location_status",
+            "location_zone": "input.location_zone",
+            "location_type": "input.location_type",
+            "location_level": "input.location_level",
+            "location_limit": "input.location_limit"
+        },
+        "path_params": {
+            "warehouse_id": "input.warehouse_id"
+        }
+    },
+    "response":{
+        "body": {
+            "object_type": "object",
+            "zone_id": {"object_type": "string", "path": "input.zone_id"}, 
+            "available_locations": {
+                "object_type": "array",
+                "source": "input.available_location_types",
+                "map":{
+                    "object_type": "object",
+                    "location_id": {"object_type": "string", "path": "loc.location_id"}, 
+                    "location_dimension": { 
+                        "object_type": "object",
+                        "length": {"object_type":"string", "path": "loc.location_dimension.length"},
+                        "width": {"object_type":"string", "path":"loc.location_dimension.width"},
+                        "height": {"object_type":"string", "path":"loc.location_dimension.height"}
+                    },
+                    "location_type": {"object_type": "string", "path": "loc.location_type"}, 
+                    "location_action": {"object_type": "string", "path": "loc.location_action"}
+                }
+            }
+        }
+    }
+}

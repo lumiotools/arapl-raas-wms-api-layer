@@ -92,6 +92,13 @@ export class GetLocationReq {
   location_status: LocationStatus = LocationStatus.All;
 
   @ApiPropertyOptional({
+    description: 'Filter by warehouse ID',
+    example: 'WH001',
+  })
+  @IsOptional()
+  warehouse_id: string;
+
+  @ApiPropertyOptional({
     description: 'Filter by location zone ID',
     example: 'ZONE_A1',
   })

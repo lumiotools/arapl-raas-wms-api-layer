@@ -1054,30 +1054,18 @@ export class RobotJobService {
           `Warehouse with ID '${warehouseId}' not found.`,
         );
       }
-      const mapping = config;
+      let mapping ;
+      try {
+        mapping = await fs.readFile(`src/config_mapping/${warehouseId}/${config}.json`, 'utf-8');
+        mapping = JSON.parse(mapping);
+      } catch (error) {
+        console.error('Error loading JSON file:', error);
+        throw new Error(`Failed to load JSON file: ${config}`);
+      }
 
       let apiEndpoint = mapping.endpoint.url;
-      const dummy: GetLocationRes = {
-        zone_id: 'zone-1',
-        available_location_types: [
-          {
-            location_id: 'LOC-DROP-101',
-            location_dimension: {
-              length: 100,
-              width: 80,
-              height: 150,
-            },
-            location_type: LocationType.Pallet,
-            location_action: LocationAction.Drop,
-          },
-        ],
-      };
-      if (warehouse.locations_customer_managed) {
-        return dummy;
-      } else {
-        return dummy;
-      }
       const path_params = mapping.request.path_params;
+      console.log(`getLocation Request: ${JSON.stringify(getLocationReq)}`)
       if (!path_params) {
         throw new Error('Path parameters are not defined in the mapping.');
       }
@@ -1085,14 +1073,14 @@ export class RobotJobService {
         console.log(
           `Path Param: ${path_param}, Value: ${path_params[path_param]}`,
         );
-        apiEndpoint = apiEndpoint.replace(
+        const paramValue = this.unstructureHelper(
+          getLocationReq,
+          path_params[path_param],
+        )[1] || '';
+        
+        apiEndpoint = apiEndpoint.replaceAll(
           `:${path_param}`,
-          encodeURIComponent(
-            this.unstructureHelper(
-              getLocationReq,
-              path_params[path_param],
-            )[1] || '',
-          ),
+          encodeURIComponent(paramValue),
         );
       }
 
@@ -1100,28 +1088,36 @@ export class RobotJobService {
       if (!query_params) {
         throw new Error('Query parameters are not defined in the mapping.');
       }
+      if (query_params){
+        apiEndpoint += '?'; // Start query parameters if any exist
+      }
       for (const query_param in query_params) {
         if (query_params[query_param] === 'null') {
           continue; // Skip if the query parameter value is "null"
         }
-        apiEndpoint += `?${query_param}=${encodeURIComponent(
-          query_params[query_param],
-        )}`;
+        apiEndpoint += `${query_param}=${encodeURIComponent(
+          String(this.unstructureHelper(getLocationReq, query_params[query_param])[1]) || '',
+        )}&`;
       }
-
-      const payload: any = await this._genericTaskTransformer(
-        mapping.request.body,
-        getLocationReq,
-      );
-      console.log('Transformed Payload:', payload);
-      const response = await axios.post(apiEndpoint, getLocationReq, {
+      console.log('API Endpoint:', apiEndpoint);
+      // const payload: any = await this._genericTaskTransformer(
+      //   mapping.request.body,
+      //   getLocationReq,
+      // );
+      // console.log('Transformed Payload:', payload);
+      const response = await fetch(apiEndpoint, {
+        method: 'GET',
         headers: {
-          'Content-Type': mapping.endpoint.headers['Content-Type'],
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwic3ViIjoiOTM5ZGQ5MzUtOTczOC00YmFlLTg3NmUtMDQ4NWI1ODE3OTU2IiwiaWF0IjoxNzU1MTg2Nzk2LCJleHAiOjE3NTUyNzMxOTZ9.LWCh_mQXcfkLz9vK98PR2hTCS-j2PTA_3T49WXloyk0`
         },
-        data: getLocationReq,
       });
-      console.log('API Response:', response.data);
-      const responseData = response.data;
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const responseData = await response.json();
+      console.log('API Response:', responseData);
       const TransformedResponse = await this._genericTaskTransformer(
         mapping.response.body,
         responseData,

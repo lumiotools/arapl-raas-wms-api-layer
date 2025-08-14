@@ -35,7 +35,7 @@ import { UnauthorizedDto } from './dto/Unauthorized.dto';
 import { ForbiddenDto } from './dto/Forbidden.dto';
 import { InternalServerErrorDto } from './dto/InternalServerError.dto';
 import { ConflictDto } from './dto/Conflict.dto';
-import { config } from 'process';
+// import { config, config, config } from 'process';
 import { GetTasksParamsDto, GetTasksResponseDto } from './dto/GetTasks.dto';
 import { UpdateWebhookReq, UpdateWebhookRes } from './dto/UpdateWebhook.dto';
 import {
@@ -772,15 +772,19 @@ export class RobotJobController {
     @Query('location_type') locationType?: LocationType,
     @Query('location_level') locationLevel?: string,
     @Query('location_limit') locationLimit?: number,
+    @Query('config_name') configName?: string,
   ): Promise<GetLocationRes> {
-    const config = request.taskConfigs?.get_location;
+    console.log(`configName: ${configName}`);
+    const config = configName ? configName : undefined;
+    console.log(`config: ${config}`);
     if (config) {
       const getLocationReq: GetLocationReq = {
         location_status: locationStatus as LocationStatus.All,
         location_zone: locationZone || '',
         location_type: locationType as LocationType.Pallet,
         location_level: locationLevel || 'All',
-        location_limit: locationLimit || 0,
+        location_limit: locationLimit || 10,
+        warehouse_id: warehouseId,
       };
       return await this.robotJobService.getLocations(
         warehouseId,
