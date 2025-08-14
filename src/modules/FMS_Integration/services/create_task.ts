@@ -1,14 +1,15 @@
 
 import {authenticate} from "./authentication";
 import fetch from 'node-fetch';
-import { Task, TaskGenerationReq, TaskGenerationRes } from "src/modules/robot-job/dto/Task_Generation.dto";
+import { TaskGenerationReq, TaskGenerationRes } from "src/modules/robot-job/dto/Task_Generation.dto";
+import { Task } from "src/modules/robot-job/entities/task.entity";
 
 interface struct_fms_create_task {
     warehouse_id: string
     batch_job_id: string,
-    batch_priority: number,
-    batch_type: string,
-    batch_frequency: number,
+    batch_priority?: number,
+    batch_type?: string,
+    batch_frequency?: number,
     tasks: Task[]
 }
 
@@ -23,7 +24,7 @@ export async function createTask(payload: struct_fms_create_task): Promise<TaskG
             tasks: payload.tasks.map(task => ({
                 task_id: task.task_id,
                 task_type:task.task_type,
-                // robot_id: task.robot_id,
+                robot_id: task.robot_id,
                 start_location: {
                     location_id: task.start_location.location_id,
                     location_type: task.start_location.location_type,

@@ -46,6 +46,7 @@ import {
   UpdateLocationTrackingReq,
   UpdateLocationTrackingRes,
 } from './dto/UpdateLocationTracking.dto';
+import { createTask } from 'src/modules/FMS_Integration/services/create_task';
 
 @Injectable()
 export class RobotJobService {
@@ -337,6 +338,7 @@ export class RobotJobService {
           start_location: task.start_location,
           end_location: task.end_location,
           wait_time: task.wait_time,
+          robot_id: task.robot_id,
           cargos: task.cargos,
           batch_job: newBatchJob,
           status: 'pending',
@@ -348,12 +350,41 @@ export class RobotJobService {
         // Optional: collect errors into array and return it at the end
       }
     }
+    let fms_response ;
+    try{
+      fms_response = await createTask({
+        warehouse_id: warehouseId,
+        batch_job_id: createRobotJobDto.batch_job_id,
+        batch_priority: createRobotJobDto.batch_priority,
+        batch_type: createRobotJobDto.batch_type,
+        batch_frequency: createRobotJobDto.batch_frequency,
+        tasks: Tasks,
+      });
+    }catch(err){
+      // Clean up: delete the created batch job and its tasks
+      try {
+        await this.TaskRepository.delete({ batch_job: newBatchJob });
+        await this.BatchJobRepository.delete({ id: newBatchJob.id });
+      } catch (cleanupError) {
+        console.error('FMS task creation Failed: Failed to cleanup batch job and tasks:', cleanupError);
+      }
+      throw new Error('FMS task creation failed: ' + err.message);
+    }
+    if (fms_response && fms_response.status === 'success') {
+      return {
+        batch_id: createRobotJobDto.batch_job_id,
+        status: 'success',
+      };
+    }
 
-    return {
-      batch_id: createRobotJobDto.batch_job_id,
+    try {
+        await this.TaskRepository.delete({ batch_job: newBatchJob });
+      await this.BatchJobRepository.delete({ id: newBatchJob.id });
+    } catch (cleanupError) {
+      console.error('FMS task creation Failed: Failed to cleanup batch job and tasks:', cleanupError);
+    }
 
-      status: 'success',
-    };
+    throw new Error('FMS task creation failed');
   }
 
   unstructureHelper(
