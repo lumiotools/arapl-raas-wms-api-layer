@@ -477,6 +477,7 @@ export class RobotJobController {
     @Body() body: CancelReq,
     @Req() request: Request,
   ): Promise<BatchCancelRes> {
+    console.log('reached');
     const config = request.taskConfigs?.cancel_task;
     if (config) {
       const result = await this.robotJobService.cancelUnstructuredBatch(
@@ -490,11 +491,12 @@ export class RobotJobController {
       }
       return result;
     }
-
+    console.log('proceeding');
     const batchDto = plainToInstance(CancelReq, body);
     const validationErrors = await this.validator.validate(batchDto);
-
+    console.log('proceeding');
     if (validationErrors.length === 0) {
+      console.log('entering');
       const result = await this.robotJobService.cancelBatch(
         warehouseId,
         batchId,
@@ -505,7 +507,7 @@ export class RobotJobController {
       }
       return result;
     }
-
+    console.log('going');
     throw new BadRequestException('Invalid request body found.');
   }
 

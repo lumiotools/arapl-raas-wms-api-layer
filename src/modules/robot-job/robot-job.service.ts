@@ -48,6 +48,7 @@ import {
 } from './dto/UpdateLocationTracking.dto';
 import { createTask } from 'src/modules/FMS_Integration/services/create_task';
 import { get_tasks } from '../FMS_Integration/services/get_task';
+import { cancelBatch } from '../FMS_Integration/services/cancel';
 
 @Injectable()
 export class RobotJobService {
@@ -346,13 +347,6 @@ export class RobotJobService {
         tasks: Tasks,
       });
     }catch(err){
-      // Clean up: delete the created batch job and its tasks
-      try {
-        await this.TaskRepository.delete({ batch_job: newBatchJob });
-        await this.BatchJobRepository.delete({ id: newBatchJob.id });
-      } catch (cleanupError) {
-        console.error('FMS task creation Failed: Failed to cleanup batch job and tasks:', cleanupError);
-      }
       throw new BadRequestException('FMS task creation failed');
     }
     console.log(`fms response: ${JSON.stringify(fms_response)}`);
@@ -362,14 +356,6 @@ export class RobotJobService {
         status: 'success',
       };
     }
-
-    try {
-        await this.TaskRepository.delete({ batch_job: newBatchJob });
-        await this.BatchJobRepository.delete({ id: newBatchJob.id });
-    } catch (cleanupError) {
-      console.error('FMS task creation Failed: Failed to cleanup batch job and tasks:', cleanupError);
-    }
-
     throw new BadRequestException('FMS task creation failed: ', fms_response.status);
   }
 
@@ -761,6 +747,21 @@ export class RobotJobService {
         cancelled_at: new Date().toISOString(),
         message: `Batch job '${batch_id}' is not in 'pending' state and cannot be cancelled.`,
       });
+    }
+    let fms_response;
+    try {
+      fms_response = await cancelBatch({
+        warehouse_id,
+        batch_job_id: batch_id,
+        cancel_req
+      });
+    } catch (error) {
+      console.error('Error occurred while cancelling batch:', error);
+      throw new BadRequestException('Failed to cancel batch in FMS');
+    }
+
+    if (!fms_response) {
+      throw new BadRequestException('Failed to cancel batch in FMS');
     }
 
     await this.BatchJobRepository.remove(batchJob);

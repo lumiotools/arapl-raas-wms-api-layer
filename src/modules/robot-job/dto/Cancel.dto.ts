@@ -50,6 +50,14 @@ import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CancelReq {
+
+  @ApiPropertyOptional({
+    description: 'Force cancellation of the task',
+    example: false,
+    default: false,
+  })
+  force: boolean = false;
+
   @ApiPropertyOptional({
     description: 'Reason for cancelling the task',
     example: 'Task no longer needed',
