@@ -1111,15 +1111,15 @@ export class RobotJobService {
       }
       
       const responseData = await response.json();
-      console.log('API Response:', responseData);
+      // console.log('API Response:', responseData);
       const TransformedResponse = await this._genericTaskTransformer(
         mapping.response.body,
         responseData,
       );
-      console.log(
-        'Transformed Response:',
-        JSON.stringify(TransformedResponse, null, 2),
-      );
+      // console.log(
+      //   'Transformed Response:',
+      //   JSON.stringify(TransformedResponse, null, 2),
+      // );
       return TransformedResponse as GetLocationRes;
     } catch (error) {
       if (error.response) {
