@@ -368,9 +368,10 @@ export class RobotJobService {
       } catch (cleanupError) {
         console.error('FMS task creation Failed: Failed to cleanup batch job and tasks:', cleanupError);
       }
-      throw new Error('FMS task creation failed: ' + err.message);
+      throw new BadRequestException('FMS task creation failed');
     }
-    if (fms_response && fms_response.status === 'success') {
+    console.log(`fms response: ${JSON.stringify(fms_response)}`);
+    if (fms_response) {
       return {
         batch_id: createRobotJobDto.batch_job_id,
         status: 'success',
@@ -379,12 +380,12 @@ export class RobotJobService {
 
     try {
         await this.TaskRepository.delete({ batch_job: newBatchJob });
-      await this.BatchJobRepository.delete({ id: newBatchJob.id });
+        await this.BatchJobRepository.delete({ id: newBatchJob.id });
     } catch (cleanupError) {
       console.error('FMS task creation Failed: Failed to cleanup batch job and tasks:', cleanupError);
     }
 
-    throw new Error('FMS task creation failed');
+    throw new BadRequestException('FMS task creation failed: ', fms_response.status);
   }
 
   unstructureHelper(

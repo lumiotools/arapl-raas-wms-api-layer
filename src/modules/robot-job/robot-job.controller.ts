@@ -229,7 +229,14 @@ export class RobotJobController {
     const config = request.taskConfigs?.create_task;
     const structuredDto = plainToInstance(TaskGenerationReq, body);
     const validationErrors = await this.validator.validate(structuredDto);
-
+    if (validationErrors.length > 0) {
+      const errorMessages = validationErrors.map(error => {
+        const property = error.property;
+        const constraints = Object.values(error.constraints || {}).join(', ');
+        return `Wrong column/attribute: '${property}' - ${constraints}`;
+      });
+      console.log(`Validation errors: ${errorMessages.join('; ')}`);
+    }
     if (validationErrors.length === 0) {
       return this.robotJobService.createTask(warehouseId, structuredDto);
     }

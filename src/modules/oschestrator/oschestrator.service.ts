@@ -30,51 +30,51 @@ export class OschestratorService {
     ) { }
 
 
-    @Interval(60000) // Check every minute
-    async checkBatchTaskStatus(): Promise<void> {
-        if (this.isCheckBatchJobStatus) {
-            // currently checking batch job status, skip this cycle
-            this.logger.warn('Already checking batch job status, skipping this cycle');
-            return;
-        }
-        try{
-            this.isCheckBatchJobStatus = true;
-            // find the first batch that is pendingg
-            const pendingBatchJob = await this.batchJobRepository.findOne({
-                where: { status: 'pending' },
-            });
-            if (pendingBatchJob) {
-                await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate a delay of 1 second
-                // Found a pending batch job, process it
-                this.logger.log(`Found pending batch job: ${pendingBatchJob.batch_job_id}`);
-                const tasks = await this.taskRepository.find({
-                    where: { batch_job: { batch_job_id: pendingBatchJob.batch_job_id }, status: 'pending' },
-                });
-                for (const task of tasks) {
-                    task.status = 'inqueue'; // Update task status to inqueue
-                    await this.taskRepository.save(task);
-                    this.TaskQueue.push(task);
-                }
-                pendingBatchJob.status = 'inqueue'; // Update batch job status to inqueue
-                await this.batchJobRepository.save(pendingBatchJob);
+    // @Interval(60000) // Check every minute
+    // async checkBatchTaskStatus(): Promise<void> {
+    //     if (this.isCheckBatchJobStatus) {
+    //         // currently checking batch job status, skip this cycle
+    //         this.logger.warn('Already checking batch job status, skipping this cycle');
+    //         return;
+    //     }
+    //     try{
+    //         this.isCheckBatchJobStatus = true;
+    //         // find the first batch that is pendingg
+    //         const pendingBatchJob = await this.batchJobRepository.findOne({
+    //             where: { status: 'pending' },
+    //         });
+    //         if (pendingBatchJob) {
+    //             await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate a delay of 1 second
+    //             // Found a pending batch job, process it
+    //             this.logger.log(`Found pending batch job: ${pendingBatchJob.batch_job_id}`);
+    //             const tasks = await this.taskRepository.find({
+    //                 where: { batch_job: { batch_job_id: pendingBatchJob.batch_job_id }, status: 'pending' },
+    //             });
+    //             for (const task of tasks) {
+    //                 task.status = 'inqueue'; // Update task status to inqueue
+    //                 await this.taskRepository.save(task);
+    //                 this.TaskQueue.push(task);
+    //             }
+    //             pendingBatchJob.status = 'inqueue'; // Update batch job status to inqueue
+    //             await this.batchJobRepository.save(pendingBatchJob);
 
-                await this.wms_webhook({tasks: tasks, existingBatchJob: pendingBatchJob});
+    //             await this.wms_webhook({tasks: tasks, existingBatchJob: pendingBatchJob});
 
-                const tasksToProcess : Task[] = [...this.TaskQueue];
-                this.TaskQueue.length = 0; // clear the TaskQueue after processing
-                await this.processTaskQueueInterval(tasksToProcess);
+    //             const tasksToProcess : Task[] = [...this.TaskQueue];
+    //             this.TaskQueue.length = 0; // clear the TaskQueue after processing
+    //             await this.processTaskQueueInterval(tasksToProcess);
                 
-                this.logger.log(`All pending tasks for batch job ${pendingBatchJob.batch_job_id} have been updated to inqueue.`);
-            } else {
-                this.logger.log('No pending batch jobs found.');
-            }
-        }
-        catch (error) {
-            this.logger.error('Error checking batch job status:', error);
-        } finally {
-            this.isCheckBatchJobStatus = false;
-        }
-    }
+    //             this.logger.log(`All pending tasks for batch job ${pendingBatchJob.batch_job_id} have been updated to inqueue.`);
+    //         } else {
+    //             this.logger.log('No pending batch jobs found.');
+    //         }
+    //     }
+    //     catch (error) {
+    //         this.logger.error('Error checking batch job status:', error);
+    //     } finally {
+    //         this.isCheckBatchJobStatus = false;
+    //     }
+    // }
 
     // @Interval(60000)
     async processTaskQueueInterval(tasksToProcess: Task[]): Promise<void> {

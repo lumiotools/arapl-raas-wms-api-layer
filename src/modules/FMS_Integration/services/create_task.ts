@@ -1,4 +1,5 @@
 
+import { BadRequestException } from "@nestjs/common";
 import {authenticate} from "./authentication";
 import fetch from 'node-fetch';
 import { TaskGenerationReq, TaskGenerationRes } from "src/modules/robot-job/dto/Task_Generation.dto";
@@ -51,14 +52,13 @@ export async function createTask(payload: struct_fms_create_task): Promise<TaskG
         console.log(`response: ${JSON.stringify(response)}`);
         if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`Failed to create task: ${response.status} ${errorText}`);
+            throw new BadRequestException(`Failed to create task: ${response.status} ${errorText}`);
         }
 
         return await response.json();
-            
-    }
-    catch (error) {
+
+    } catch (error) {
         console.error('Error during create-task:', error);
-        throw new Error('Create task failed');
+        throw new BadRequestException('FMS Create task failed');
     }
 }
