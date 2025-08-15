@@ -1043,7 +1043,6 @@ export class RobotJobService {
   async getLocations(
     warehouseId: string,
     getLocationReq: GetLocationReq,
-    config: any,
   ): Promise<GetLocationRes> {
     try {
       const warehouse = await this.WarehouseRepository.findOne({
@@ -1054,14 +1053,7 @@ export class RobotJobService {
           `Warehouse with ID '${warehouseId}' not found.`,
         );
       }
-      let mapping ;
-      try {
-        mapping = await fs.readFile(`src/config_mapping/${warehouseId}/${config}.json`, 'utf-8');
-        mapping = JSON.parse(mapping);
-      } catch (error) {
-        console.error('Error loading JSON file:', error);
-        throw new Error(`Failed to load JSON file: ${config}`);
-      }
+      const mapping = warehouse.get_location_config;
 
       let apiEndpoint = mapping.endpoint.url;
       const path_params = mapping.request.path_params;

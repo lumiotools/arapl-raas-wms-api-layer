@@ -772,44 +772,19 @@ export class RobotJobController {
     @Query('location_type') locationType?: LocationType,
     @Query('location_level') locationLevel?: string,
     @Query('location_limit') locationLimit?: number,
-    @Query('config_name') configName?: string,
   ): Promise<GetLocationRes> {
-    console.log(`configName: ${configName}`);
-    const config = configName ? configName : undefined;
-    console.log(`config: ${config}`);
-    if (config) {
-      const getLocationReq: GetLocationReq = {
-        location_status: locationStatus as LocationStatus.All,
-        location_zone: locationZone || '',
-        location_type: locationType as LocationType.Pallet,
-        location_level: locationLevel || 'All',
-        location_limit: locationLimit || 10,
-        warehouse_id: warehouseId,
-      };
-      return await this.robotJobService.getLocations(
-        warehouseId,
-        getLocationReq,
-        config,
-      );
-    } else {
-      const dummy: GetLocationRes = {
-        zone_id: 'zone-1',
-        available_location_types: [
-          {
-            location_id: 'LOC-DROP-101',
-            location_dimension: {
-              length: 100,
-              width: 80,
-              height: 150,
-            },
-            location_type: LocationType.Pallet,
-            location_action: LocationAction.Drop,
-          },
-        ],
-      };
-
-      return dummy;
-    }
+    const getLocationReq: GetLocationReq = {
+      location_status: locationStatus as LocationStatus.All,
+      location_zone: locationZone || '',
+      location_type: locationType as LocationType.Pallet,
+      location_level: locationLevel || 'All',
+      location_limit: locationLimit || 1e9,
+      warehouse_id: warehouseId,
+    };
+    return await this.robotJobService.getLocations(
+      warehouseId,
+      getLocationReq
+    );
   }
 
   @ApiOperation({ summary: 'Update webhook URL for a warehouse' })
