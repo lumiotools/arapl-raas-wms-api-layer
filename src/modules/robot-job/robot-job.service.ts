@@ -47,6 +47,7 @@ import {
   UpdateLocationTrackingRes,
 } from './dto/UpdateLocationTracking.dto';
 import { createTask } from 'src/modules/FMS_Integration/services/create_task';
+import { get_tasks } from '../FMS_Integration/services/get_task';
 
 @Injectable()
 export class RobotJobService {
@@ -70,26 +71,10 @@ export class RobotJobService {
     warehouseId: string,
     batchId: string,
   ): Promise<TaskEntity[]> {
-    const batchJob = await this.BatchJobRepository.findOne({
-      where: {
-        batch_job_id: batchId,
-        warehouse_id: warehouseId,
-      },
+    return get_tasks({
+      warehouse_id: warehouseId,
+      batch_job_id: batchId,
     });
-
-    if (!batchJob) {
-      throw new NotFoundException(
-        `Batch job with ID '${batchId}' not found in warehouse '${warehouseId}'.`,
-      );
-    }
-
-    const tasks = await this.TaskRepository.find({
-      where: {
-        batch_job_id: batchJob.id,
-      },
-    });
-
-    return tasks;
   }
 
   async updateLocation(

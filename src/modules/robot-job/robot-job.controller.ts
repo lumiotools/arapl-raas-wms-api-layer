@@ -127,15 +127,7 @@ export class RobotJobController {
       params.warehouse_id,
       params.batch_id,
     );
-
-    const tasksForResponse = taskEntities.map((entity) => {
-      return {
-        ...entity,
-        wait: entity.wait_time,
-      };
-    });
-
-    return { tasks: tasksForResponse };
+    return { tasks: taskEntities };
   }
 
   // @Post(':warehouse_id/tasks')
