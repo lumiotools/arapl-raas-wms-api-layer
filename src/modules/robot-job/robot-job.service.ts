@@ -48,7 +48,7 @@ import {
 } from './dto/UpdateLocationTracking.dto';
 import { createTask } from 'src/modules/FMS_Integration/services/create_task';
 import { get_tasks } from '../FMS_Integration/services/get_task';
-import { cancelBatch } from '../FMS_Integration/services/cancel';
+import { cancelBatch, cancelBatchTask } from '../FMS_Integration/services/cancel';
 
 @Injectable()
 export class RobotJobService {
@@ -841,6 +841,21 @@ export class RobotJobService {
         cancelled_at: new Date().toISOString(),
         message: `Task '${task_id}' is not in 'pending' state and cannot be cancelled.`,
       });
+    }
+    let fms_response;
+    try{
+      fms_response = await cancelBatchTask({
+        warehouse_id,
+        batch_job_id: batch_id,
+        task_id: task_id,
+        cancel_req
+      });
+    } catch (error) {
+      console.error('Error occurred while cancelling task:', error);
+      throw new BadRequestException('Failed to cancel task in FMS');
+    }
+    if (!fms_response) {
+      throw new BadRequestException('Failed to cancel task in FMS');
     }
 
     await this.TaskRepository.remove(taskRepo);

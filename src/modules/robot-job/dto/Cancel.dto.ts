@@ -56,7 +56,8 @@ export class CancelReq {
     example: false,
     default: false,
   })
-  force: boolean = false;
+  @IsOptional()
+  force?: boolean = false;
 
   @ApiPropertyOptional({
     description: 'Reason for cancelling the task',

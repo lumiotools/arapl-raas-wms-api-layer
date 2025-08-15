@@ -10,6 +10,7 @@ interface CancelBatch {
     warehouse_id: string;
     batch_job_id: string;
     cancel_req: CancelReq
+    task_id?: string;
 }
 
 export async function cancelBatch(payload: CancelBatch): Promise<TaskGenerationRes> {
@@ -18,6 +19,36 @@ export async function cancelBatch(payload: CancelBatch): Promise<TaskGenerationR
         let URL = process.env.FMS_BASE_URL;
         console.log(`Cancel Batch URL: ${URL}/wms-integration-wrapper/robot-job/${payload.warehouse_id}/tasks/${payload.batch_job_id}/cancel`);
         const response = await fetch(`${URL}/wms-integration-wrapper/robot-job/${payload.warehouse_id}/tasks/${payload.batch_job_id}/cancel`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${Token}`
+            },
+            body: JSON.stringify(payload.cancel_req)
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new BadRequestException(`Failed to cancel batch: ${response.status} ${errorText}`);
+        }
+
+        const responseData = await response.json();
+        console.log(`response: ${JSON.stringify(responseData)}`);
+        return responseData;
+
+    } catch (error) {
+        console.error('Error during cancel-batch:', error);
+        throw new BadRequestException('FMS Cancel batch failed');
+    }
+}
+
+
+export async function cancelBatchTask(payload: CancelBatch): Promise<TaskGenerationRes> {
+    try{
+        const Token = await authenticate();
+        let URL = process.env.FMS_BASE_URL;
+        console.log(`Cancel Batch URL: ${URL}/wms-integration-wrapper/robot-job/${payload.warehouse_id}/tasks/${payload.batch_job_id}/${payload.task_id}/cancel`);
+        const response = await fetch(`${URL}/wms-integration-wrapper/robot-job/${payload.warehouse_id}/tasks/${payload.batch_job_id}/${payload.task_id}/cancel`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
