@@ -1,96 +1,47 @@
 
+import { BadRequestException } from "@nestjs/common";
 import {authenticate} from "./authentication";
 import fetch from 'node-fetch';
-import { Task } from "src/modules/robot-job/dto/Task_Generation.dto";
-import { TaskUpdateReq, TaskUpdateRes } from "src/modules/robot-job/dto/Task_Update.dto";
-import { CancelReq, BatchCancelRes, TaskCancelRes } from "src/modules/robot-job/dto/Cancel.dto";
-import { Cancel } from "axios";
-let UPDATE_TASK_URL = 'https://api.araplraas.com/operator/v1/tasks/';
+import { TaskGenerationReq, TaskGenerationRes } from "src/modules/robot-job/dto/Task_Generation.dto";
+import { Task } from "src/modules/robot-job/entities/task.entity";
+import { TaskUpdateRes } from "src/modules/robot-job/dto/Task_Update.dto";
 
+interface update_payload {
+    warehouse_id: string,
+    batch_job_id: string,
+    updates:Task[],
+    timestamp?: string
+}
 
-export async function updateTask(payload : TaskUpdateReq, id : string): Promise<TaskUpdateRes> {
+export async function updateTask(payload: update_payload): Promise<TaskUpdateRes> {
     try{
-        UPDATE_TASK_URL = UPDATE_TASK_URL + id;
-        console.log("update task url: ",UPDATE_TASK_URL);
         const Token = await authenticate();
-        const response = await fetch(UPDATE_TASK_URL, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${Token}`
-            },
-            body: JSON.stringify(payload)
-        });
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Failed to update task: ${response.status} ${errorText}`);
+        const RequestBody = {
+            batch_job_id: payload.batch_job_id,
+            updates: payload.updates,
         }
-        try {
-            return await response.json();
-        } catch (jsonError) {
-            console.error('Error parsing JSON response:', jsonError);
-            throw new Error('Failed to parse JSON response from update batch task status');
-        }
-            
-    }
-    catch (error) {
-        console.error('Error during update task:', error);
-        throw new Error('Update task failed');
-    }
-}
-
-
-
-export async function updateBatchAction(payload: CancelReq, task_id : string): Promise<BatchCancelRes> {// action
-    try {
-        const UPDATE_TASK_ACTION_URL = `https://api.araplraas.com/operator/v1/tasks/${task_id}/action`;
-        const Token = await authenticate();
-        const response = await fetch(UPDATE_TASK_ACTION_URL, {
+        let URL = process.env.FMS_BASE_URL;
+        const response = await fetch(`${URL}/wms-integration-wrapper/${payload.warehouse_id}/tasks`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${Token}`
             },
-            body: JSON.stringify({ payload})
+            body: JSON.stringify(RequestBody)
         });
+        console.log(`Request Body: ${JSON.stringify(RequestBody)}`);
         console.log("token: ",Token);
-        console.log("respone: ", response);
-
+        console.log(`response: ${JSON.stringify(response)}`);
         if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`Failed to update status: ${response.status} ${errorText}`);
+            throw new BadRequestException(`Failed to update task: ${response.status} ${errorText}`);
         }
 
         return await response.json();
+
     } catch (error) {
-        console.error('Error during update batch status:', error);
-        throw new Error('Update batch status failed');
+        console.error('Error during update-task:', error);
+        throw new BadRequestException('FMS Update task failed');
     }
 }
-
-export async function updateBatchTaskAction(payload: CancelReq, task_id : string , subtask_id: string): Promise<TaskCancelRes> { //action
-    try {
-        const UPDATE_TASK_ACTION_URL = `https://api.araplraas.com/operator/v1/tasks/${task_id}/subtasks/${subtask_id}/action`;
-        const Token = await authenticate();
-        const response = await fetch(UPDATE_TASK_ACTION_URL, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${Token}`
-            },
-            body: JSON.stringify({ payload})
-        });
-        console.log("token: ",Token);
-        console.log("respone: ", response);
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Failed to update task status: ${response.status} ${errorText}`);
-        }
-
-        return await response.json();
-    } catch (error) {
-        console.error('Error during update  batch task status:', error);
-        throw new Error('Update batch task status failed');
-    }
-}
+           
