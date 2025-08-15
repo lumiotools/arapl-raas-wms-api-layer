@@ -49,9 +49,75 @@ import {
 import { createTask } from 'src/modules/FMS_Integration/services/create_task';
 import { get_tasks } from '../FMS_Integration/services/get_task';
 import { cancelBatch, cancelBatchTask } from '../FMS_Integration/services/cancel';
+import { io, Socket } from 'socket.io-client';
 
 @Injectable()
 export class RobotJobService {
+  private fms_socket: Socket;
+  private isFilterSet = false;
+
+  onModuleInit() {
+    this.fms_socket = io('ws://api.araplraas.com');
+
+    this.fms_socket.on('connect', () => {
+      console.log('Connected to FMS socket server');
+      this.setupTaskFilters(); // Set filters on connect
+    });
+
+    this.fms_socket.on('reconnect', () => {
+      console.log('Reconnected to FMS socket server');
+      this.setupTaskFilters(); // Re-establish filters on reconnection
+    });
+
+    this.fms_socket.on('message', (data) => {
+      console.log('Received from FMS server:', data);
+    });
+
+    this.fms_socket.on('taskListFilteredUpdate', (data: any) => {
+      console.log('Received task list filtered update:', data);
+      this.processTaskUpdate(data);
+    });
+
+    this.fms_socket.on('disconnect', () => {
+      this.isFilterSet = false;
+    });
+  }
+
+  private setupTaskFilters() {
+    if (!this.isFilterSet) {
+      this.fms_socket.emit('message', {
+        "event": "setTaskListFilters",
+        "data": {
+          "limit": 10,
+          "filter": { "status": "task_in_progress" },
+          "sort": "latest",
+          "start_date": "2025-08-01",
+          "end_date": "2025-08-08"
+        }
+      });
+      this.isFilterSet = true;
+      console.log('Task filters set');
+    }
+  }
+
+  // Method to update filters when needed
+  updateTaskFilters(newFilters: any) {
+    this.fms_socket.emit('message', {
+      "event": "setTaskListFilters",
+      "data": newFilters
+    });
+    console.log('Task filters updated:', newFilters);
+  }
+
+  private processTaskUpdate(data: any) {
+    // Your business logic here
+    // This will be called automatically when tasks change
+  }
+
+  onModuleDestroy() {
+    this.fms_socket?.disconnect();
+  }
+
   constructor(
     @InjectRepository(BatchJob)
     private readonly BatchJobRepository: Repository<BatchJob>,
@@ -1211,5 +1277,11 @@ export class RobotJobService {
         `Failed to update location tracking settings: ${error.message}`,
       );
     }
+  }
+
+  async processIncomingData(incomingData: any): Promise<any> {
+    // Process the incoming data and return the result
+    console.log('Processing incoming data:', incomingData);
+    return { success: true };
   }
 }
