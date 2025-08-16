@@ -768,14 +768,14 @@ export class RobotJobController {
   async getEmptyLocations(
     @Param('warehouse_id') warehouseId: string,
     @Req() request: Request,
-    @Query('location_status') locationStatus?: LocationStatus,
+    @Query('location_status') locationStatus?: string,
     @Query('location_zone') locationZone?: string,
     @Query('location_type') locationType?: LocationType,
     @Query('location_level') locationLevel?: string,
     @Query('location_limit') locationLimit?: number,
   ): Promise<GetLocationRes> {
     const getLocationReq: GetLocationReq = {
-      location_status: locationStatus as LocationStatus.All,
+      location_status: locationStatus || '',
       location_zone: locationZone || '',
       location_type: locationType as LocationType.Pallet,
       location_level: locationLevel || 'All',

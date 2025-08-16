@@ -83,13 +83,10 @@ export class Location {
 
 export class GetLocationReq {
   @ApiPropertyOptional({
-    enum: LocationStatus,
-    default: LocationStatus.All,
     description: 'Status filter for locations (e.g. All, Empty, Occupied)',
   })
   @IsOptional()
-  @IsEnum(LocationStatus)
-  location_status: LocationStatus = LocationStatus.All;
+  location_status: string;
 
   @ApiPropertyOptional({
     description: 'Filter by warehouse ID',

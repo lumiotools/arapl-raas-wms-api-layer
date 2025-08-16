@@ -50,6 +50,7 @@ import { createTask } from 'src/modules/FMS_Integration/services/create_task';
 import { get_tasks } from '../FMS_Integration/services/get_task';
 import { cancelBatch, cancelBatchTask } from '../FMS_Integration/services/cancel';
 import { io, Socket } from 'socket.io-client';
+import { get_location } from '../FMS_Integration/services/get_location';
 
 @Injectable()
 export class RobotJobService {
@@ -1121,72 +1122,91 @@ export class RobotJobService {
           `Warehouse with ID '${warehouseId}' not found.`,
         );
       }
-      const mapping = warehouse.get_location_config;
-
-      let apiEndpoint = mapping.endpoint.url;
-      const path_params = mapping.request.path_params;
-      console.log(`getLocation Request: ${JSON.stringify(getLocationReq)}`)
-      if (!path_params) {
-        throw new Error('Path parameters are not defined in the mapping.');
+      if (!warehouse.locations_customer_managed) {
+        return await get_location(getLocationReq);
       }
-      for (const path_param in path_params) {
-        console.log(
-          `Path Param: ${path_param}, Value: ${path_params[path_param]}`,
-        );
-        const paramValue = this.unstructureHelper(
-          getLocationReq,
-          path_params[path_param],
-        )[1] || '';
+      return {
+        "zone_id": '',
+        "available_location_types": []
+      }
+    //   const mapping = warehouse.get_location_config;
+
+    //   let apiEndpoint = mapping.endpoint.url;
+    //   const path_params = mapping.request.path_params;
+    //   console.log(`getLocation Request: ${JSON.stringify(getLocationReq)}`)
+    //   if (!path_params) {
+    //     throw new Error('Path parameters are not defined in the mapping.');
+    //   }
+    //   for (const path_param in path_params) {
+    //     console.log(
+    //       `Path Param: ${path_param}, Value: ${path_params[path_param]}`,
+    //     );
+    //     const paramValue = this.unstructureHelper(
+    //       getLocationReq,
+    //       path_params[path_param],
+    //     )[1] || '';
         
-        apiEndpoint = apiEndpoint.replaceAll(
-          `:${path_param}`,
-          encodeURIComponent(paramValue),
-        );
-      }
+    //     apiEndpoint = apiEndpoint.replaceAll(
+    //       `:${path_param}`,
+    //       encodeURIComponent(paramValue),
+    //     );
+    //   }
 
-      const query_params = mapping.request.query_params;
-      if (!query_params) {
-        throw new Error('Query parameters are not defined in the mapping.');
-      }
-      if (query_params){
-        apiEndpoint += '?'; // Start query parameters if any exist
-      }
-      for (const query_param in query_params) {
-        if (query_params[query_param] === 'null') {
-          continue; // Skip if the query parameter value is "null"
-        }
-        apiEndpoint += `${query_param}=${encodeURIComponent(
-          String(this.unstructureHelper(getLocationReq, query_params[query_param])[1]) || '',
-        )}&`;
-      }
-      console.log('API Endpoint:', apiEndpoint);
-      // const payload: any = await this._genericTaskTransformer(
-      //   mapping.request.body,
-      //   getLocationReq,
-      // );
-      // console.log('Transformed Payload:', payload);
-      const response = await fetch(apiEndpoint, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwic3ViIjoiOTM5ZGQ5MzUtOTczOC00YmFlLTg3NmUtMDQ4NWI1ODE3OTU2IiwiaWF0IjoxNzU1MTg2Nzk2LCJleHAiOjE3NTUyNzMxOTZ9.LWCh_mQXcfkLz9vK98PR2hTCS-j2PTA_3T49WXloyk0`
-        },
-      });
+    //   const query_params = mapping.request.query_params;
+    //   if (!query_params) {
+    //     throw new Error('Query parameters are not defined in the mapping.');
+    //   }
+    //   if (query_params){
+    //     apiEndpoint += '?'; // Start query parameters if any exist
+    //   }
+    //   for (const query_param in query_params) {
+    //     if (query_params[query_param] === 'null') {
+    //       continue; // Skip if the query parameter value is "null"
+    //     }
+    //     apiEndpoint += `${query_param}=${encodeURIComponent(
+    //       String(this.unstructureHelper(getLocationReq, query_params[query_param])[1]) || '',
+    //     )}&`;
+    //   }
+    //   console.log('API Endpoint:', apiEndpoint);
+    //   // const payload: any = await this._genericTaskTransformer(
+    //   //   mapping.request.body,
+    //   //   getLocationReq,
+    //   // );
+    //   // console.log('Transformed Payload:', payload);
+    //   const response = await fetch(apiEndpoint, {
+    //     method: 'GET',
+    //     headers: {
+    //       'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwic3ViIjoiOTM5ZGQ5MzUtOTczOC00YmFlLTg3NmUtMDQ4NWI1ODE3OTU2IiwiaWF0IjoxNzU1MTg2Nzk2LCJleHAiOjE3NTUyNzMxOTZ9.LWCh_mQXcfkLz9vK98PR2hTCS-j2PTA_3T49WXloyk0`
+    //     },
+    //   });
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+    //   if (!response.ok) {
+    //     throw new Error(`HTTP error! status: ${response.status}`);
+    //   }
       
-      const responseData = await response.json();
-      // console.log('API Response:', responseData);
-      const TransformedResponse = await this._genericTaskTransformer(
-        mapping.response.body,
-        responseData,
-      );
-      // console.log(
-      //   'Transformed Response:',
-      //   JSON.stringify(TransformedResponse, null, 2),
-      // );
-      return TransformedResponse as GetLocationRes;
+    //   const responseData = await response.json();
+    //   // console.log('API Response:', responseData);
+    //   const TransformedResponse = await this._genericTaskTransformer(
+    //     mapping.response.body,
+    //     responseData,
+    //   );
+    //   // console.log(
+    //   //   'Transformed Response:',
+    //   //   JSON.stringify(TransformedResponse, null, 2),
+    //   // );
+    //   return TransformedResponse as GetLocationRes;
+    // } catch (error) {
+    //   if (error.response) {
+    //     throw new BadRequestException(
+    //       `API request failed with status ${error.response.status}: ${error.response.data}`,
+    //     );
+    //   } else if (error.code === 'ENOENT') {
+    //     throw new NotFoundException(`Configuration file not found`);
+    //   } else {
+    //     throw new BadRequestException(
+    //       `Error processing request: ${error.message}`,
+    //     );
+    //   }
     } catch (error) {
       if (error.response) {
         throw new BadRequestException(
