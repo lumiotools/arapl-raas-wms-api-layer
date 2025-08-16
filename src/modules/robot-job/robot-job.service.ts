@@ -70,10 +70,6 @@ export class RobotJobService {
       this.setupTaskFilters(); // Re-establish filters on reconnection
     });
 
-    this.fms_socket.on('message', (data) => {
-      console.log('Received from FMS server:', data);
-    });
-
     this.fms_socket.on('taskListFilteredUpdate', async (data: any) => {
       await this.processTaskUpdate(data);
     });
@@ -100,7 +96,6 @@ export class RobotJobService {
     }
   }
 
-  // Method to update filters when needed
   updateTaskFilters(newFilters: any) {
     this.fms_socket.emit('message', {
       "event": "setTaskListFilters",
@@ -118,7 +113,7 @@ export class RobotJobService {
       if (db_task.status!=task.status){
         // console.log('hi');
         db_task.status = task.status;
-        // await this.TaskRepository.save(db_task);
+        
         const batch = await this.BatchJobRepository.findOne({ where: { id: db_task.batch_job_id } });
         if (!batch) continue;
         console.log('batch')
@@ -141,6 +136,7 @@ export class RobotJobService {
               },
               timeout: 5000,
             });
+            await this.TaskRepository.save(db_task);
             console.log('Webhook notification sent successfully');
           } catch (webhookError) {
             console.error('Failed to send webhook notification:', webhookError);
