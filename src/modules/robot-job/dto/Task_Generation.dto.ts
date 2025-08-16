@@ -491,9 +491,15 @@ export class Task {
 
   @ApiProperty({ type: [Cargo] })
   @IsArray()
+  @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => Cargo)
-  cargos: Cargo[];
+  cargos?: Cargo[];
+
+  @ApiPropertyOptional({ example: 'ROBOT001' })
+  @IsOptional()
+  @IsString()
+  robot_id?: string;
 }
 
 export class TaskGenerationReq {

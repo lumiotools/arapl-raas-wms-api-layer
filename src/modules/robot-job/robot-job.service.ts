@@ -74,9 +74,8 @@ export class RobotJobService {
       console.log('Received from FMS server:', data);
     });
 
-    this.fms_socket.on('taskListFilteredUpdate', (data: any) => {
-      console.log('Received task list filtered update:', data);
-      this.processTaskUpdate(data);
+    this.fms_socket.on('taskListFilteredUpdate', async (data: any) => {
+      await this.processTaskUpdate(data);
     });
 
     this.fms_socket.on('disconnect', () => {
@@ -90,7 +89,7 @@ export class RobotJobService {
         "event": "setTaskListFilters",
         "data": {
           "limit": 10,
-          "filter": { "status": "task_in_progress" },
+          "filter": { "status": "Completed" },
           "sort": "latest",
           "start_date": "2025-08-01",
           "end_date": "2025-08-08"
@@ -110,9 +109,46 @@ export class RobotJobService {
     console.log('Task filters updated:', newFilters);
   }
 
-  private processTaskUpdate(data: any) {
-    // Your business logic here
-    // This will be called automatically when tasks change
+  private async processTaskUpdate(data: any) {
+    const tasks = data.data || [];
+    console.log(`tasks length: ${tasks.length}`);
+    for (const task of tasks){
+      const db_task = await this.TaskRepository.findOne({ where: { task_id: task.task_display_id } });
+      if(!db_task) continue;
+      if (db_task.status!=task.status){
+        // console.log('hi');
+        db_task.status = task.status;
+        // await this.TaskRepository.save(db_task);
+        const batch = await this.BatchJobRepository.findOne({ where: { id: db_task.batch_job_id } });
+        if (!batch) continue;
+        console.log('batch')
+        let webhook_payload;
+        try{
+          webhook_payload = await this.getTasksByBatchId(batch.warehouse_id, batch.batch_job_id);
+        } catch (error) {
+          console.error('Error fetching webhook payload:', error);
+          continue;
+        }
+        
+        console.log(`payload: ${JSON.stringify(webhook_payload)}`)
+        const warehouse = await this.WarehouseRepository.findOne({ where: { warehouse_id: batch.warehouse_id } });
+        if (!warehouse) continue;
+        if (warehouse.webhook_url) {
+          try {
+            await axios.post(warehouse.webhook_url, webhook_payload, {
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              timeout: 5000,
+            });
+            console.log('Webhook notification sent successfully');
+          } catch (webhookError) {
+            console.error('Failed to send webhook notification:', webhookError);
+          }
+        }
+
+      }
+    }
   }
 
   onModuleDestroy() {
@@ -327,7 +363,7 @@ export class RobotJobService {
       where: { batch_job_id: batch_job_id, warehouse_id: warehouseId },
     });
 
-    if (uniqueness) {
+    if (uniqueness && uniqueness.status !== 'pending') {
       throw new ConflictException(
         `Batch job with id ${batch_job_id} already exists in warehouse ${warehouseId}.`,
       );

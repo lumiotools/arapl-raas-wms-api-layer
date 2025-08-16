@@ -24,10 +24,10 @@ export class Task {
     @Column({ type: 'json', nullable: true })
     wait_time: Wait; 
 
-    @Column({ type: 'json' })
+    @Column({ type: 'json', nullable: true })
     cargos: Cargo[];
 
-    @Column({type: 'varchar', nullable: true})
+    @Column({ type: 'varchar', nullable: true })
     robot_id: string;
 
     @ManyToOne(() => BatchJob, batchJob => batchJob.id, {

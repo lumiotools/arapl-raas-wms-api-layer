@@ -16,7 +16,7 @@ interface struct_fms_create_task {
 
 export async function createTask(payload: struct_fms_create_task): Promise<TaskGenerationRes> {
     try{
-        const Token = await authenticate();
+        // const Token = await authenticate();
         const RequestBody = {
             batch_job_id: payload.batch_job_id,
             batch_priority: payload.batch_priority,
@@ -43,12 +43,12 @@ export async function createTask(payload: struct_fms_create_task): Promise<TaskG
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${Token}`
+                // 'Authorization': `Bearer ${Token}`
             },
             body: JSON.stringify(RequestBody)
         });
         console.log(`Request Body: ${JSON.stringify(RequestBody)}`);
-        console.log("token: ",Token);
+        // console.log("token: ",Token);
         console.log(`response: ${JSON.stringify(response)}`);
         if (!response.ok) {
             const errorText = await response.text();
