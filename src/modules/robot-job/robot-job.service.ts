@@ -111,7 +111,6 @@ export class RobotJobService {
       const db_task = await this.TaskRepository.findOne({ where: { task_id: task.task_display_id } });
       if(!db_task) continue;
       if (db_task.status!=task.status){
-        // console.log('hi');
         db_task.status = task.status;
         
         const batch = await this.BatchJobRepository.findOne({ where: { id: db_task.batch_job_id } });
