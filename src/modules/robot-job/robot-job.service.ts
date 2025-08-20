@@ -116,12 +116,12 @@ export class RobotJobService {
         const batch = await this.BatchJobRepository.findOne({ where: { id: db_task.batch_job_id } });
         if (!batch) continue;
         console.log('batch')
-        let webhook_payload;
-        try{
-          webhook_payload = await this.getTasksByBatchId(batch.warehouse_id, batch.batch_job_id);
-        } catch (error) {
-          console.error('Error fetching webhook payload:', error);
-          continue;
+        const webhook_payload = {
+          batch_job_id: batch.batch_job_id,
+          batch_job_status: task.status,
+          tasks:[
+            task
+          ]
         }
         
         console.log(`payload: ${JSON.stringify(webhook_payload)}`)

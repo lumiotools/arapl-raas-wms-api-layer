@@ -208,7 +208,7 @@
 
 // export enum batch_type {
 //     Continuous = "Continuous",
-//     Discrete = "Discrete"
+//     DISCRETE = "DISCRETE"
 // }
 
 // export class TaskGenerationReq {
@@ -224,7 +224,7 @@
 
 //     @IsOptional()
 //     @IsEnum(batch_type)
-//     batch_type?: batch_type = batch_type.Discrete;
+//     batch_type?: batch_type = batch_type.DISCRETE;
 
 //     @IsArray()
 //     @ValidateNested({ each: true })
@@ -313,7 +313,7 @@ export enum TaskType {
 
 export enum batch_type {
   Continuous = 'CONTINUOUS',
-  Discrete = 'DISCRETE',
+  DISCRETE = 'DISCRETE',
 }
 
 // Classes
@@ -515,10 +515,10 @@ export class TaskGenerationReq {
   @Max(10)
   batch_priority?: number = 5;
 
-  @ApiPropertyOptional({ enum: batch_type, default: batch_type.Discrete })
+  @ApiPropertyOptional({ enum: batch_type, default: batch_type.DISCRETE })
   @IsOptional()
   @IsEnum(batch_type)
-  batch_type?: batch_type = batch_type.Discrete;
+  batch_type?: batch_type = batch_type.DISCRETE;
 
   @ApiProperty({ type: [Task] })
   @IsArray()

@@ -2,7 +2,7 @@
   "object_type": "object",
   "batch_job_id": {"object_type": "string", "path":"input.job_id"}, 
   "batch_priority": {"object_type": "number", "path": "input.batch_priority", "default": 5},
-  "batch_type": {"object_type": "string", "path": "input.batch_type" , "default": "Discrete"},
+  "batch_type": {"object_type": "string", "path": "input.batch_type" , "default": "DISCRETE"},
   "batch_frequency": {"object_type": "number", "path": "input.batch_frequency"},
   "tasks": {
     "object_type": "array",

@@ -120,7 +120,7 @@ describe('RobotJobController (e2e)', () => {
     const validTaskRequest: TaskGenerationReq = {
       batch_job_id: testBatchId,
       batch_priority: 5,
-      batch_type: batch_type.Discrete,
+      batch_type: batch_type.DISCRETE,
       tasks: [
         {
           task_id: testTaskId,
@@ -174,7 +174,7 @@ describe('RobotJobController (e2e)', () => {
       });
       expect(batchJob).toBeDefined();
       expect(batchJob?.batch_priority).toBe(5);
-      expect(batchJob?.batch_type).toBe(batch_type.Discrete);
+      expect(batchJob?.batch_type).toBe(batch_type.DISCRETE);
 
       // Verify task was created
       const task = await taskRepository.findOne({
@@ -267,7 +267,7 @@ describe('RobotJobController (e2e)', () => {
           batch_type: {
             object_type: 'string',
             path: 'input.batch_type',
-            default: 'Discrete',
+            default: 'DISCRETE',
           },
           tasks: {
             object_type: 'array',
@@ -366,7 +366,7 @@ describe('RobotJobController (e2e)', () => {
           input: {
             job_id: testBatchId,
             batch_priority: 3,
-            batch_type: 'Discrete',
+            batch_type: 'DISCRETE',
             task_list: [
               {
                 task_identifier: testTaskId,
@@ -430,7 +430,7 @@ describe('RobotJobController (e2e)', () => {
           input: {
             job_id: testBatchId,
             // batch_priority omitted - should use default 5
-            // batch_type omitted - should use default 'Discrete'
+            // batch_type omitted - should use default 'DISCRETE'
             task_list: [
               {
                 task_identifier: testTaskId,
@@ -498,7 +498,7 @@ describe('RobotJobController (e2e)', () => {
         batch_job_id: testBatchId,
         warehouse_id: testWarehouseId,
         batch_priority: 5,
-        batch_type: batch_type.Discrete,
+        batch_type: batch_type.DISCRETE,
         status: 'pending',
       });
 
@@ -606,7 +606,7 @@ describe('RobotJobController (e2e)', () => {
         batch_job_id: testBatchId,
         warehouse_id: testWarehouseId,
         batch_priority: 5,
-        batch_type: batch_type.Discrete,
+        batch_type: batch_type.DISCRETE,
         status: 'pending',
       });
 
@@ -866,7 +866,7 @@ describe('RobotJobController (e2e)', () => {
         batch_job_id: testBatchId,
         warehouse_id: testWarehouseId,
         batch_priority: 5,
-        batch_type: batch_type.Discrete,
+        batch_type: batch_type.DISCRETE,
         status: 'pending',
       });
     });
@@ -984,7 +984,7 @@ describe('RobotJobController (e2e)', () => {
         batch_job_id: testBatchId,
         warehouse_id: testWarehouseId,
         batch_priority: 5,
-        batch_type: batch_type.Discrete,
+        batch_type: batch_type.DISCRETE,
         status: 'pending',
       });
 

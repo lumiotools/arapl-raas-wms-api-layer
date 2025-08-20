@@ -378,7 +378,7 @@ export class ConfigMappingService {
   private generateStringSampleData(path: string): string {
     // Generate appropriate sample data based on the field path
     if (path && path.includes('batch_type')) {
-      return 'Discrete'; // Use valid enum value
+      return 'DISCRETE'; // Use valid enum value
     }
     if (path && path.includes('task_type')) {
       return 'Crossdock'; // Use a realistic task type

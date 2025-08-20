@@ -184,7 +184,7 @@ describe('RobotJobService', () => {
     const validCreateTaskDto: TaskGenerationReq = {
       batch_job_id: 'BATCH_001',
       batch_priority: 5,
-      batch_type: batch_type.Discrete,
+      batch_type: batch_type.DISCRETE,
       tasks: [
         {
           task_id: 'TASK_001',
@@ -840,7 +840,7 @@ describe('RobotJobService', () => {
       batch_type: {
         object_type: 'string',
         path: 'input.batch_type',
-        default: 'Discrete',
+        default: 'DISCRETE',
       },
       batch_frequency: { object_type: 'number', path: 'input.batch_frequency' },
       tasks: {
@@ -1745,7 +1745,7 @@ describe('RobotJobService', () => {
       const emptyTaskDto = {
         batch_job_id: 'BATCH_001',
         batch_priority: 5,
-        batch_type: batch_type.Discrete,
+        batch_type: batch_type.DISCRETE,
         tasks: [],
       };
 
@@ -1766,7 +1766,7 @@ describe('RobotJobService', () => {
       const taskDto: TaskGenerationReq = {
         batch_job_id: 'BATCH_CONCURRENT',
         batch_priority: 5,
-        batch_type: batch_type.Discrete,
+        batch_type: batch_type.DISCRETE,
         tasks: [
           {
             task_id: 'TASK_001',
@@ -1813,7 +1813,7 @@ describe('RobotJobService', () => {
       const taskDto: TaskGenerationReq = {
         batch_job_id: 'BATCH_001',
         batch_priority: 5,
-        batch_type: batch_type.Discrete,
+        batch_type: batch_type.DISCRETE,
         tasks: [
           {
             task_id: 'TASK_001',
@@ -1848,7 +1848,7 @@ describe('RobotJobService', () => {
       const taskWithInvalidWait: TaskGenerationReq = {
         batch_job_id: 'BATCH_001',
         batch_priority: 5,
-        batch_type: batch_type.Discrete,
+        batch_type: batch_type.DISCRETE,
         tasks: [
           {
             task_id: 'TASK_001',

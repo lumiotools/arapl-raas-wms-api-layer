@@ -127,7 +127,7 @@ describe('RobotJobController', () => {
     const validTaskDto: TaskGenerationReq = {
       batch_job_id: 'job12345',
       batch_priority: 5,
-      batch_type: batch_type.Discrete,
+      batch_type: batch_type.DISCRETE,
       batch_frequency: 1,
       tasks: [
         {

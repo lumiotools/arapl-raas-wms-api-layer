@@ -26,7 +26,7 @@ export class BatchJob {
   @Column({ type: 'int', default: 5 })
   batch_priority: number;
 
-  @Column({ type: 'enum', enum: batch_type, default: batch_type.Discrete })
+  @Column({ type: 'enum', enum: batch_type, default: batch_type.DISCRETE })
   batch_type: batch_type;
 
   @Column({ type: 'int', nullable: true })

@@ -22,7 +22,7 @@ export class CreateTaskConfigDto {
       batch_type: {
         object_type: 'string',
         path: 'input.batch_type',
-        default: 'Discrete',
+        default: 'DISCRETE',
       },
       batch_frequency: { object_type: 'number', path: 'input.batch_frequency' },
       tasks: {
