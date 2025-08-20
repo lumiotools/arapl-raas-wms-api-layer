@@ -774,23 +774,6 @@ export class RobotJobController {
     @Query('location_level') locationLevel?: string,
     @Query('location_limit') locationLimit?: number,
   ): Promise<GetLocationRes> {
-    if (locationZone==='inventory'){
-      return {
-        zone_id: "inventory",
-        available_location_types:[
-          { location_id: "INV001",
-            location_type: LocationType.Pallet,
-            location_action: LocationAction.Drop,
-            location_dimension:{
-              length: 120,
-              width: 100,
-              height: 80
-            }
-
-          }
-        ]
-      }
-    }
     const getLocationReq: GetLocationReq = {
       location_status: locationStatus || '',
       location_zone: locationZone || '',
