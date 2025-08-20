@@ -51,6 +51,7 @@ import { get_tasks } from '../FMS_Integration/services/get_task';
 import { cancelBatch, cancelBatchTask } from '../FMS_Integration/services/cancel';
 import { io, Socket } from 'socket.io-client';
 import { get_location } from '../FMS_Integration/services/get_location';
+import { get_idle_robots } from '../FMS_Integration/services/idle_robots';
 
 @Injectable()
 export class RobotJobService {
@@ -1353,9 +1354,10 @@ export class RobotJobService {
 
   async getIdleRobots(): Promise<{ id: string; status: string }[]> {
     // Temporary: return hardcoded robots with status
-    return [
-      { id: '550e8400-e29b-41d4-a716-446655440000', status: 'idle' },
-      { id: '8b7e5c9d-3a42-4f1d-9f1a-123456789abc', status: 'idle' },
-    ];
+    // return [
+    //   { id: '550e8400-e29b-41d4-a716-446655440000', status: 'idle' },
+    //   { id: '8b7e5c9d-3a42-4f1d-9f1a-123456789abc', status: 'idle' },
+    // ];
+    return get_idle_robots();
   }
 }
