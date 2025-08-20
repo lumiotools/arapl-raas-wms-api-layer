@@ -16,8 +16,9 @@ export async function get_tasks(payload: getTasks): Promise<Task[]> {
             const errorText = await response.text();
             throw new BadRequestException(`Failed to get tasks: ${response.status} ${errorText}`);
         }
+        const tasks = await response.json();
+        return tasks.tasks;
 
-        return await response.json();
 
     } catch (error) {
         console.error('Error during get-tasks:', error);

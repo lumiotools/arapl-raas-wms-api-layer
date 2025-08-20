@@ -130,8 +130,8 @@ export class RobotJobController {
       params.warehouse_id,
       params.batch_id,
     );
-
     const includeRobot = !!request.warehouse?.robot_access;
+    
     const tasksForResponse = taskEntities.map((entity) => ({
       ...entity,
       wait: entity.wait_time,
@@ -486,7 +486,7 @@ export class RobotJobController {
   async cancelBatch(
     @Param('warehouse_id') warehouseId: string,
     @Param('batch_id') batchId: string,
-  @Body() body: CancelBatchReq,
+  @Body() body: CancelTaskReq,
     @Req() request: Request,
   ): Promise<BatchCancelRes> {
     console.log('reached');
@@ -504,7 +504,7 @@ export class RobotJobController {
       return result;
     }
 
-  const batchDto = plainToInstance(CancelBatchReq, body);
+  const batchDto = plainToInstance(CancelTaskReq, body);
     const validationErrors = await this.validator.validate(batchDto);
     console.log('proceeding');
     if (validationErrors.length === 0) {
@@ -926,7 +926,7 @@ export class RobotJobController {
   async getIdleRobots(@Req() request: Request): Promise<GetIdleRobotsRes> {
     // Enforce robot access per warehouse
     if (!request.warehouse?.robot_access) {
-  throw new ForbiddenException('Warehouse does not have robot access');
+      throw new ForbiddenException('Warehouse does not have robot access');
     }
   const robots = await this.robotJobService.getIdleRobots();
   return { robots };

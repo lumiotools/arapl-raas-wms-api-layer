@@ -615,118 +615,118 @@ export class RobotJobService {
         `Warehouse with ID '${warehouse_id}' not found.`,
       );
     }
-  const batchJob = await this.BatchJobRepository.findOne({
-      where: {
-        batch_job_id: updateRobotJobDto.batch_job_id,
-        warehouse_id: warehouse_id,
-      },
-    });
-    if (!batchJob) {
-      throw new NotFoundException(
-        `Batch job with ID '${updateRobotJobDto.batch_job_id}' not found in warehouse '${warehouse_id}'.`,
-      );
-    }
+  // const batchJob = await this.BatchJobRepository.findOne({
+  //     where: {
+  //       batch_job_id: updateRobotJobDto.batch_job_id,
+  //       warehouse_id: warehouse_id,
+  //     },
+  //   });
+  //   if (!batchJob) {
+  //     throw new NotFoundException(
+  //       `Batch job with ID '${updateRobotJobDto.batch_job_id}' not found in warehouse '${warehouse_id}'.`,
+  //     );
+  //   }
   const tasks: UpdateTask[] = updateRobotJobDto.updates;
   const hasRobotAccess = !!warehouse.robot_access;
-    for (const task of tasks) {
-      try {
-        if (
-          task.wait_time &&
-          task.wait_time.wait_type == WaitType.Conditional
-        ) {
-          const wait = task.wait_time;
-          if (!wait.wait_condition) {
-            throw new Error(
-              `Wait condition is required for conditional wait type in task ${task.task_id}.`,
-            );
-          }
-          if (
-            wait.wait_condition == WaitCondition.Time &&
-            wait.start_location_wait_time == 0 &&
-            wait.end_location_wait_time == 0
-          ) {
-            throw new Error(
-              `Start and end location wait times are required for time-based wait condition in task ${task.task_id}.`,
-            );
-          }
-          if (
-            wait.wait_condition == WaitCondition.LocationAvailable &&
-            !wait.start_location_available_wait &&
-            !wait.end_location_available_wait
-          ) {
-            throw new Error(
-              `Start and end location available wait times are required for location available wait condition in task ${task.task_id}.`,
-            );
-          }
-        }
-        const taskRepo: Task | null = await this.TaskRepository.findOne({
-          where: {
-            task_id: task.task_id,
-            batch_job: {
-              batch_job_id: updateRobotJobDto.batch_job_id,
-              warehouse_id: warehouse_id,
-            },
-          },
-          relations: ['batch_job'],
-        });
-        if (!taskRepo) {
-          console.log(
-            `Task with ID ${task.task_id} not found in warehouse ${warehouse_id}.`,
-          );
-          continue;
-        }
-        taskRepo.task_dependency =
-          task.task_dependency ?? taskRepo.task_dependency;
+  //   for (const task of tasks) {
+  //     try {
+  //       if (
+  //         task.wait_time &&
+  //         task.wait_time.wait_type == WaitType.Conditional
+  //       ) {
+  //         const wait = task.wait_time;
+  //         if (!wait.wait_condition) {
+  //           throw new Error(
+  //             `Wait condition is required for conditional wait type in task ${task.task_id}.`,
+  //           );
+  //         }
+  //         if (
+  //           wait.wait_condition == WaitCondition.Time &&
+  //           wait.start_location_wait_time == 0 &&
+  //           wait.end_location_wait_time == 0
+  //         ) {
+  //           throw new Error(
+  //             `Start and end location wait times are required for time-based wait condition in task ${task.task_id}.`,
+  //           );
+  //         }
+  //         if (
+  //           wait.wait_condition == WaitCondition.LocationAvailable &&
+  //           !wait.start_location_available_wait &&
+  //           !wait.end_location_available_wait
+  //         ) {
+  //           throw new Error(
+  //             `Start and end location available wait times are required for location available wait condition in task ${task.task_id}.`,
+  //           );
+  //         }
+  //       }
+  //       const taskRepo: Task | null = await this.TaskRepository.findOne({
+  //         where: {
+  //           task_id: task.task_id,
+  //           batch_job: {
+  //             batch_job_id: updateRobotJobDto.batch_job_id,
+  //             warehouse_id: warehouse_id,
+  //           },
+  //         },
+  //         relations: ['batch_job'],
+  //       });
+  //       if (!taskRepo) {
+  //         console.log(
+  //           `Task with ID ${task.task_id} not found in warehouse ${warehouse_id}.`,
+  //         );
+  //         continue;
+  //       }
+  //       taskRepo.task_dependency =
+  //         task.task_dependency ?? taskRepo.task_dependency;
 
-        // Robot assignment
-        if (hasRobotAccess) {
-          if (typeof task.robot_id === 'string') {
-            taskRepo.robot_id = task.robot_id;
-          }
-        } else {
-          taskRepo.robot_id = null;
-        }
+  //       // Robot assignment
+  //       if (hasRobotAccess) {
+  //         if (typeof task.robot_id === 'string') {
+  //           taskRepo.robot_id = task.robot_id;
+  //         }
+  //       } else {
+  //         taskRepo.robot_id = null;
+  //       }
 
-        // await this.updateLocation(taskRepo.start_location, true);
-        // await this.updateLocation(taskRepo.end_location, true);
-        taskRepo.start_location.location_id = task.start_location.location_id;
-        taskRepo.start_location.location_dimension =
-          task.start_location.location_dimension;
+  //       // await this.updateLocation(taskRepo.start_location, true);
+  //       // await this.updateLocation(taskRepo.end_location, true);
+  //       taskRepo.start_location.location_id = task.start_location.location_id;
+  //       taskRepo.start_location.location_dimension =
+  //         task.start_location.location_dimension;
 
-        taskRepo.end_location.location_id = task.end_location.location_id;
-        taskRepo.end_location.location_dimension =
-          task.end_location.location_dimension;
+  //       taskRepo.end_location.location_id = task.end_location.location_id;
+  //       taskRepo.end_location.location_dimension =
+  //         task.end_location.location_dimension;
 
-        // await this.updateLocation(taskRepo.start_location, false);
-        // await this.updateLocation(taskRepo.end_location, false);
+  //       // await this.updateLocation(taskRepo.start_location, false);
+  //       // await this.updateLocation(taskRepo.end_location, false);
 
-        taskRepo.wait_time = task.wait_time
-          ? task.wait_time
-          : taskRepo.wait_time;
+  //       taskRepo.wait_time = task.wait_time
+  //         ? task.wait_time
+  //         : taskRepo.wait_time;
 
-        for (const cargo of task.cargos) {
-          const existingCargo = taskRepo.cargos.find(
-            (c) => c.cargo_code === cargo.cargo_code,
-          );
-          if (existingCargo) {
-            existingCargo.cargo_dimension = cargo.cargo_dimension;
-            existingCargo.cargo_weight =
-              cargo.cargo_weight ?? existingCargo.cargo_weight;
-          }
-        }
-        await this.TaskRepository.save(taskRepo);
-      } catch (error) {
-        // catch (error) {
-        //   console.error('Error updating task:', error);
-        // }
-        console.error(`Error updating task ${task.task_id}:`, error);
-        throw new BadRequestException(
-          `Task ${task.task_id} update failed: ${error.message}`,
-        );
-      } finally {
-        continue;
-      }
-    }
+  //       for (const cargo of task.cargos) {
+  //         const existingCargo = taskRepo.cargos.find(
+  //           (c) => c.cargo_code === cargo.cargo_code,
+  //         );
+  //         if (existingCargo) {
+  //           existingCargo.cargo_dimension = cargo.cargo_dimension;
+  //           existingCargo.cargo_weight =
+  //             cargo.cargo_weight ?? existingCargo.cargo_weight;
+  //         }
+  //       }
+  //       await this.TaskRepository.save(taskRepo);
+    //   } catch (error) {
+    //     // catch (error) {
+    //     //   console.error('Error updating task:', error);
+    //     // }
+    //     console.error(`Error updating task ${task.task_id}:`, error);
+    //     throw new BadRequestException(
+    //       `Task ${task.task_id} update failed: ${error.message}`,
+    //     );
+    //   } finally {
+    //     continue;
+    //   }
+    // }
 
     if (tasks.length === 0) {
       return {
@@ -834,30 +834,42 @@ export class RobotJobService {
   async cancelBatch(
     warehouse_id: string,
     batch_id: string,
-  cancel_req: CancelBatchReq,
+    cancel_req: CancelTaskReq,
   ): Promise<BatchCancelRes> {
-    const batchJob = await this.BatchJobRepository.findOne({
-      where: {
-        batch_job_id: batch_id,
-        warehouse_id: warehouse_id,
-      },
+    // const batchJob = await this.BatchJobRepository.findOne({
+    //   where: {
+    //     batch_job_id: batch_id,
+    //     warehouse_id: warehouse_id,
+    //   },
+    // });
+
+    // if (!batchJob) {
+    //   throw new NotFoundException({
+    //     // task_id: batch_id,
+    //     status: 'error',
+    //     cancelled_at: new Date().toISOString(),
+    //     message: `Batch job '${batch_id}' not found in warehouse '${warehouse_id}'.`,
+    //   });
+    // }
+
+    // if (batchJob.status !== 'pending') {
+    //   throw new ConflictException({
+    //     // task_id: batch_id,
+    //     status: 'error',
+    //     cancelled_at: new Date().toISOString(),
+    //     message: `Batch job '${batch_id}' is not in 'pending' state and cannot be cancelled.`,
+    //   });
+    // }
+    const warehouse = await this.WarehouseRepository.findOne({
+      where: { warehouse_id },
+      select: ['warehouse_id', 'robot_access'],
     });
-
-    if (!batchJob) {
-      throw new NotFoundException({
-        // task_id: batch_id,
-        status: 'error',
-        cancelled_at: new Date().toISOString(),
-        message: `Batch job '${batch_id}' not found in warehouse '${warehouse_id}'.`,
-      });
-    }
-
-    if (batchJob.status !== 'pending') {
+    const force = !!cancel_req?.force && !!warehouse?.robot_access;
+    if (!force){
       throw new ConflictException({
-        // task_id: batch_id,
         status: 'error',
         cancelled_at: new Date().toISOString(),
-        message: `Batch job '${batch_id}' is not in 'pending' state and cannot be cancelled.`,
+        message: `Batch job '${batch_id}' cannot be cancelled without force or no robot access.`,
       });
     }
     let fms_response;
@@ -876,13 +888,13 @@ export class RobotJobService {
       throw new BadRequestException('Failed to cancel batch in FMS');
     }
 
-    await this.BatchJobRepository.remove(batchJob);
+    // await this.BatchJobRepository.remove(batchJob);
 
     return {
-      batch_id: batchJob.batch_job_id,
+      batch_id: batch_id,
       status: 'success',
       cancelled_at: new Date().toISOString(),
-      message: `Batch job '${batchJob.batch_job_id}' and its tasks have been cancelled.`,
+      message: `${fms_response.message}`,
     };
   }
 
@@ -931,36 +943,43 @@ export class RobotJobService {
     task_id: string,
   cancel_req: CancelTaskReq,
   ): Promise<TaskCancelRes> {
-  const taskRepo: Task | null = await this.TaskRepository.findOne({
-      where: {
-        task_id: task_id,
-        batch_job: { batch_job_id: batch_id },
-      },
-      relations: ['batch_job'],
-    });
+  // const taskRepo: Task | null = await this.TaskRepository.findOne({
+  //     where: {
+  //       task_id: task_id,
+  //       batch_job: { batch_job_id: batch_id },
+  //     },
+  //     relations: ['batch_job'],
+  //   });
 
-    if (!taskRepo) {
-      throw new NotFoundException({
-        status: 'error',
-        cancelled_at: new Date().toISOString(),
-        message: `Task with ID '${task_id}' not found in warehouse '${batch_id}'.`,
-      });
-    }
+  //   if (!taskRepo) {
+  //     throw new NotFoundException({
+  //       status: 'error',
+  //       cancelled_at: new Date().toISOString(),
+  //       message: `Task with ID '${task_id}' not found in warehouse '${batch_id}'.`,
+  //     });
+  //   }
 
-    // Determine if force cancel is allowed: only when warehouse has robot_access
+  //   // Determine if force cancel is allowed: only when warehouse has robot_access
     const warehouse = await this.WarehouseRepository.findOne({
       where: { warehouse_id },
       select: ['warehouse_id', 'robot_access'],
     });
     const force = !!cancel_req?.force && !!warehouse?.robot_access;
-
-    if (taskRepo.status !== 'pending' && !force) {
+    if (!force){
       throw new ConflictException({
         status: 'error',
         cancelled_at: new Date().toISOString(),
-        message: `Task '${task_id}' is not in 'pending' state and cannot be cancelled.`,
+        message: `Task '${task_id}' cannot be cancelled without force or no robot access.`,
       });
     }
+
+  //   if (taskRepo.status !== 'pending' && !force) {
+  //     throw new ConflictException({
+  //       status: 'error',
+  //       cancelled_at: new Date().toISOString(),
+  //       message: `Task '${task_id}' is not in 'pending' state and cannot be cancelled.`,
+  //     });
+  //   }
     let fms_response;
     try{
       fms_response = await cancelBatchTask({
@@ -977,13 +996,13 @@ export class RobotJobService {
       throw new BadRequestException('Failed to cancel task in FMS');
     }
 
-    await this.TaskRepository.remove(taskRepo);
+    // await this.TaskRepository.remove(taskRepo);
 
     return {
-      task_id: taskRepo.task_id,
+      task_id: task_id,
       status: 'success',
       cancelled_at: new Date().toISOString(),
-      message: `Task '${taskRepo.task_id}' has been cancelled.`,
+      message: fms_response.message,
     };
   }
 

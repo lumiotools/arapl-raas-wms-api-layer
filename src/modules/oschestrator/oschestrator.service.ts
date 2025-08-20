@@ -205,7 +205,7 @@ export class OschestratorService {
     }
 
 
-    @Interval(2000)
+    // @Interval(2000)
     async checkBatchTaskStatus(): Promise<void> {
         if (this.isCheckBatchJobStatus) {
             this.logger.warn('Already checking batch job status, skipping this cycle');
