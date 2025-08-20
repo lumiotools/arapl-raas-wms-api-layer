@@ -426,7 +426,6 @@ export class RobotJobService {
           start_location: task.start_location,
           end_location: task.end_location,
           wait_time: task.wait_time,
-          robot_id: task.robot_id,
           cargos: task.cargos,
           robot_id: hasRobotAccess ? (task.robot_id ?? null) : null,
           batch_job: newBatchJob,

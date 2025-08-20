@@ -479,7 +479,7 @@ export class Task {
   })
   @IsOptional()
   @IsString()
-  robot_id?: string;
+  robot_id?: string | null;
 
   @ApiProperty({ type: Location })
   @ValidateNested()
@@ -503,11 +503,6 @@ export class Task {
   @ValidateNested({ each: true })
   @Type(() => Cargo)
   cargos?: Cargo[];
-
-  @ApiPropertyOptional({ example: 'ROBOT001' })
-  @IsOptional()
-  @IsString()
-  robot_id?: string;
 }
 
 export class TaskGenerationReq {

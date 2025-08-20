@@ -28,7 +28,7 @@ export class Task {
     cargos: Cargo[];
 
     @Column({ type: 'varchar', nullable: true })
-    robot_id: string;
+    robot_id: string | null;
 
     @ManyToOne(() => BatchJob, batchJob => batchJob.id, {
         nullable: true,
