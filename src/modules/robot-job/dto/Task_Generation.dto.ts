@@ -473,6 +473,14 @@ export class Task {
   @IsString()
   task_dependency?: string;
 
+  @ApiPropertyOptional({
+    description: 'Assigned robot ID for the task (ignored if warehouse has no robot access)',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @IsOptional()
+  @IsString()
+  robot_id?: string;
+
   @ApiProperty({ type: Location })
   @ValidateNested()
   @Type(() => Location)

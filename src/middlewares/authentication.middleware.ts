@@ -64,6 +64,7 @@ export class AuthenticationMiddleware implements NestMiddleware {
           'update_task_config',
           'cancel_task_config',
           'get_location_config',
+          'robot_access',
         ],
       });
 

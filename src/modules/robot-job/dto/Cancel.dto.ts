@@ -46,19 +46,10 @@
 //   message: string;
 // }
 
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsBoolean } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export class CancelReq {
-
-  @ApiPropertyOptional({
-    description: 'Force cancellation of the task',
-    example: false,
-    default: false,
-  })
-  @IsOptional()
-  force?: boolean = false;
-
+export class CancelBatchReq {
   @ApiPropertyOptional({
     description: 'Reason for cancelling the task',
     example: 'Task no longer needed',
@@ -74,6 +65,17 @@ export class CancelReq {
   @IsOptional()
   @IsString()
   timestamp?: string;
+}
+
+export class CancelTaskReq extends CancelBatchReq {
+  @ApiPropertyOptional({
+    description:
+      'Force immediate cancellation even if task is in-progress (only effective when warehouse has robot access)',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  force?: boolean;
 }
 
 export class BatchCancelRes {

@@ -10,6 +10,7 @@ import {
   BadRequestException,
   Logger,
   Req,
+  ForbiddenException,
 } from '@nestjs/common';
 import { RobotJobService } from './robot-job.service';
 import { Validator } from 'class-validator';
@@ -21,7 +22,7 @@ import {
   TaskGenerationRes,
 } from './dto/Task_Generation.dto';
 import { TaskUpdateReq, TaskUpdateRes } from './dto/Task_Update.dto';
-import { BatchCancelRes, CancelReq, TaskCancelRes } from './dto/Cancel.dto';
+import { BatchCancelRes, CancelBatchReq, CancelTaskReq, TaskCancelRes } from './dto/Cancel.dto';
 import {
   GetLocationReq,
   GetLocationRes,
@@ -52,6 +53,7 @@ import {
   ApiQuery,
   ApiBody,
 } from '@nestjs/swagger';
+import { GetIdleRobotsRes } from './dto/GetIdleRobots.dto';
 
 @ApiSecurity('api-key')
 @Controller('robot-job')
@@ -122,12 +124,22 @@ export class RobotJobController {
   @Get(':warehouse_id/tasks/:batch_id')
   async getTasks(
     @Param() params: GetTasksParamsDto,
+    @Req() request: Request,
   ): Promise<GetTasksResponseDto> {
     const taskEntities = await this.robotJobService.getTasksByBatchId(
       params.warehouse_id,
       params.batch_id,
     );
-    return { tasks: taskEntities };
+
+    const includeRobot = !!request.warehouse?.robot_access;
+    const tasksForResponse = taskEntities.map((entity) => ({
+      ...entity,
+      wait: entity.wait_time,
+      // Only expose robot_id when warehouse has robot access; override spread value
+      robot_id: includeRobot ? (entity.robot_id ?? undefined) : undefined,
+    }));
+
+    return { tasks: tasksForResponse };
   }
 
   // @Post(':warehouse_id/tasks')
@@ -437,7 +449,7 @@ export class RobotJobController {
   //   example: 'cancel_config_v1',
   // })
   @ApiBody({
-    type: CancelReq,
+    type: CancelBatchReq,
     description: 'Cancellation request body',
   })
   @ApiResponse({
@@ -474,7 +486,7 @@ export class RobotJobController {
   async cancelBatch(
     @Param('warehouse_id') warehouseId: string,
     @Param('batch_id') batchId: string,
-    @Body() body: CancelReq,
+  @Body() body: CancelBatchReq,
     @Req() request: Request,
   ): Promise<BatchCancelRes> {
     console.log('reached');
@@ -491,8 +503,8 @@ export class RobotJobController {
       }
       return result;
     }
-    console.log('proceeding');
-    const batchDto = plainToInstance(CancelReq, body);
+
+  const batchDto = plainToInstance(CancelBatchReq, body);
     const validationErrors = await this.validator.validate(batchDto);
     console.log('proceeding');
     if (validationErrors.length === 0) {
@@ -581,8 +593,9 @@ export class RobotJobController {
   //   example: 'cancel_config_v1',
   // })
   @ApiBody({
-    type: CancelReq,
-    description: 'Task cancellation request body',
+    type: CancelTaskReq,
+    description:
+      'Task cancellation request body. Set force=true to force cancel in-progress tasks (only for warehouses with robot access).',
   })
   @ApiResponse({
     status: 200,
@@ -624,7 +637,7 @@ export class RobotJobController {
     @Param('warehouse_id') warehouseId: string,
     @Param('batch_id') batchId: string,
     @Param('task_id') taskId: string,
-    @Body() body: CancelReq,
+  @Body() body: CancelTaskReq,
     @Req() request: Request,
   ): Promise<TaskCancelRes> {
     const config = request.taskConfigs?.cancel_task;
@@ -642,7 +655,7 @@ export class RobotJobController {
       return result;
     }
 
-    const singleTaskDto = plainToInstance(CancelReq, body);
+  const singleTaskDto = plainToInstance(CancelTaskReq, body);
     const validationErrors = await this.validator.validate(singleTaskDto);
 
     if (validationErrors.length === 0) {
@@ -897,5 +910,25 @@ export class RobotJobController {
       warehouseId,
       structuredDto,
     );
+  }
+
+  @ApiOperation({ summary: 'Get list of robots (id and status)' })
+  @ApiParam({
+    name: 'warehouse_id',
+    type: String,
+    description: 'Warehouse identifier (reserved for future scoping)',
+    example: 'WH_001',
+  })
+  @ApiResponse({ status: 200, description: 'Robots returned', type: GetIdleRobotsRes })
+  @ApiResponse({ status: 401, description: 'Unauthorized', type: UnauthorizedDto })
+  @ApiResponse({ status: 403, description: 'Forbidden - warehouse does not have robot access', type: ForbiddenDto })
+  @Get(':warehouse_id/robots')
+  async getIdleRobots(@Req() request: Request): Promise<GetIdleRobotsRes> {
+    // Enforce robot access per warehouse
+    if (!request.warehouse?.robot_access) {
+  throw new ForbiddenException('Warehouse does not have robot access');
+    }
+  const robots = await this.robotJobService.getIdleRobots();
+  return { robots };
   }
 }

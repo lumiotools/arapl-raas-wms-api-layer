@@ -25,7 +25,7 @@ import { Any, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { BatchJob } from './entities/batch_task.entity';
 import { Task } from './entities/task.entity';
-import { CancelReq, BatchCancelRes, TaskCancelRes } from './dto/Cancel.dto';
+import { CancelBatchReq, CancelTaskReq, BatchCancelRes, TaskCancelRes } from './dto/Cancel.dto';
 import { Location } from './entities/locations.entity';
 import {
   GetLocationReq,
@@ -373,7 +373,7 @@ export class RobotJobService {
       );
     }
 
-    const newBatchJob = this.BatchJobRepository.create({
+  const newBatchJob = this.BatchJobRepository.create({
       batch_job_id,
       warehouse_id: warehouseId,
       batch_priority: createRobotJobDto.batch_priority,
@@ -384,7 +384,11 @@ export class RobotJobService {
 
     await this.BatchJobRepository.save(newBatchJob);
 
-    for (const task of Tasks) {
+  // Determine robot access for warehouse
+  const warehouse = await this.WarehouseRepository.findOne({ where: { warehouse_id: warehouseId } });
+  const hasRobotAccess = !!warehouse?.robot_access;
+
+  for (const task of Tasks) {
       try {
         if (task.wait && task.wait.wait_type === WaitType.Conditional) {
           const wait = task.wait;
@@ -424,6 +428,7 @@ export class RobotJobService {
           wait_time: task.wait_time,
           robot_id: task.robot_id,
           cargos: task.cargos,
+          robot_id: hasRobotAccess ? (task.robot_id ?? null) : null,
           batch_job: newBatchJob,
           status: 'pending',
         });
@@ -611,7 +616,7 @@ export class RobotJobService {
         `Warehouse with ID '${warehouse_id}' not found.`,
       );
     }
-    const batchJob = await this.BatchJobRepository.findOne({
+  const batchJob = await this.BatchJobRepository.findOne({
       where: {
         batch_job_id: updateRobotJobDto.batch_job_id,
         warehouse_id: warehouse_id,
@@ -622,7 +627,8 @@ export class RobotJobService {
         `Batch job with ID '${updateRobotJobDto.batch_job_id}' not found in warehouse '${warehouse_id}'.`,
       );
     }
-    const tasks: UpdateTask[] = updateRobotJobDto.updates;
+  const tasks: UpdateTask[] = updateRobotJobDto.updates;
+  const hasRobotAccess = !!warehouse.robot_access;
     for (const task of tasks) {
       try {
         if (
@@ -672,6 +678,15 @@ export class RobotJobService {
         }
         taskRepo.task_dependency =
           task.task_dependency ?? taskRepo.task_dependency;
+
+        // Robot assignment
+        if (hasRobotAccess) {
+          if (typeof task.robot_id === 'string') {
+            taskRepo.robot_id = task.robot_id;
+          }
+        } else {
+          taskRepo.robot_id = null;
+        }
 
         // await this.updateLocation(taskRepo.start_location, true);
         // await this.updateLocation(taskRepo.end_location, true);
@@ -820,7 +835,7 @@ export class RobotJobService {
   async cancelBatch(
     warehouse_id: string,
     batch_id: string,
-    cancel_req: CancelReq,
+  cancel_req: CancelBatchReq,
   ): Promise<BatchCancelRes> {
     const batchJob = await this.BatchJobRepository.findOne({
       where: {
@@ -915,9 +930,9 @@ export class RobotJobService {
     warehouse_id: string,
     batch_id: string,
     task_id: string,
-    cancel_req: CancelReq,
+  cancel_req: CancelTaskReq,
   ): Promise<TaskCancelRes> {
-    const taskRepo: Task | null = await this.TaskRepository.findOne({
+  const taskRepo: Task | null = await this.TaskRepository.findOne({
       where: {
         task_id: task_id,
         batch_job: { batch_job_id: batch_id },
@@ -933,7 +948,14 @@ export class RobotJobService {
       });
     }
 
-    if (taskRepo.status !== 'pending') {
+    // Determine if force cancel is allowed: only when warehouse has robot_access
+    const warehouse = await this.WarehouseRepository.findOne({
+      where: { warehouse_id },
+      select: ['warehouse_id', 'robot_access'],
+    });
+    const force = !!cancel_req?.force && !!warehouse?.robot_access;
+
+    if (taskRepo.status !== 'pending' && !force) {
       throw new ConflictException({
         status: 'error',
         cancelled_at: new Date().toISOString(),
@@ -1015,12 +1037,12 @@ export class RobotJobService {
     warehouseId: string,
     batchId: string,
     config: any,
-    input: any,
+  input: any,
   ): Promise<BatchCancelRes> {
     try {
       const cancelRequest = await this._genericTaskTransformer(config, input);
 
-      const structuredDto = plainToInstance(CancelReq, cancelRequest);
+  const structuredDto = plainToInstance(CancelBatchReq, cancelRequest);
       const validationErrors = await this.validator.validate(structuredDto);
       if (validationErrors.length > 0) {
         throw new BadRequestException({
@@ -1103,12 +1125,12 @@ export class RobotJobService {
     batchId: string,
     taskId: string,
     config: any,
-    input: any,
+  input: any,
   ): Promise<TaskCancelRes> {
     try {
       const cancelRequest = await this._genericTaskTransformer(config, input);
 
-      const structuredDto = plainToInstance(CancelReq, cancelRequest);
+  const structuredDto = plainToInstance(CancelTaskReq, cancelRequest);
       const validationErrors = await this.validator.validate(structuredDto);
       if (validationErrors.length > 0) {
         throw new BadRequestException({
@@ -1314,9 +1336,11 @@ export class RobotJobService {
     }
   }
 
-  async processIncomingData(incomingData: any): Promise<any> {
-    // Process the incoming data and return the result
-    console.log('Processing incoming data:', incomingData);
-    return { success: true };
+  async getIdleRobots(): Promise<{ id: string; status: string }[]> {
+    // Temporary: return hardcoded robots with status
+    return [
+      { id: '550e8400-e29b-41d4-a716-446655440000', status: 'idle' },
+      { id: '8b7e5c9d-3a42-4f1d-9f1a-123456789abc', status: 'idle' },
+    ];
   }
 }
