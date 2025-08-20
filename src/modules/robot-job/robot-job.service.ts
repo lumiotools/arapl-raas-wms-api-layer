@@ -1242,9 +1242,6 @@ export class RobotJobService {
       // console.log('Transformed Payload:', payload);
       const response = await fetch(apiEndpoint, {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwic3ViIjoiOTM5ZGQ5MzUtOTczOC00YmFlLTg3NmUtMDQ4NWI1ODE3OTU2IiwiaWF0IjoxNzU1MTg2Nzk2LCJleHAiOjE3NTUyNzMxOTZ9.LWCh_mQXcfkLz9vK98PR2hTCS-j2PTA_3T49WXloyk0`
-        },
       });
       
       if (!response.ok) {
