@@ -287,9 +287,9 @@ export enum FallbackAction {
 }
 
 export enum LocationAction {
-  Pick = 'Pick',
-  Drop = 'Drop',
-  Nop = 'Nop',
+  Pick = 'PICK',
+  Drop = 'DROP',
+  Nop = 'NOP',
   WaitPick = 'WaitPick',
   WaitDrop = 'WaitDrop',
   Wait = 'Wait',
@@ -308,12 +308,12 @@ export enum TaskType {
   CrossDocking = 'Crossdock',
   Putaway = 'Putaway',
   Picking = 'Picking',
-  GoodsToPerson = 'GoodsToPerson',
+  GoodsToPerson = 'GOODSTOPERSON',
 }
 
 export enum batch_type {
-  Continuous = 'Continuous',
-  Discrete = 'Discrete',
+  Continuous = 'CONTINUOUS',
+  Discrete = 'DISCRETE',
 }
 
 // Classes
