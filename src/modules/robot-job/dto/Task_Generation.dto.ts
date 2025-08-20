@@ -300,7 +300,7 @@ export enum LocationType {
   Zone = 'Zone',
   Aisle = 'Aisle',
   Bay = 'Bay',
-  Pallet = 'Pallet',
+  Pallet = 'PALLET',
   Transient = 'Transient',
 }
 
