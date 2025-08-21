@@ -71,7 +71,7 @@ export class RobotJobService {
       this.setupTaskFilters(); // Re-establish filters on reconnection
     });
 
-    this.fms_socket.on('taskListFilteredUpdate', async (data: any) => {
+    this.fms_socket.on('taskListFilteredUpdateWMS', async (data: any) => {
       await this.processTaskUpdate(data);
     });
 
@@ -108,24 +108,22 @@ export class RobotJobService {
   private async processTaskUpdate(data: any) {
     const tasks = data.data || [];
     console.log(`tasks length: ${tasks.length}`);
-    for (const task of tasks){
-      const db_task = await this.TaskRepository.findOne({ where: { task_id: task.task_display_id } });
+    for (const socket_batch of tasks){
+      const task = socket_batch.tasks[0];
+      const db_task = await this.TaskRepository.findOne({ where: { task_id: task.task_id } });
       if(!db_task) continue;
       if (db_task.status!=task.status){
         db_task.status = task.status;
-        
+        await this.TaskRepository.save(db_task);
         const batch = await this.BatchJobRepository.findOne({ where: { id: db_task.batch_job_id } });
         if (!batch) continue;
-        console.log('batch')
         const webhook_payload = {
-          batch_job_id: batch.batch_job_id,
-          batch_job_status: task.status,
+          batch_job_id: socket_batch.batch_job_id,
+          batch_job_status: socket_batch.status,
           tasks:[
             task
           ]
-        }
-        
-        console.log(`payload: ${JSON.stringify(webhook_payload)}`)
+        };
         const warehouse = await this.WarehouseRepository.findOne({ where: { warehouse_id: batch.warehouse_id } });
         if (!warehouse) continue;
         if (warehouse.webhook_url) {
@@ -136,7 +134,6 @@ export class RobotJobService {
               },
               timeout: 5000,
             });
-            await this.TaskRepository.save(db_task);
             console.log('Webhook notification sent successfully');
           } catch (webhookError) {
             console.error('Failed to send webhook notification:', webhookError);
