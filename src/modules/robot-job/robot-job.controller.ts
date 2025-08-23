@@ -514,7 +514,7 @@ export class RobotJobController {
         batchId,
         batchDto,
       );
-      if (result.status !== 'success') {
+      if (result.status !== 'cancelled') {
         throw new BadRequestException(result.message);
       }
       return result;
@@ -665,7 +665,7 @@ export class RobotJobController {
         taskId,
         singleTaskDto,
       );
-      if (result.status !== 'success') {
+      if (result.status !== 'cancelled') {
         throw new BadRequestException(result.message);
       }
       return result;

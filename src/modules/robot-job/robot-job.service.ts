@@ -63,12 +63,10 @@ export class RobotJobService {
 
     this.fms_socket.on('connect', () => {
       console.log('Connected to FMS socket server');
-      this.setupTaskFilters(); // Set filters on connect
     });
 
     this.fms_socket.on('reconnect', () => {
       console.log('Reconnected to FMS socket server');
-      this.setupTaskFilters(); // Re-establish filters on reconnection
     });
 
     this.fms_socket.on('taskListFilteredUpdateWMS', async (data: any) => {
@@ -78,31 +76,6 @@ export class RobotJobService {
     this.fms_socket.on('disconnect', () => {
       this.isFilterSet = false;
     });
-  }
-
-  private setupTaskFilters() {
-    if (!this.isFilterSet) {
-      this.fms_socket.emit('message', {
-        "event": "setTaskListFilters",
-        "data": {
-          "limit": 10,
-          "filter": { "status": "Completed" },
-          "sort": "latest",
-          "start_date": "2025-08-01",
-          "end_date": "2025-08-08"
-        }
-      });
-      this.isFilterSet = true;
-      console.log('Task filters set');
-    }
-  }
-
-  updateTaskFilters(newFilters: any) {
-    this.fms_socket.emit('message', {
-      "event": "setTaskListFilters",
-      "data": newFilters
-    });
-    console.log('Task filters updated:', newFilters);
   }
 
   private async processTaskUpdate(data: any) {
@@ -119,7 +92,7 @@ export class RobotJobService {
         if (!batch) continue;
         const webhook_payload = {
           batch_job_id: socket_batch.batch_job_id,
-          batch_job_status: socket_batch.status,
+          batch_job_status: socket_batch.batch_job_status,
           tasks:[
             task
           ]
@@ -890,7 +863,7 @@ export class RobotJobService {
 
     return {
       batch_id: batch_id,
-      status: 'success',
+      status: fms_response.status,
       cancelled_at: new Date().toISOString(),
       message: `${fms_response.message}`,
     };
@@ -998,7 +971,7 @@ export class RobotJobService {
 
     return {
       task_id: task_id,
-      status: 'success',
+      status: fms_response.status,
       cancelled_at: new Date().toISOString(),
       message: fms_response.message,
     };
