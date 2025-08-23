@@ -85,6 +85,9 @@ export class RobotJobService {
       const task = socket_batch.tasks[0];
       const db_task = await this.TaskRepository.findOne({ where: { task_id: task.task_id } });
       if(!db_task) continue;
+      if (task.status === null){
+        continue;
+      }
       if (db_task.status!=task.status){
         db_task.status = task.status;
         await this.TaskRepository.save(db_task);
