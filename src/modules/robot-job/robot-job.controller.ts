@@ -11,6 +11,7 @@ import {
   Logger,
   Req,
   ForbiddenException,
+  Injectable,
 } from '@nestjs/common';
 import { RobotJobService } from './robot-job.service';
 import { Validator } from 'class-validator';
@@ -54,14 +55,22 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { GetIdleRobotsRes } from './dto/GetIdleRobots.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Robot } from './entities/robot.entity';
+import { Repository } from 'typeorm';
 
 @ApiSecurity('api-key')
 @Controller('robot-job')
+@Injectable()
 export class RobotJobController {
   private readonly logger = new Logger(RobotJobController.name);
   private readonly validator = new Validator();
 
-  constructor(private readonly robotJobService: RobotJobService) {}
+  constructor(
+    private readonly robotJobService: RobotJobService,
+    @InjectRepository(Robot)
+    private readonly robotRepository: Repository<Robot>,
+  ) {}
 
   // @Get(':warehouse_id/tasks/:batch_id')
   // async getTasks(
@@ -923,12 +932,26 @@ export class RobotJobController {
   @ApiResponse({ status: 401, description: 'Unauthorized', type: UnauthorizedDto })
   @ApiResponse({ status: 403, description: 'Forbidden - warehouse does not have robot access', type: ForbiddenDto })
   @Get(':warehouse_id/robots')
-  async getIdleRobots(@Req() request: Request): Promise<GetIdleRobotsRes> {
+  async getIdleRobots(@Req() request: Request): Promise<any> {
     // Enforce robot access per warehouse
     if (!request.warehouse?.robot_access) {
       throw new ForbiddenException('Warehouse does not have robot access');
     }
-  const robots = await this.robotJobService.getIdleRobots();
+  // const robots = await this.robotJobService.getIdleRobots();
+
+  //////////////////////////////////////////////
+  const robotEntities = await this.robotRepository.find();
+  const robots = robotEntities.map(entity => {
+    if (entity.available){
+      const dto = {
+        id: entity.robot_id,
+        status: 'Idle',
+      };
+      return dto;
+    }
+  });
+  if (!robots) throw new BadRequestException('No idle robots found');
+  //////////////////////////////////////////////
   return { robots };
   }
 }
