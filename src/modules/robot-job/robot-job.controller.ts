@@ -941,15 +941,16 @@ export class RobotJobController {
 
   //////////////////////////////////////////////
   const robotEntities = await this.robotRepository.find();
-  const robots = robotEntities.map(entity => {
-    if (entity.available){
-      const dto = {
-        id: entity.robot_id,
-        status: 'Idle',
-      };
-      return dto;
-    }
-  });
+  const robots = robotEntities
+    .filter(entity => entity.available)
+    .map(entity => ({
+      id: entity.robot_id,
+      status: 'Idle',
+    }));
+  
+  if (robots.length === 0) {
+    return { robots: [] };  
+  }
   if (!robots) throw new BadRequestException('No idle robots found');
   //////////////////////////////////////////////
   return { robots };

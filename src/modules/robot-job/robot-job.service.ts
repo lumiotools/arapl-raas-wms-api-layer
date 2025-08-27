@@ -42,6 +42,7 @@ import { plainToInstance } from 'class-transformer';
 import { Task as TaskEntity } from './entities/task.entity';
 import { Warehouse } from './entities/warehouse.entity';
 import { UpdateWebhookReq, UpdateWebhookRes } from './dto/UpdateWebhook.dto';
+import { OschestratorService } from '../oschestrator/oschestrator.service';
 import {
   UpdateLocationTrackingReq,
   UpdateLocationTrackingRes,
@@ -138,6 +139,8 @@ export class RobotJobService {
     private readonly WarehouseRepository: Repository<Warehouse>,
 
     private readonly validator: Validator = new Validator(),
+
+    private readonly orchestratorService: OschestratorService,
   ) {}
 
   async getTasksByBatchId(
@@ -413,26 +416,30 @@ export class RobotJobService {
       }
     }
     let fms_response ;
-    try{
-      fms_response = await createTask({
-        warehouse_id: warehouseId,
-        batch_job_id: createRobotJobDto.batch_job_id,
-        batch_priority: createRobotJobDto.batch_priority,
-        batch_type: createRobotJobDto.batch_type,
-        batch_frequency: createRobotJobDto.batch_frequency,
-        tasks: Tasks,
-      });
-    }catch(err){
-      throw new BadRequestException('FMS task creation failed');
-    }
-    console.log(`fms response: ${JSON.stringify(fms_response)}`);
-    if (fms_response) {
-      return {
+    // try{
+    //   fms_response = await createTask({
+    //     warehouse_id: warehouseId,
+    //     batch_job_id: createRobotJobDto.batch_job_id,
+    //     batch_priority: createRobotJobDto.batch_priority,
+    //     batch_type: createRobotJobDto.batch_type,
+    //     batch_frequency: createRobotJobDto.batch_frequency,
+    //     tasks: Tasks,
+    //   });
+    // }catch(err){
+    //   throw new BadRequestException('FMS task creation failed');
+    // }
+    // console.log(`fms response: ${JSON.stringify(fms_response)}`);
+    // if (fms_response) {
+    //   return {
+    //     batch_id: createRobotJobDto.batch_job_id,
+    //     status: 'success',
+    //   };
+    // }
+    return {
         batch_id: createRobotJobDto.batch_job_id,
         status: 'success',
       };
-    }
-    throw new BadRequestException('FMS task creation failed: ', fms_response.status);
+    // throw new BadRequestException('FMS task creation failed: ', fms_response.status);
   }
 
   unstructureHelper(
@@ -810,21 +817,21 @@ export class RobotJobService {
     batch_id: string,
     cancel_req: CancelTaskReq,
   ): Promise<BatchCancelRes> {
-    // const batchJob = await this.BatchJobRepository.findOne({
-    //   where: {
-    //     batch_job_id: batch_id,
-    //     warehouse_id: warehouse_id,
-    //   },
-    // });
+    const batchJob = await this.BatchJobRepository.findOne({
+      where: {
+        batch_job_id: batch_id,
+        warehouse_id: warehouse_id,
+      },
+    });
 
-    // if (!batchJob) {
-    //   throw new NotFoundException({
-    //     // task_id: batch_id,
-    //     status: 'error',
-    //     cancelled_at: new Date().toISOString(),
-    //     message: `Batch job '${batch_id}' not found in warehouse '${warehouse_id}'.`,
-    //   });
-    // }
+    if (!batchJob) {
+      throw new NotFoundException({
+        // task_id: batch_id,
+        status: 'error',
+        cancelled_at: new Date().toISOString(),
+        message: `Batch job '${batch_id}' not found in warehouse '${warehouse_id}'.`,
+      });
+    }
 
     // if (batchJob.status !== 'pending') {
     //   throw new ConflictException({
@@ -839,36 +846,54 @@ export class RobotJobService {
       select: ['warehouse_id', 'robot_access'],
     });
     const force = !!cancel_req?.force && !!warehouse?.robot_access;
-    if (!force){
+    console.log(`Force cancel: ${force}`);
+    // if (!force){
+    //   throw new ConflictException({
+    //     status: 'error',
+    //     cancelled_at: new Date().toISOString(),
+    //     message: `Batch job '${batch_id}' cannot be cancelled without force or no robot access.`,
+    //   });
+    // }
+    // let fms_response;
+    // try {
+    //   fms_response = await cancelBatch({
+    //     warehouse_id,
+    //     batch_job_id: batch_id,
+    //     cancel_req
+    //   });
+    // } catch (error) {
+    //   console.error('Error occurred while cancelling batch:', error);
+    //   throw new BadRequestException('Failed to cancel batch in FMS');
+    // }
+
+    // if (!fms_response) {
+    //   throw new BadRequestException('Failed to cancel batch in FMS');
+    // }
+
+    if (force){
+      await this.BatchJobRepository.update(batchJob.id, { status: 'cancelled' });
+      await this.TaskRepository.update({ batch_job: { id: batchJob.id } }, { status: 'cancelled' });
+      await this.orchestratorService.wms_webhook({tasks: await this.TaskRepository.find({where: {batch_job: {id: batchJob.id}}}), existingBatchJob: batchJob});
+    }
+    else if (batchJob.status !== 'pending' && !force){
       throw new ConflictException({
+        // task_id: batch_id,
         status: 'error',
         cancelled_at: new Date().toISOString(),
-        message: `Batch job '${batch_id}' cannot be cancelled without force or no robot access.`,
+        message: `Batch job '${batch_id}' is not in 'pending' state and cannot be cancelled without force.`,
       });
-    }
-    let fms_response;
-    try {
-      fms_response = await cancelBatch({
-        warehouse_id,
-        batch_job_id: batch_id,
-        cancel_req
-      });
-    } catch (error) {
-      console.error('Error occurred while cancelling batch:', error);
-      throw new BadRequestException('Failed to cancel batch in FMS');
-    }
-
-    if (!fms_response) {
-      throw new BadRequestException('Failed to cancel batch in FMS');
+    } else {
+      await this.BatchJobRepository.update(batchJob.id, { status: 'cancelled' });
+      await this.TaskRepository.update({ batch_job: { id: batchJob.id } }, { status: 'cancelled' });
     }
 
     // await this.BatchJobRepository.remove(batchJob);
 
     return {
       batch_id: batch_id,
-      status: fms_response.status,
+      status: 'cancelled',
       cancelled_at: new Date().toISOString(),
-      message: `${fms_response.message}`,
+      message: `cancelled`,
     };
   }
 
