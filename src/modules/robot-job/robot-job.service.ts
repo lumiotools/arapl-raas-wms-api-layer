@@ -887,6 +887,21 @@ export class RobotJobService {
       await this.TaskRepository.update({ batch_job: { id: batchJob.id } }, { status: 'cancelled' });
     }
 
+    // Make robots available for all tasks in the batch
+    const batchTasks = await this.TaskRepository.find({
+      where: { batch_job: { id: batchJob.id } },
+      select: ['robot_id']
+    });
+
+    for (const task of batchTasks) {
+      if (task.robot_id) {
+        // TODO: Implement robot availability update logic
+        // This would typically involve calling an external service or updating a robot status table
+        await this.orchestratorService.makeRobotAvailable(task.robot_id);
+        console.log(`Making robot ${task.robot_id} available`);
+      }
+    }
+
     // await this.BatchJobRepository.remove(batchJob);
 
     return {

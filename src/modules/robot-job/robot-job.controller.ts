@@ -795,7 +795,7 @@ export class RobotJobController {
     @Query('location_type') locationType?: LocationType,
     @Query('location_level') locationLevel?: string,
     @Query('location_limit') locationLimit?: number,
-  ): Promise<GetLocationRes> {
+  ): Promise<any> {
     const getLocationReq: GetLocationReq = {
       location_status: locationStatus || '',
       location_zone: locationZone || '',
@@ -804,10 +804,86 @@ export class RobotJobController {
       location_limit: locationLimit || 1e9,
       warehouse_id: warehouseId,
     };
-    return await this.robotJobService.getLocations(
-      warehouseId,
-      getLocationReq
-    );
+    // return await this.robotJobService.getLocations(
+    //   warehouseId,
+    //   getLocationReq
+    // );
+    if (locationZone==='station'){
+      return {
+        'zone_id': 'station',
+        'available_location_types': [
+          {
+            'location_id': 'ST010'
+          }
+        ]
+      }
+    }
+    if (locationZone==='inventory'){
+      return {
+        'zone_id': 'inventory',
+        'available_location_types': [
+          {
+            'location_id': 'R10X23'
+          },
+          {
+            'location_id': 'R10X02'
+          },
+          {
+            'location_id': 'R20X01'
+          },
+          {
+            'location_id': 'R10X01'
+          },
+          {
+            'location_id': 'R10X03'
+          },
+          {
+            'location_id': 'R10X04'
+          },
+          {
+            'location_id': 'R10X05'
+          },
+          {
+            'location_id': 'R10X06'
+          },
+          {
+            'location_id': 'R10X07'
+          },
+          {
+            'location_id': 'R10X08'
+          },
+          {
+            'location_id': 'R10X09'
+          },
+          {
+            'location_id': 'R10X10'
+          }
+        ]
+      }
+    }
+    if (locationZone==='wait'){
+      return {
+        'zone_id': 'wait',
+        'available_location_types': [
+          { 'location_id': 'WA0101' },
+          { 'location_id': 'WA0102' },
+          { 'location_id': 'WA0103' },
+          { 'location_id': 'WA0104' },
+          { 'location_id': 'WA0105' },
+          { 'location_id': 'WA0106' },
+          { 'location_id': 'WA0107' },
+          { 'location_id': 'WA0108' },
+          { 'location_id': 'WA0109' },
+          { 'location_id': 'WA0110' },
+          { 'location_id': 'WA0111' },
+          { 'location_id': 'WA0112' },
+          { 'location_id': 'WA0113' },
+          { 'location_id': 'WA0114' },
+          { 'location_id': 'WA0115' },
+          { 'location_id': 'WA0116' }
+        ]
+      }
+    }
   }
 
   @ApiOperation({ summary: 'Update webhook URL for a warehouse' })
