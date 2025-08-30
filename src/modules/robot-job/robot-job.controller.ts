@@ -857,6 +857,9 @@ export class RobotJobController {
           },
           {
             'location_id': 'R10X10'
+          },
+          {
+            'location_id': 'R30X23'
           }
         ]
       }
