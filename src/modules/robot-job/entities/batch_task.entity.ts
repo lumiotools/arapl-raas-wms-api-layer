@@ -34,4 +34,10 @@ export class BatchJob {
 
   @Column({ type: 'varchar', default: 'pending' })
   status: string;
+
+  @CreateDateColumn()
+  created_at: Date;
+
+  @UpdateDateColumn()
+  updated_at: Date;
 }
