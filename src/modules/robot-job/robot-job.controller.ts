@@ -812,9 +812,11 @@ export class RobotJobController {
       return {
         'zone_id': 'station',
         'available_location_types': [
-          {
-            'location_id': 'ST010'
-          }
+          {'location_id': 'ST010'},
+          {'location_id': 'ST001'},
+          {'location_id': 'ST002'},
+          {'location_id': 'ST003'},
+          {'location_id': 'ST004'}
         ]
       }
     }
