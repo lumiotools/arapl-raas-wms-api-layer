@@ -15,7 +15,7 @@ export async function get_idle_robots(): Promise<any[]> {
         console.log(`res: ${JSON.stringify(res)}`);
         const returnRes: any[] = [];
         for (const robot of res.data) {
-            if (['MAIA-003','MAIA-004','MAIA-005'].includes(robot.name)) continue; // Filter out test robots
+            // if (['MAIA-003','MAIA-004','MAIA-005'].includes(robot.name)) continue; // Filter out test robots
             returnRes.push({
                 id: robot.robot_id,
                 status: robot.status,
