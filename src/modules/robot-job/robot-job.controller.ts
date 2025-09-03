@@ -816,7 +816,8 @@ export class RobotJobController {
           {'location_id': 'ST001'},
           {'location_id': 'ST002'},
           {'location_id': 'ST003'},
-          {'location_id': 'ST004'}
+          {'location_id': 'ST004'},
+          {'location_id': 'ST008'}
         ]
       }
     }

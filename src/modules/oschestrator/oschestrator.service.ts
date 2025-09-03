@@ -345,8 +345,11 @@ export class OschestratorService {
     private async initializeRobots(): Promise<void> {
         try {
             const robotIds = [
-                'f47ac10b-58cc-4372-a567-0e02b2c3d479',
-                '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
+                'ROBOT-001',
+                'ROBOT-002',
+                'ROBOT-003',
+                'ROBOT-004',
+                'ROBOT-005',
                 // '6ba7b812-9dad-11d1-80b4-00c04fd430c9',
                 // '6ba7b813-9dad-11d1-80b4-00c04fd430c9'
             ];
