@@ -59,7 +59,7 @@ export class RobotJobService {
   private isFilterSet = false;
 
   onModuleInit() {
-    this.fms_socket = io('ws://api.araplraas.com');
+    this.fms_socket = io(process.env.SOCKET_URL);
 
     this.fms_socket.on('connect', () => {
       console.log('Connected to FMS socket server');
