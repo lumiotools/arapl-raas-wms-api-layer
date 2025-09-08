@@ -231,7 +231,7 @@ export class OschestratorService {
                 await this.wms_webhook({ tasks: [task], existingBatchJob: existingBatchJob });
 
                 // Simulate task processing time of 60 seconds
-                await new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * 50000) + 10000));
+                await new Promise(resolve => setTimeout(resolve, 40000));
 
                 // check if this task was cancelled
                 const checkTaskForCancel = await this.taskRepository.findOne({
