@@ -287,13 +287,10 @@ export enum FallbackAction {
 }
 
 export enum LocationAction {
-  Pick = 'PICK',
-  Drop = 'DROP',
-  Nop = 'NOP',
-  WaitPick = 'WaitPick',
-  WaitDrop = 'WaitDrop',
-  Wait = 'Wait',
-  Destack = 'Destack',
+  PICK = 'PICK',
+  DROP = 'DROP',
+  NOP_RESUME = 'NOP-resume',
+  NOP_PAUSE = 'NOP-pause',
 }
 
 export enum LocationType {
