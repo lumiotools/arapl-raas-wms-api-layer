@@ -6,7 +6,7 @@ import { Task } from '../robot-job/entities/task.entity';
 import { BatchJob } from '../robot-job/entities/batch_task.entity';
 import { Warehouse } from '../robot-job/entities/warehouse.entity';
 import { Robot } from '../robot-job/entities/robot.entity';
-import { TaskGenerationReq } from '../robot-job/dto/Task_Generation.dto';
+import { LocationAction, TaskGenerationReq } from '../robot-job/dto/Task_Generation.dto';
 import { queueElementDto } from './dto/queue.dto';
 import axios from 'axios';
 import { promises } from 'dns';
@@ -292,9 +292,7 @@ async checkBatchTaskStatus(): Promise<void> {
 
                 task.status = 'completed';
                 await this.taskRepository.save(task);
-                if (task.end_location?.location_id?.startsWith('R') || task.end_location?.location_id?.startsWith('Z') || task.end_location?.location_id?.startsWith('P')
-                || task.end_location?.location_id?.startsWith('W')
-                ) {
+                if (task.end_location.location_action === LocationAction.DROP){
                     await this.robotRepository.update(
                         { robot_id: task.robot_id },
                         { available: true, current_task_id: null }
@@ -306,11 +304,15 @@ async checkBatchTaskStatus(): Promise<void> {
 
                 await this.wms_webhook({ tasks: [task], existingBatchJob: existingBatchJob });
             }
+            const pendingTasksOfBatch = await this.taskRepository.find({
+                where: { batch_job: { batch_job_id: existingBatchJob.batch_job_id }, status: 'pending' },
+            });
+            if (pendingTasksOfBatch.length === 0) {
+                existingBatchJob.status = 'completed';
+                await this.batchJobRepository.save(existingBatchJob);
+            }
 
-            existingBatchJob.status = 'completed';
-
-            await this.batchJobRepository.save(existingBatchJob);
-
+            
             // await this.wms_webhook({ tasks: tasksToProcess, existingBatchJob: existingBatchJob });
 
         } catch (error) {

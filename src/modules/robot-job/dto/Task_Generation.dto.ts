@@ -306,6 +306,7 @@ export enum TaskType {
   Putaway = 'Putaway',
   Picking = 'Picking',
   GoodsToPerson = 'GOODSTOPERSON',
+  BASEOPS = 'Baseops',
 }
 
 export enum batch_type {
