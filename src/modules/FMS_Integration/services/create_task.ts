@@ -2,7 +2,7 @@
 import { BadRequestException } from "@nestjs/common";
 import {authenticate} from "./authentication";
 import fetch from 'node-fetch';
-import { TaskGenerationReq, TaskGenerationRes } from "src/modules/robot-job/dto/Task_Generation.dto";
+import { TaskGenerationReq, TaskGenerationRes, TaskType } from "src/modules/robot-job/dto/Task_Generation.dto";
 import { Task } from "src/modules/robot-job/entities/task.entity";
 
 interface struct_fms_create_task {
@@ -24,7 +24,7 @@ export async function createTask(payload: struct_fms_create_task): Promise<TaskG
             batch_frequency: payload.batch_frequency,
             tasks: payload.tasks.map(task => ({
                 task_id: task.task_id,
-                task_type:task.task_type,
+                task_type: TaskType.GoodsToPerson,
                 robot_id: task.robot_id,
                 start_location: {
                     location_id: task.start_location.location_id,
