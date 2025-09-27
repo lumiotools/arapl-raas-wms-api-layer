@@ -289,8 +289,8 @@ export enum FallbackAction {
 export enum LocationAction {
   PICK = 'PICK',
   DROP = 'DROP',
-  NOP_RESUME = 'NOP-resume',
-  NOP_PAUSE = 'NOP-pause',
+  NOP_RESUME = 'NOP_RESUME',
+  NOP_PAUSE = 'NOP_PAUSE',
 }
 
 export enum LocationType {
@@ -306,6 +306,7 @@ export enum TaskType {
   Putaway = 'Putaway',
   Picking = 'Picking',
   GoodsToPerson = 'GOODSTOPERSON',
+  BASEOPS = 'BASEOPS',
 }
 
 export enum batch_type {

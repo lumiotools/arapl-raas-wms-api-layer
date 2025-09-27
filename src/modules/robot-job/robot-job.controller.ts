@@ -890,6 +890,24 @@ export class RobotJobController {
         ]
       }
     }
+    console.log('location zone ', locationZone);
+    if (locationZone==='empty'){
+      return {
+        'zone_id': 'empty',
+        'available_location_types': [
+          { 'location_id': 'EM0101' },
+          { 'location_id': 'EM0102' },
+          { 'location_id': 'EM0103' },
+          { 'location_id': 'EM0104' },
+          { 'location_id': 'EM0105' },
+          { 'location_id': 'EM0106' },
+          { 'location_id': 'EM0107' },
+          { 'location_id': 'EM0108' },
+          { 'location_id': 'EM0109' },
+          { 'location_id': 'EM0110' },
+        ]
+      }
+    }
   }
 
   @ApiOperation({ summary: 'Update webhook URL for a warehouse' })
