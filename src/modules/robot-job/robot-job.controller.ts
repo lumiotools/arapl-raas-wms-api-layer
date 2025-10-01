@@ -931,4 +931,33 @@ export class RobotJobController {
   const robots = await this.robotJobService.getIdleRobots();
   return { robots };
   }
+
+  @Patch(':warehouse_id/locations/status')
+  @ApiOperation({ summary: 'Update the status of the location' })
+  @ApiParam({
+    name: 'warehouse_id',
+    type: String,
+    description: 'Unique identifier of the warehouse',
+    example: 'WH_001',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        location_id: { type: 'string', description: 'ID of the location to update', example: 'LOC_123' },
+        status: { type: 'string', description: 'New status for the location', example: 'Occupied' },
+      },
+      required: ['location_id', 'status'],
+    },
+    description: 'Location status update request body',
+  })
+  async updateLocationStatus(
+    @Param('warehouse_id') warehouseId: string,
+    @Body() body: any,
+  ): Promise<{ message: string }> {
+    const { location_id, status } = body;
+
+    return this.robotJobService.updateLocationStatus(warehouseId, location_id, status);
+  }
+
 }

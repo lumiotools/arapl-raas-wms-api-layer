@@ -52,6 +52,7 @@ import { cancelBatch, cancelBatchTask } from '../FMS_Integration/services/cancel
 import { io, Socket } from 'socket.io-client';
 import { get_location } from '../FMS_Integration/services/get_location';
 import { get_idle_robots } from '../FMS_Integration/services/idle_robots';
+import { update_location_status } from '../FMS_Integration/services/update_location_status';
 
 @Injectable()
 export class RobotJobService {
@@ -1332,5 +1333,9 @@ export class RobotJobService {
     //   { id: '8b7e5c9d-3a42-4f1d-9f1a-123456789abc', status: 'idle' },
     // ];
     return get_idle_robots();
+  }
+
+  async updateLocationStatus(warehouseId: string, locationId: string, status: string){
+    return update_location_status(warehouseId, locationId, status);
   }
 }
