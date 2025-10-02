@@ -6,7 +6,7 @@ import { Task } from '../robot-job/entities/task.entity';
 import { BatchJob } from '../robot-job/entities/batch_task.entity';
 import { Warehouse } from '../robot-job/entities/warehouse.entity';
 import { Robot } from '../robot-job/entities/robot.entity';
-import { LocationAction, TaskGenerationReq } from '../robot-job/dto/Task_Generation.dto';
+import { LocationAction, TaskGenerationReq, TaskType } from '../robot-job/dto/Task_Generation.dto';
 import { queueElementDto } from './dto/queue.dto';
 import axios from 'axios';
 import { promises } from 'dns';
@@ -38,225 +38,257 @@ export class OschestratorService {
         this.initializeRobots();
     }
 
-        @Cron('*/2 * * * * *')
-async checkBatchTaskStatus(): Promise<void> {
-    if (this.isCheckBatchJobStatus) {
-        this.logger.warn('Already checking batch job status, skipping this cycle');
-        return;
-    }
-    
-    // Set flag immediately
-    this.isCheckBatchJobStatus = true;
-    
-    let queryRunner: QueryRunner | null = null;
-    
-    try {
-        // First, get all pending batch jobs without transaction
-        queryRunner = this.batchJobRepository.manager.connection.createQueryRunner();
-        await queryRunner.connect();
-        
-        const pendingBatchJobs = await queryRunner.manager
-            .createQueryBuilder(BatchJob, 'batch')
-            .where('batch.status = :status', { status: 'pending' })
-            .getMany();
-
-        if (!pendingBatchJobs.length) {
-            this.logger.log('No pending batch jobs found.');
+    // @Cron('*/10 * * * * *')
+    @Interval(2000)
+    async checkBatchTaskStatus(): Promise<void> {
+        if (this.isCheckBatchJobStatus) {
+            this.logger.warn('Already checking batch job status, skipping this cycle');
             return;
         }
-
-        // Process each batch job with its own transaction
-        for (const pendingBatchJob of pendingBatchJobs) {
-            let batchQueryRunner: QueryRunner | null = null;
+        
+        // Set flag immediately
+        this.isCheckBatchJobStatus = true;
+        
+        let queryRunner: QueryRunner | null = null;
+        
+        try {
+            // First, get all pending batch jobs without transaction
+            queryRunner = this.batchJobRepository.manager.connection.createQueryRunner();
+            await queryRunner.connect();
             
-            try {
-                // Create a new query runner for each batch job
-                batchQueryRunner = this.batchJobRepository.manager.connection.createQueryRunner();
-                await batchQueryRunner.connect();
-                await batchQueryRunner.startTransaction();
+            const pendingBatchJobs = await queryRunner.manager
+                .createQueryBuilder(BatchJob, 'batch')
+                .where('batch.status = :status', { status: 'pending' })
+                .getMany();
+
+            if (!pendingBatchJobs.length) {
+                this.logger.log('No pending batch jobs found.');
+                return;
+            }
+
+            // Process each batch job with its own transaction
+            for (const pendingBatchJob of pendingBatchJobs) {
+                let batchQueryRunner: QueryRunner | null = null;
                 
-                // Re-check and lock the specific batch job
-                const lockedBatchJob = await batchQueryRunner.manager
-                    .createQueryBuilder(BatchJob, 'batch')
-                    .where('batch.batch_job_id = :id AND batch.status = :status', { 
-                        id: pendingBatchJob.batch_job_id, 
-                        status: 'pending' 
-                    })
-                    .setLock('pessimistic_write')
-                    .getOne();
-
-                if (!lockedBatchJob) {
-                    this.logger.log(`Batch job ${pendingBatchJob.batch_job_id} is no longer pending, skipping`);
-                    await batchQueryRunner.commitTransaction();
-                    continue;
-                }
-                
-                const tasks = await batchQueryRunner.manager.find(Task, {
-                    where: { batch_job: { batch_job_id: pendingBatchJob.batch_job_id }, status: 'pending' },
-                });
-
-                if (!tasks.length) {
-                    this.logger.log(`No pending tasks found for batch job ${pendingBatchJob.batch_job_id}`);
-                    await batchQueryRunner.commitTransaction();
-                    continue;
-                }
-
-                // Update batch status to processing first
-                // await batchQueryRunner.manager.update(BatchJob, 
-                //     { batch_job_id: pendingBatchJob.batch_job_id }, 
-                //     { status: 'processing' }
-                // );
-
-                // Commit the batch job status update
-                await batchQueryRunner.commitTransaction();
-
-                // Process each task individually with separate transactions
-                const processedTasks: Task[] = [];
-                
-                for (const task of tasks) {
-                    let taskQueryRunner: QueryRunner | null = null;
+                try {
+                    // Create a new query runner for each batch job
+                    batchQueryRunner = this.batchJobRepository.manager.connection.createQueryRunner();
+                    await batchQueryRunner.connect();
+                    await batchQueryRunner.startTransaction();
                     
-                    try {
-                        console.log(`Processing task: ${JSON.stringify(task)}`);
-                        
-                        // Create new transaction for each task
-                        taskQueryRunner = this.batchJobRepository.manager.connection.createQueryRunner();
-                        await taskQueryRunner.connect();
-                        await taskQueryRunner.startTransaction();
-                        
-                        let assignedRobotId = task.robot_id;
-                        
-                        // Robot assignment logic
-                        if (!assignedRobotId) {
-                            const availableRobot = await taskQueryRunner.manager.findOne(Robot, {
-                                where: { available: true }
-                            });
-                            if (availableRobot) {
-                                task.robot_id = availableRobot.robot_id;
-                                assignedRobotId = availableRobot.robot_id;
-                                await taskQueryRunner.manager.save(task);
-                                await taskQueryRunner.manager.update(Robot, 
-                                    { robot_id: availableRobot.robot_id }, 
-                                    { available: false, current_task_id: task.task_id }
-                                );
-                                this.logger.log(`Assigned robot ${availableRobot.robot_id} to task ${task.task_id}`);
-                            }
-                        }
-                        
-                        if (!assignedRobotId) {
-                            this.logger.warn(`No robot available for task ${task.task_id}. Will retry in next cycle.`);
-                            await taskQueryRunner.rollbackTransaction();
-                            continue; // Skip to next task, not batch job
-                        }
+                    // Re-check and lock the specific batch job
+                    const lockedBatchJob = await batchQueryRunner.manager
+                        .createQueryBuilder(BatchJob, 'batch')
+                        .where('batch.batch_job_id = :id AND batch.status = :status', { 
+                            id: pendingBatchJob.batch_job_id, 
+                            status: 'pending' 
+                        })
+                        .setLock('pessimistic_write')
+                        .getOne();
 
-                        // Update robot status if not already updated
-                        if (task.robot_id !== assignedRobotId) {
-                            await taskQueryRunner.manager.update(Robot,
-                                { robot_id: assignedRobotId },
-                                { available: false, current_task_id: task.task_id }
-                            );
-                        }
-
-                        // Update task status
-                        task.status = 'processing';
-                        await taskQueryRunner.manager.save(task);
-                        
-                        // Commit the task transaction
-                        await taskQueryRunner.commitTransaction();
-                        
-                        // Add to processed tasks list
-                        processedTasks.push(task);
-                        
-                    } catch (taskError) {
-                        this.logger.error(`Error processing task ${task.task_id}:`, taskError);
-                        
-                        // Rollback task transaction if active
-                        if (taskQueryRunner?.isTransactionActive) {
-                            try {
-                                await taskQueryRunner.rollbackTransaction();
-                            } catch (rollbackError) {
-                                this.logger.error('Error rolling back task transaction:', rollbackError);
-                            }
-                        }
-                        
-                        // Continue with next task
+                    if (!lockedBatchJob) {
+                        this.logger.log(`Batch job ${pendingBatchJob.batch_job_id} is no longer pending, skipping`);
+                        await batchQueryRunner.commitTransaction();
                         continue;
+                    }
+                    
+                    const tasks = await batchQueryRunner.manager.find(Task, {
+                        where: { batch_job: { batch_job_id: pendingBatchJob.batch_job_id }, status: 'pending' },
+                    });
+
+                    if (!tasks.length) {
+                        this.logger.log(`No pending tasks found for batch job ${pendingBatchJob.batch_job_id}`);
+                        await batchQueryRunner.commitTransaction();
+                        continue;
+                    }
+
+                    // Update batch status to processing first
+                    // await batchQueryRunner.manager.update(BatchJob, 
+                    //     { batch_job_id: pendingBatchJob.batch_job_id }, 
+                    //     { status: 'processing' }
+                    // );
+
+                    // Commit the batch job status update
+                    await batchQueryRunner.commitTransaction();
+
+                    // Process each task individually with separate transactions
+                    const processedTasks: Task[] = [];
+                    
+                    for (const task of tasks) {
+                        let taskQueryRunner: QueryRunner | null = null;
                         
-                    } finally {
-                        // Clean up the task-specific query runner
-                        if (taskQueryRunner) {
-                            try {
-                                await taskQueryRunner.release();
-                            } catch (releaseError) {
-                                this.logger.error('Error releasing task query runner:', releaseError);
+                        try {
+                            console.log(`Processing task: ${JSON.stringify(task)}`);
+                            
+                            // Create new transaction for each task
+                            taskQueryRunner = this.batchJobRepository.manager.connection.createQueryRunner();
+                            await taskQueryRunner.connect();
+                            await taskQueryRunner.startTransaction();
+                            
+                            let assignedRobotId = task.robot_id;
+                            
+                            // Robot assignment logic
+                            // if (!assignedRobotId) {
+                            //     const availableRobot = await taskQueryRunner.manager.findOne(Robot, {
+                            //         where: { available: true }
+                            //     });
+                            //     if (availableRobot) {
+                            //         task.robot_id = availableRobot.robot_id;
+                            //         assignedRobotId = availableRobot.robot_id;
+                            //         await taskQueryRunner.manager.save(task);
+                            //         await taskQueryRunner.manager.update(Robot, 
+                            //             { robot_id: availableRobot.robot_id }, 
+                            //             { available: false }
+                            //         );
+                            //         this.logger.log(`Assigned robot ${availableRobot.robot_id} to task ${task.task_id}`);
+                            //     }
+                            // }
+
+                            // Robot assignment logic using raw queries
+                            if (!assignedRobotId) {
+                                // Find available robot with row lock (prevents race conditions)
+                                const availableRobots = await taskQueryRunner.query(
+                                    `SELECT robot_id FROM robots WHERE available = true and is_active = true and task_type = $1 LIMIT 1 FOR UPDATE`,
+                                    [task.task_type]
+                                );
+                                
+                                if (availableRobots && availableRobots.length > 0) {
+                                    const availableRobotId = availableRobots[0].robot_id;
+                                    
+                                    // Update task with robot_id
+                                    await taskQueryRunner.query(
+                                        `UPDATE tasks SET robot_id = $1 WHERE task_id = $2`,
+                                        [availableRobotId, task.task_id]
+                                    );
+                                    
+                                    // Update robot availability
+                                    await taskQueryRunner.query(
+                                        `UPDATE robots SET available = false WHERE robot_id = $1`,
+                                        [availableRobotId]
+                                    );
+                                    
+                                    // Update local task object
+                                    task.robot_id = availableRobotId;
+                                    assignedRobotId = availableRobotId;
+                                    
+                                    this.logger.log(`Assigned robot ${availableRobotId} to task ${task.task_id}`);
+                                }
+                            }
+                            
+                            if (!assignedRobotId) {
+                                this.logger.warn(`No robot available for task ${task.task_id}. Will retry in next cycle.`);
+                                await taskQueryRunner.rollbackTransaction();
+                                continue; // Skip to next task, not batch job
+                            }
+
+                            // Update robot status if not already updated
+                            if (task.robot_id !== assignedRobotId) {
+                                await taskQueryRunner.manager.update(Robot,
+                                    { robot_id: assignedRobotId },
+                                    { available: false }
+                                );
+                            }
+
+                            // Update task status
+                            task.status = 'processing';
+                            await taskQueryRunner.manager.save(task);
+                            
+                            // Commit the task transaction
+                            await taskQueryRunner.commitTransaction();
+                            
+                            // Add to processed tasks list
+                            processedTasks.push(task);
+                            
+                        } catch (taskError) {
+                            this.logger.error(`Error processing task ${task.task_id}:`, taskError);
+                            
+                            // Rollback task transaction if active
+                            if (taskQueryRunner?.isTransactionActive) {
+                                try {
+                                    await taskQueryRunner.rollbackTransaction();
+                                } catch (rollbackError) {
+                                    this.logger.error('Error rolling back task transaction:', rollbackError);
+                                }
+                            }
+                            
+                            // Continue with next task
+                            continue;
+                            
+                        } finally {
+                            // Clean up the task-specific query runner
+                            if (taskQueryRunner) {
+                                try {
+                                    await taskQueryRunner.release();
+                                } catch (releaseError) {
+                                    this.logger.error('Error releasing task query runner:', releaseError);
+                                }
                             }
                         }
                     }
-                }
 
-                // Process all successfully updated tasks outside transactions
-                if (processedTasks.length > 0) {
-                    try {
-                        await this.wms_webhook({tasks: processedTasks, existingBatchJob: pendingBatchJob});
-                        
-                        // Don't await this - let it run in background
-                        processedTasks.forEach(task => {
-                            this.processTaskQueueInterval([task]).catch(error => {
-                                this.logger.error('Error in background task processing:', error);
+                    // Process all successfully updated tasks outside transactions
+                    if (processedTasks.length > 0) {
+                        try {
+                            await this.wms_webhook({tasks: processedTasks, existingBatchJob: pendingBatchJob});
+                            
+                            // Don't await this - let it run in background
+                            processedTasks.forEach(task => {
+                                this.processTaskQueueInterval([task]).catch(error => {
+                                    this.logger.error('Error in background task processing:', error);
+                                });
                             });
-                        });
-                    } catch (webhookError) {
-                        this.logger.error('Error in webhook call:', webhookError);
-                        // Note: Database changes are already committed
-                        // You might want to implement compensating actions here
+                        } catch (webhookError) {
+                            this.logger.error('Error in webhook call:', webhookError);
+                            // Note: Database changes are already committed
+                            // You might want to implement compensating actions here
+                        }
                     }
-                }
-                
-            } catch (batchError) {
-                this.logger.error(`Error processing batch job ${pendingBatchJob.batch_job_id}:`, batchError);
-                
-                // Rollback batch transaction if it exists and is active
-                if (batchQueryRunner?.isTransactionActive) {
-                    try {
-                        await batchQueryRunner.rollbackTransaction();
-                    } catch (rollbackError) {
-                        this.logger.error('Error rolling back batch transaction:', rollbackError);
+                    
+                } catch (batchError) {
+                    this.logger.error(`Error processing batch job ${pendingBatchJob.batch_job_id}:`, batchError);
+                    
+                    // Rollback batch transaction if it exists and is active
+                    if (batchQueryRunner?.isTransactionActive) {
+                        try {
+                            await batchQueryRunner.rollbackTransaction();
+                        } catch (rollbackError) {
+                            this.logger.error('Error rolling back batch transaction:', rollbackError);
+                        }
                     }
-                }
-                
-                // Continue with next batch job instead of stopping the entire process
-                continue;
-                
-            } finally {
-                // Clean up the batch-specific query runner
-                if (batchQueryRunner) {
-                    try {
-                        await batchQueryRunner.release();
-                    } catch (releaseError) {
-                        this.logger.error('Error releasing batch query runner:', releaseError);
+                    
+                    // Continue with next batch job instead of stopping the entire process
+                    continue;
+                    
+                } finally {
+                    // Clean up the batch-specific query runner
+                    if (batchQueryRunner) {
+                        try {
+                            await batchQueryRunner.release();
+                        } catch (releaseError) {
+                            this.logger.error('Error releasing batch query runner:', releaseError);
+                        }
                     }
                 }
             }
-        }
-        
-    } catch (error) {
-        this.logger.error('Error checking batch job status:', error);
-        
-    } finally {
-        // CRITICAL: Always clean up and reset flag
-        if (queryRunner) {
-            try {
-                await queryRunner.release();
-            } catch (releaseError) {
-                this.logger.error('Error releasing query runner:', releaseError);
+            
+        } catch (error) {
+            this.logger.error('Error checking batch job status:', error);
+            
+        } finally {
+            // CRITICAL: Always clean up and reset flag
+            if (queryRunner) {
+                try {
+                    await queryRunner.release();
+                } catch (releaseError) {
+                    this.logger.error('Error releasing query runner:', releaseError);
+                }
             }
+            
+            // ALWAYS reset the flag - this prevents the infinite skip cycle
+            this.isCheckBatchJobStatus = false;
+            this.logger.debug('Batch job status check completed, flag reset');
         }
-        
-        // ALWAYS reset the flag - this prevents the infinite skip cycle
-        this.isCheckBatchJobStatus = false;
-        this.logger.debug('Batch job status check completed, flag reset');
     }
-}
     // @Interval(60000)
     async processTaskQueueInterval(tasksToProcess: Task[]): Promise<void> {
         try {
@@ -295,7 +327,7 @@ async checkBatchTaskStatus(): Promise<void> {
                 if (task.end_location.location_action === LocationAction.DROP){
                     await this.robotRepository.update(
                         { robot_id: task.robot_id },
-                        { available: true, current_task_id: null }
+                        { available: true }
                     );
                 }
 
@@ -395,30 +427,31 @@ async checkBatchTaskStatus(): Promise<void> {
      */
     private async initializeRobots(): Promise<void> {
         try {
-            const robotIds = [
-                'ROBOT-001',
-                'ROBOT-002',
-                'ROBOT-003',
-                'ROBOT-004',
-                'ROBOT-005',
-                // '6ba7b812-9dad-11d1-80b4-00c04fd430c9',
-                // '6ba7b813-9dad-11d1-80b4-00c04fd430c9'
-            ];
+            // const robotIds = [
+            //     'ROBOT-001',
+            //     'ROBOT-002',
+            //     'ROBOT-003',
+            //     'ROBOT-004',
+            //     'ROBOT-005',
+            //     // '6ba7b812-9dad-11d1-80b4-00c04fd430c9',
+            //     // '6ba7b813-9dad-11d1-80b4-00c04fd430c9'
+            // ];
             
-            for (const robotId of robotIds) {
-                const existingRobot = await this.robotRepository.findOne({
-                    where: { robot_id: robotId }
-                });
+            // for (const robotId of robotIds) {
+            //     const existingRobot = await this.robotRepository.findOne({
+            //         where: { robot_id: robotId }
+            //     });
                 
-                if (!existingRobot) {
-                    const robot = this.robotRepository.create({
-                        robot_id: robotId,
-                        available: true
-                    });
-                    await this.robotRepository.save(robot);
-                    this.logger.log(`Initialized robot ${robotId} in database`);
-                }
-            }
+            //     if (!existingRobot) {
+            //         const robot = this.robotRepository.create({
+            //             robot_id: robotId,
+            //             available: true
+            //         });
+            //         await this.robotRepository.save(robot);
+            //         this.logger.log(`Initialized robot ${robotId} in database`);
+            //     }
+            // }
+            this.createRobots(10);
         } catch (error) {
             this.logger.error('Error initializing robots:', error);
         }
@@ -436,6 +469,13 @@ async checkBatchTaskStatus(): Promise<void> {
                 .createQueryBuilder('robot')
                 .orderBy('robot.robot_id', 'DESC')
                 .getOne();
+            if (highestRobot?.robot_id === 'ROBOT-010') {
+                return {
+                    message: 'Maximum robot limit reached (ROBOT-010). Cannot create more robots.',
+                    success: false,
+                    robots: []
+                }
+            }
 
             let startIndex = 1;
             if (highestRobot && /^ROBOT-\d+$/.test(highestRobot.robot_id)) {
@@ -447,11 +487,11 @@ async checkBatchTaskStatus(): Promise<void> {
             const robots: string[] = [];
             for (let i = 0; i < count; i++) {
                 const robotId = `ROBOT-${String(startIndex + i).padStart(3, '0')}`;
+                console.log(`Creating robot with ID: ${robotId}, index: ${i}`);
                 const robot = this.robotRepository.create({
                     robot_id: robotId,
                     available: true,
-                    last_task_id: null,
-                    current_task_id: null
+                    task_type: (i%2)==0 ? TaskType.GoodsToPerson: TaskType.BASEOPS
                 });
                 await this.robotRepository.save(robot);
                 robots.push(robotId);
@@ -469,63 +509,6 @@ async checkBatchTaskStatus(): Promise<void> {
                 success: false,
                 robots: []
             };
-        }
-    }
-
-    /**
-     * Get a robot that didn't end at inventory but can be assigned to a task that depends on its last task
-     */
-    private async getRobotWaitingForDependentTask(taskId: string): Promise<string | null> {
-        try {
-            const availableRobots = await this.robotRepository.find({
-                where: { available: true }
-            });
-            
-            // Check each available robot to see if this task depends on its last task
-            for (const robot of availableRobots) {
-                const lastTaskId = await this.getLastTaskForRobot(robot.robot_id);
-                
-                if (lastTaskId) {
-                    // Check if the current task depends on this robot's last task
-                    // We need to find if there's a dependency chain that connects this task to the robot's last task
-                    const isDependentOnLastTask = await this.isTaskDependentOnTask(taskId, lastTaskId);
-                    
-                    if (isDependentOnLastTask) {
-                        // Check if the robot's last task did NOT end at inventory
-                        const lastTaskEntity = await this.taskRepository.findOne({
-                            where: { task_id: lastTaskId }
-                        });
-                        
-                        if (lastTaskEntity) {
-                            const endLocation = lastTaskEntity.end_location;
-                            const endedAtInventory = endLocation?.location_attribute?.attribute_value === 'inventory';
-                            
-                            if (!endedAtInventory) {
-                                this.logger.log(`Robot ${robot.robot_id} last task ${lastTaskId} did not end at inventory and current task ${taskId} depends on it - can assign`);
-                                return robot.robot_id;
-                            }
-                        }
-                    }
-                }
-            }
-            
-            return null;
-        } catch (error) {
-            this.logger.error('Error getting robot waiting for dependent task:', error);
-            return null;
-        }
-    }
-    
-    /**
-     * Get the last completed task ID for a robot (from DB)
-     */
-    private async getLastTaskForRobot(robotId: string): Promise<string | null> {
-        try {
-            const robot = await this.robotRepository.findOne({ where: { robot_id: robotId } });
-            return robot?.last_task_id || null;
-        } catch (error) {
-            this.logger.error(`Error getting last task for robot ${robotId}:`, error);
-            return null;
         }
     }
 

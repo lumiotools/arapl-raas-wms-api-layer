@@ -1,4 +1,5 @@
 import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { TaskType } from '../dto/Task_Generation.dto';
 
 @Entity('robots')
 export class Robot {
@@ -8,12 +9,11 @@ export class Robot {
     @Column({ type: 'boolean', default: true })
     available: boolean;
 
+    @Column({ type: 'enum', enum : TaskType, default: TaskType.GoodsToPerson })
+    task_type: TaskType;
 
-    @Column({ type: 'varchar', length: 100, nullable: true })
-    last_task_id: string | null;
-
-    @Column({ type: 'varchar', length: 100, nullable: true })
-    current_task_id: string | null;
+    @Column({ type: 'boolean', default: true})
+    is_active: boolean;
 
     @CreateDateColumn()
     created_at: Date;

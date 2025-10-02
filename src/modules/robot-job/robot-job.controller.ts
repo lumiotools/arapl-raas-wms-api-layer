@@ -21,6 +21,7 @@ import {
   LocationAction,
   TaskGenerationReq,
   TaskGenerationRes,
+  TaskType,
 } from './dto/Task_Generation.dto';
 import { TaskUpdateReq, TaskUpdateRes } from './dto/Task_Update.dto';
 import { BatchCancelRes, CancelBatchReq, CancelTaskReq, TaskCancelRes } from './dto/Cancel.dto';
@@ -1054,5 +1055,71 @@ export class RobotJobController {
   if (!robots) throw new BadRequestException('No idle robots found');
   //////////////////////////////////////////////
   return { robots };
+  }
+
+  @ApiOperation({ summary: 'Get list of all robots (id and status)' })
+  @ApiParam({
+    name: 'warehouse_id',
+    type: String,
+    description: 'Warehouse identifier (reserved for future scoping)',
+    example: 'WH_001',
+  })
+  @ApiResponse({ status: 200, description: 'All robots returned', type: GetIdleRobotsRes })
+  @ApiResponse({ status: 401, description: 'Unauthorized', type: UnauthorizedDto })
+  @ApiResponse({ status: 403, description: 'Forbidden - warehouse does not have robot access', type: ForbiddenDto })
+  @Get(':warehouse_id/all-robots')
+  async getAllRobots(@Req() request: Request, @Query() task_type: TaskType): Promise<any> {
+    if (!request.warehouse?.robot_access) {
+      throw new ForbiddenException('Warehouse does not have robot access');
+    }
+    const robotEntities = await this.robotRepository.find({where:{task_type: task_type['task_type']}});
+    const robots = robotEntities.map(entity => ({
+      id: entity.robot_id,
+      status: entity.available ? 'Idle' : 'Busy',
+      is_active: entity.is_active,
+    }));
+    return { robots };
+  }
+
+  @ApiOperation({ summary: 'Deactivate/activate a robot by robot_id' })
+  @ApiParam({
+    name: 'warehouse_id',
+    type: String,
+    description: 'Warehouse identifier (reserved for future scoping)',
+    example: 'WH_001',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        robot_id: { type: 'string', example: 'ROBOT_001' },
+      },
+      required: ['robot_id'],
+    },
+    description: 'Robot deactivation request body',
+  })
+  @ApiResponse({ status: 200, description: 'Robot deactivated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid robot_id or robot not found', type: BadRequestDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized', type: UnauthorizedDto })
+  @ApiResponse({ status: 403, description: 'Forbidden - warehouse does not have robot access', type: ForbiddenDto })
+  @ApiResponse({ status: 500, description: 'Internal server error', type: InternalServerErrorDto })
+  @Patch(':warehouse_id/update-robot')
+  async toggleRobot(
+    @Body('robot_id') robotId: string,
+    @Req() request: Request,
+  ): Promise<{ message: string }> {
+    if (!request.warehouse?.robot_access) {
+      throw new ForbiddenException('Warehouse does not have robot access');
+    }
+    if (!robotId) {
+      throw new BadRequestException('robot_id is required');
+    }
+    const robot = await this.robotRepository.findOne({ where: { robot_id: robotId } });
+    if (!robot) {
+      throw new BadRequestException('Robot not found');
+    }
+    robot.is_active = !robot.is_active;
+    await this.robotRepository.save(robot);
+    return { message: `Robot ${robotId} ${robot.is_active ? 'activated' : 'deactivated'} successfully` };
   }
 }
