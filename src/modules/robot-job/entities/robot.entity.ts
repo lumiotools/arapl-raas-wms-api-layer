@@ -15,6 +15,9 @@ export class Robot {
     @Column({ type: 'boolean', default: true})
     is_active: boolean;
 
+    @Column({ type: 'varchar', length: 100, nullable: true })
+    message_code: 'maintenance' | 'charging' | 'error' | null;
+
     @CreateDateColumn()
     created_at: Date;
 

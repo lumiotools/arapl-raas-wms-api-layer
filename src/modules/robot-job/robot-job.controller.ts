@@ -1077,6 +1077,8 @@ export class RobotJobController {
       id: entity.robot_id,
       status: entity.available ? 'Idle' : 'Busy',
       is_active: entity.is_active,
+      current_status_time: Math.floor((Date.now() - new Date(entity.updated_at).getTime()) / 1000),
+      message_code: entity.message_code,
     }));
     return { robots };
   }
@@ -1106,6 +1108,7 @@ export class RobotJobController {
   @Patch(':warehouse_id/update-robot')
   async toggleRobot(
     @Body('robot_id') robotId: string,
+    @Body('message_code') message_code: 'maintenance' | 'charging' | 'error',
     @Req() request: Request,
   ): Promise<{ message: string }> {
     if (!request.warehouse?.robot_access) {
@@ -1119,6 +1122,7 @@ export class RobotJobController {
       throw new BadRequestException('Robot not found');
     }
     robot.is_active = !robot.is_active;
+    robot.message_code = message_code;
     await this.robotRepository.save(robot);
     return { message: `Robot ${robotId} ${robot.is_active ? 'activated' : 'deactivated'} successfully` };
   }
