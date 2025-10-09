@@ -302,7 +302,7 @@ export enum LocationType {
 }
 
 export enum TaskType {
-  CrossDocking = 'Crossdock',
+  CrossDocking = 'CROSSDOCK',
   Putaway = 'Putaway',
   Picking = 'Picking',
   GoodsToPerson = 'GOODSTOPERSON',
