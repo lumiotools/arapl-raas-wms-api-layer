@@ -18,10 +18,18 @@
 //   @Type(() => Task)
 //   tasks: Task[];
 // }
-import { IsArray, ValidateNested, IsString, IsNotEmpty } from 'class-validator';
+import {
+  IsArray,
+  ValidateNested,
+  IsString,
+  IsNotEmpty,
+  IsNumber,
+  IsEnum,
+  IsOptional,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Task } from './Task_Generation.dto';
+import { Task, batch_type } from './Task_Generation.dto';
 
 export class GetTasksParamsDto {
   @ApiProperty({
@@ -42,10 +50,30 @@ export class GetTasksParamsDto {
 }
 
 export class GetTasksResponseDto {
-  @ApiProperty({
-    description: 'List of tasks in the batch',
-    type: [Task],
-  })
+  @ApiProperty({ example: 'UNIQUE_BATCH_ID' })
+  @IsString()
+  @IsNotEmpty()
+  batch_job_id: string;
+
+  @ApiProperty({ example: 0 })
+  @IsNumber()
+  batch_priority: number;
+
+  @ApiProperty({ enum: batch_type })
+  @IsEnum(batch_type)
+  batch_type: batch_type;
+
+  @ApiPropertyOptional({ example: 0 })
+  @IsOptional()
+  @IsNumber()
+  batch_frequency?: number;
+
+  @ApiProperty({ example: 'task_in_progress' })
+  @IsString()
+  @IsNotEmpty()
+  batch_job_status: string;
+
+  @ApiProperty({ type: [Task] })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => Task)

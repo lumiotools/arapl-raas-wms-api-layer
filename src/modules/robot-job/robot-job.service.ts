@@ -46,17 +46,19 @@ import {
   UpdateLocationTrackingReq,
   UpdateLocationTrackingRes,
 } from './dto/UpdateLocationTracking.dto';
-import { createTask } from 'src/modules/FMS_Integration/services/create_task';
-import { get_tasks } from '../FMS_Integration/services/get_task';
-import { cancelBatch, cancelBatchTask } from '../FMS_Integration/services/cancel';
+import { createTask } from 'src/modules/integration/services/create_task';
+import { get_tasks } from '../integration/services/get_task';
+import { cancelBatch, cancelBatchTask } from '../integration/services/cancel';
 import { io, Socket } from 'socket.io-client';
-import { get_location } from '../FMS_Integration/services/get_location';
-import { get_idle_robots } from '../FMS_Integration/services/idle_robots';
-import { update_location_status } from '../FMS_Integration/services/update_location_status';
+import { get_location } from '../integration/services/get_location';
+import { get_idle_robots } from '../integration/services/idle_robots';
+import { update_location_status } from '../integration/services/update_location_status';
+import { GetTasksResponseDto } from './dto/GetTasks.dto';
 
 @Injectable()
 export class RobotJobService {
   private fms_socket: Socket;
+  private moveops_socket: Socket;
   private isFilterSet = false;
 
   onModuleInit() {
@@ -77,46 +79,81 @@ export class RobotJobService {
     this.fms_socket.on('disconnect', () => {
       this.isFilterSet = false;
     });
+
+    this.moveops_socket = io(process.env.MOVEOPS_WS_URL);
+
+    this.moveops_socket.on('connect', () => {
+      console.log('Connected to MoveOps socket server');
+    });
+
+    this.moveops_socket.on('reconnect', () => {
+      console.log('Reconnected to MoveOps socket server');
+    });
+
+    this.moveops_socket.on('taskListFilteredUpdateWMS', async (data: any) => {
+      await this.processTaskUpdate(data);
+    });
+
+    this.moveops_socket.on('disconnect', () => {
+      this.isFilterSet = false;
+    });
   }
 
   private async processTaskUpdate(data: any) {
     const tasks = data.data || [];
     console.log(`tasks length: ${tasks.length}`);
     for (const socket_batch of tasks){
-      const task = socket_batch.tasks[0];
-      const db_task = await this.TaskRepository.findOne({ where: { task_id: task.task_id } });
-      if(!db_task) continue;
-      if (task.status === null){
-        continue;
-      }
-      if (db_task.status!=task.status){
-        db_task.status = task.status;
-        await this.TaskRepository.save(db_task);
+      for (const task of socket_batch.tasks) {
+        const db_task = await this.TaskRepository.findOne({ where: { task_id: task.task_id } });
+        if(!db_task) continue;
         const batch = await this.BatchJobRepository.findOne({ where: { id: db_task.batch_job_id } });
         if (!batch) continue;
-        const webhook_payload = {
-          batch_job_id: socket_batch.batch_job_id,
-          batch_job_status: socket_batch.batch_job_status,
-          tasks:[
-            task
-          ]
-        };
-        const warehouse = await this.WarehouseRepository.findOne({ where: { warehouse_id: batch.warehouse_id } });
-        if (!warehouse) continue;
-        if (warehouse.webhook_url) {
-          try {
-            await axios.post(warehouse.webhook_url, webhook_payload, {
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              timeout: 5000,
-            });
-            console.log('Webhook notification sent successfully');
-          } catch (webhookError) {
-            console.error('Failed to send webhook notification:', webhookError);
-          }
+        if (task.status === null){
+          continue;
         }
+        if (db_task.status!=task.status || batch.status!=socket_batch.batch_job_status){
+          db_task.status = task.status;
+          db_task.robot_id = task.robot_id;
+          await this.TaskRepository.save(db_task);
 
+          batch.status = socket_batch.batch_job_status;
+          await this.BatchJobRepository.save(batch);
+
+          task.task_type = db_task.task_type;
+          task.start_location = db_task.start_location;
+          task.end_location = db_task.end_location;
+          task.cargos = db_task.cargos;
+          
+          const warehouse = await this.WarehouseRepository.findOne({ where: { warehouse_id: batch.warehouse_id } });
+          if (!warehouse) continue;
+
+          const includeRobot = !!warehouse?.robot_access;
+
+          task.robot_id = includeRobot ? (task.robot_id ?? undefined) : undefined;
+
+          const webhook_payload = {
+            batch_job_id: socket_batch.batch_job_id,
+            batch_job_status: socket_batch.batch_job_status,
+            timestamp: new Date().toISOString(),
+            tasks: [
+              task
+            ]
+          };
+          if (warehouse.webhook_url) {
+            try {
+              await axios.post(warehouse.webhook_url, webhook_payload, {
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                timeout: 5000,
+              });
+              console.log('Webhook notification sent successfully');
+            } catch (webhookError) {
+              console.error('Failed to send webhook notification:', webhookError);
+            }
+          }
+
+        }
       }
     }
   }
@@ -144,11 +181,32 @@ export class RobotJobService {
   async getTasksByBatchId(
     warehouseId: string,
     batchId: string,
-  ): Promise<TaskEntity[]> {
-    return get_tasks({
+  ): Promise<GetTasksResponseDto> {
+    const firstTaskFromBatch = await this.TaskRepository.findOne({
+      where: {
+        batch_job: {
+          batch_job_id: batchId,
+        }
+      }
+    })
+
+    if (!firstTaskFromBatch) {
+      throw new NotFoundException(`Batch job with ID '${batchId}' not found in warehouse '${warehouseId}'.`);
+    }
+    const batchTasks = await get_tasks({
       warehouse_id: warehouseId,
       batch_job_id: batchId,
-    });
+    }, firstTaskFromBatch.task_type);
+
+    await Promise.all(batchTasks.tasks.map(async (task) => {
+      const db_task = await this.TaskRepository.findOne({ where: { task_id: task.task_id } });
+      if (db_task) {
+        task.task_type = db_task.task_type;
+        task.cargos = db_task.cargos;
+      }
+    }))
+
+    return batchTasks;
   }
 
   async updateLocation(
@@ -333,7 +391,7 @@ export class RobotJobService {
       where: { batch_job_id: batch_job_id, warehouse_id: warehouseId },
     });
 
-    if (uniqueness && uniqueness.status !== 'pending') {
+    if (uniqueness) {
       throw new ConflictException(
         `Batch job with id ${batch_job_id} already exists in warehouse ${warehouseId}.`,
       );
@@ -348,74 +406,48 @@ export class RobotJobService {
       );
     }
 
-  const newBatchJob = this.BatchJobRepository.create({
-      batch_job_id,
-      warehouse_id: warehouseId,
-      batch_priority: createRobotJobDto.batch_priority,
-      batch_type: createRobotJobDto.batch_type,
-      batch_frequency: createRobotJobDto.batch_frequency,
-      status: 'pending',
-    });
+    // Determine robot access for warehouse
+    const warehouse = await this.WarehouseRepository.findOne({ where: { warehouse_id: warehouseId } });
+    const hasRobotAccess = !!warehouse?.robot_access;
 
-    await this.BatchJobRepository.save(newBatchJob);
-
-  // Determine robot access for warehouse
-  const warehouse = await this.WarehouseRepository.findOne({ where: { warehouse_id: warehouseId } });
-  const hasRobotAccess = !!warehouse?.robot_access;
-
-  for (const task of Tasks) {
-      try {
-        if (task.wait && task.wait.wait_type === WaitType.Conditional) {
-          const wait = task.wait;
-          if (!wait.wait_condition) {
-            throw new BadRequestException(
-              `Wait condition is required for conditional wait in task ${task.task_id}.`,
-            );
-          }
-
-          if (
-            wait.wait_condition === WaitCondition.Time &&
-            wait.start_location_wait_time === 0 &&
-            wait.end_location_wait_time === 0
-          ) {
-            throw new BadRequestException(
-              `Wait times are required for time-based wait condition in task ${task.task_id}.`,
-            );
-          }
-
-          if (
-            wait.wait_condition === WaitCondition.LocationAvailable &&
-            !wait.start_location_available_wait &&
-            !wait.end_location_available_wait
-          ) {
-            throw new BadRequestException(
-              `Location availability flags are required for location-based wait in task ${task.task_id}.`,
-            );
-          }
+    for (const task of Tasks) {
+      if (task.wait && task.wait.wait_type === WaitType.Conditional) {
+        const wait = task.wait;
+        if (!wait.wait_condition) {
+          throw new BadRequestException(
+            `Wait condition is required for conditional wait in task ${task.task_id}.`,
+          );
         }
 
-        const newTask = this.TaskRepository.create({
-          task_id: task.task_id,
-          task_type: task.task_type,
-          task_dependency: task.task_dependency,
-          start_location: task.start_location,
-          end_location: task.end_location,
-          wait_time: task.wait_time,
-          cargos: task.cargos,
-          robot_id: hasRobotAccess ? (task.robot_id ?? null) : null,
-          batch_job: newBatchJob,
-          status: 'pending',
-        });
+        if (
+          wait.wait_condition === WaitCondition.Time &&
+          wait.start_location_wait_time === 0 &&
+          wait.end_location_wait_time === 0
+        ) {
+          throw new BadRequestException(
+            `Wait times are required for time-based wait condition in task ${task.task_id}.`,
+          );
+        }
 
-        await this.TaskRepository.save(newTask);
-      } catch (err) {
-        console.error(`Task ${task.task_id} creation failed:`, err);
-        // Optional: collect errors into array and return it at the end
+        if (
+          wait.wait_condition === WaitCondition.LocationAvailable &&
+          !wait.start_location_available_wait &&
+          !wait.end_location_available_wait
+        ) {
+          throw new BadRequestException(
+            `Location availability flags are required for location-based wait in task ${task.task_id}.`,
+          );
+        }
+      }
+
+      if (!hasRobotAccess) {
+        task.robot_id = null;
       }
     }
-    let fms_response ;
+
+    let response ;
     try{
-      fms_response = await createTask({
+      response = await createTask({
         warehouse_id: warehouseId,
         batch_job_id: createRobotJobDto.batch_job_id,
         batch_priority: createRobotJobDto.batch_priority,
@@ -423,17 +455,46 @@ export class RobotJobService {
         batch_frequency: createRobotJobDto.batch_frequency,
         tasks: Tasks,
       });
-    }catch(err){
-      throw new BadRequestException('FMS task creation failed');
+    } catch(err){
+      throw new BadRequestException(err.message);
     }
-    console.log(`fms response: ${JSON.stringify(fms_response)}`);
-    if (fms_response) {
+    console.log(`Task Creation Response: ${JSON.stringify(response)}`);
+
+    const newBatchJob = this.BatchJobRepository.create({
+        batch_job_id,
+        warehouse_id: warehouseId,
+        batch_priority: createRobotJobDto.batch_priority,
+        batch_type: createRobotJobDto.batch_type,
+        batch_frequency: createRobotJobDto.batch_frequency,
+        status: 'task_acknowledged',
+    });
+
+    await this.BatchJobRepository.save(newBatchJob);
+
+    for (const task of Tasks) {
+      const newTask = this.TaskRepository.create({
+        task_id: task.task_id,
+        task_type: task.task_type,
+        task_dependency: task.task_dependency,
+        start_location: task.start_location,
+        end_location: task.end_location,
+        wait_time: task.wait_time,
+        cargos: task.cargos,
+        robot_id: hasRobotAccess ? (task.robot_id ?? null) : null,
+        batch_job: newBatchJob,
+        status: 'task_acknowledged',
+      });
+
+      await this.TaskRepository.save(newTask);
+    }
+    
+    if (response) {
       return {
         batch_id: createRobotJobDto.batch_job_id,
         status: 'success',
       };
     }
-    throw new BadRequestException('FMS task creation failed: ', fms_response.status);
+    throw new BadRequestException(response.status);
   }
 
   unstructureHelper(

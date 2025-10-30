@@ -168,7 +168,7 @@
 // }
 
 // export enum TaskType {
-//     CrossDocking = "Crossdock",
+//     CrossDock = "Crossdock",
 //     Putaway = "Putaway",
 //     Picking = "Picking",
 //     GoodsToPerson = "GoodsToPerson",
@@ -294,17 +294,18 @@ export enum LocationAction {
 }
 
 export enum LocationType {
-  Zone = 'Zone',
-  Aisle = 'Aisle',
-  Bay = 'Bay',
+  Zone = 'ZONE',
+  Aisle = 'AISLE',
+  Bay = 'BAY',
   Pallet = 'PALLET',
-  Transient = 'Transient',
+  Transient = 'TRANSIENT',
 }
 
 export enum TaskType {
-  CrossDocking = 'Crossdock',
-  Putaway = 'Putaway',
-  Picking = 'Picking',
+  CrossDock = 'CROSSDOCK',
+  CrossDock_Internal = 'CROSSDOCK_INTERNAL',
+  Putaway = 'PUTAWAY',
+  Picking = 'PICKING',
   Baseops = 'BASEOPS',
   GoodsToPerson = 'GOODSTOPERSON',
 }

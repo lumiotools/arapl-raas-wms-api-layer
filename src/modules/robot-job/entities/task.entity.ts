@@ -9,7 +9,7 @@ export class Task {
     @Column({'type': 'varchar'})
     task_id: string;
 
-    @Column({ type: 'enum', enum: TaskType, default: TaskType.CrossDocking })
+    @Column({ type: 'enum', enum: TaskType, default: TaskType.Baseops })
     task_type: TaskType;
 
     @Column({ nullable: true })

@@ -4,6 +4,7 @@ import {authenticate} from "./authentication";
 import fetch from 'node-fetch';
 import { TaskGenerationReq, TaskGenerationRes, TaskType } from "src/modules/robot-job/dto/Task_Generation.dto";
 import { Task } from "src/modules/robot-job/entities/task.entity";
+import { INTEGRATION_URL } from "src/constants/integrations";
 
 interface struct_fms_create_task {
     warehouse_id: string
@@ -38,7 +39,11 @@ export async function createTask(payload: struct_fms_create_task): Promise<TaskG
                 }
             })),
         }
-        let URL = process.env.FMS_BASE_URL;
+        // let URL = process.env.FMS_BASE_URL;
+        let URL = INTEGRATION_URL[payload.tasks[0].task_type];
+        if (!URL) {
+        throw new BadRequestException('Invalid task type specified');
+        }
         const response = await fetch(`${URL}/wms-integration-wrapper/${payload.warehouse_id}/tasks`, {
             method: 'POST',
             headers: {
@@ -47,18 +52,14 @@ export async function createTask(payload: struct_fms_create_task): Promise<TaskG
             },
             body: JSON.stringify(RequestBody)
         });
-        console.log(`Request Body: ${JSON.stringify(RequestBody)}`);
-        // console.log("token: ",Token);
-        console.log(`response: ${JSON.stringify(response)}`);
         if (!response.ok) {
             const errorText = await response.text();
-            throw new BadRequestException(`Failed to create task: ${response.status} ${errorText}`);
+            throw new BadRequestException(errorText);
         }
 
         return await response.json();
 
     } catch (error) {
-        console.error('Error during create-task:', error);
-        throw new BadRequestException('FMS Create task failed');
+        throw new BadRequestException(error.message);
     }
 }

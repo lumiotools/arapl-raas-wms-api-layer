@@ -16,7 +16,7 @@ import {
   WaitStatus,
 } from './dto/Task_Generation.dto';
 import { TaskUpdateReq, TaskUpdateRes } from './dto/Task_Update.dto';
-import { CancelReq, BatchCancelRes, TaskCancelRes } from './dto/Cancel.dto';
+import { CancelBatchReq, CancelTaskReq, BatchCancelRes, TaskCancelRes } from './dto/Cancel.dto';
 import {
   GetLocationRes,
   LocationStatus,
@@ -77,7 +77,7 @@ describe('RobotJobController', () => {
       {
         id: '1',
         task_id: 'TASK_001',
-        task_type: TaskType.CrossDocking,
+        task_type: TaskType.CrossDock,
         wait_time: { wait_type: WaitType.Trigger },
         status: 'pending',
       },
@@ -93,7 +93,10 @@ describe('RobotJobController', () => {
     it('should return tasks for a valid warehouse and batch ID', async () => {
       mockRobotJobService.getTasksByBatchId.mockResolvedValue(mockTaskEntities);
 
-      const result = await controller.getTasks(mockParams);
+      const result = await controller.getTasks(
+        mockParams,
+        {} as any as Request,
+      );
 
       expect(service.getTasksByBatchId).toHaveBeenCalledWith(
         'WH_001',
@@ -112,7 +115,9 @@ describe('RobotJobController', () => {
         new NotFoundException('Batch job not found'),
       );
 
-      await expect(controller.getTasks(mockParams)).rejects.toThrow(
+      await expect(
+        controller.getTasks(mockParams, {} as any as Request),
+      ).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -132,12 +137,12 @@ describe('RobotJobController', () => {
       tasks: [
         {
           task_id: 'task001',
-          task_type: TaskType.CrossDocking,
+          task_type: TaskType.CrossDock,
           task_dependency: 'abc',
           start_location: {
             location_id: 'ST1-4-1-1',
             location_type: TaskLocationType.Zone,
-            location_action: LocationAction.Pick,
+            location_action: LocationAction.PICK,
             location_dimension: {
               length: 10,
               width: 5,
@@ -151,7 +156,7 @@ describe('RobotJobController', () => {
           end_location: {
             location_id: 'DZ1-6-1-6',
             location_type: TaskLocationType.Zone,
-            location_action: LocationAction.Drop,
+            location_action: LocationAction.DROP,
             location_dimension: {
               length: 8,
               width: 4,
@@ -378,7 +383,7 @@ describe('RobotJobController', () => {
       taskConfigs: { cancel_task: 'cancel_config' },
     } as any as Request;
 
-    const cancelDto: CancelReq = {
+    const cancelDto: CancelBatchReq = {
       reason: 'User requested cancellation',
     };
 
@@ -473,7 +478,7 @@ describe('RobotJobController', () => {
       taskConfigs: { cancel_task: 'cancel_task_config' },
     } as any as Request;
 
-    const cancelDto: CancelReq = {
+    const cancelDto: CancelTaskReq = {
       reason: 'Task no longer needed',
     };
 
@@ -568,7 +573,7 @@ describe('RobotJobController', () => {
             height: 150,
           },
           location_type: LocationType.Pallet,
-          location_action: LocationAction.Drop,
+          location_action: LocationAction.DROP,
         },
       ],
     };
@@ -697,7 +702,9 @@ describe('RobotJobController', () => {
         new NotFoundException('Batch not found'),
       );
 
-      await expect(controller.getTasks(mockParams)).rejects.toThrow(
+      await expect(
+        controller.getTasks(mockParams, {} as any as Request),
+      ).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -712,7 +719,9 @@ describe('RobotJobController', () => {
         new Error('Database connection failed'),
       );
 
-      await expect(controller.getTasks(mockParams)).rejects.toThrow(
+      await expect(
+        controller.getTasks(mockParams, {} as any as Request),
+      ).rejects.toThrow(
         'Database connection failed',
       );
     });

@@ -63,25 +63,6 @@ export class RobotJobController {
 
   constructor(private readonly robotJobService: RobotJobService) {}
 
-  // @Get(':warehouse_id/tasks/:batch_id')
-  // async getTasks(
-  //   @Param() params: GetTasksParamsDto,
-  // ): Promise<GetTasksResponseDto> {
-  //   const taskEntities = await this.robotJobService.getTasksByBatchId(
-  //     params.warehouse_id,
-  //     params.batch_id,
-  //   );
-
-  //   const tasksForResponse = taskEntities.map((entity) => {
-  //     return {
-  //       ...entity,
-  //       wait: entity.wait_time,
-  //     };
-  //   });
-
-  //   return { tasks: tasksForResponse };
-  // }
-
   @ApiOperation({ summary: 'Get tasks for a specific warehouse and batch' })
   @ApiParam({
     name: 'warehouse_id',
@@ -126,59 +107,23 @@ export class RobotJobController {
     @Param() params: GetTasksParamsDto,
     @Req() request: Request,
   ): Promise<GetTasksResponseDto> {
-    const taskEntities = await this.robotJobService.getTasksByBatchId(
+    const batchJob = await this.robotJobService.getTasksByBatchId(
       params.warehouse_id,
       params.batch_id,
     );
+
     const includeRobot = !!request.warehouse?.robot_access;
-    
-    const tasksForResponse = taskEntities.map((entity) => ({
-      ...entity,
-      wait: entity.wait_time,
-      // Only expose robot_id when warehouse has robot access; override spread value
-      robot_id: includeRobot ? (entity.robot_id ?? undefined) : undefined,
-    }));
 
-    return { tasks: tasksForResponse };
+    const batchJobResponse = {
+      ...batchJob,
+      tasks: batchJob.tasks.map(task => ({
+        ...task,
+        robot_id: includeRobot ? (task.robot_id ?? undefined) : undefined,
+      })),
+    };
+
+    return batchJobResponse;
   }
-
-  // @Post(':warehouse_id/tasks')
-  // async unifiedCreateTask(
-  //   @Param('warehouse_id') warehouseId: string,
-  //   @Body() body: any,
-  //   @Query('config_name') configName?: string,
-  // ): Promise<TaskGenerationRes> {
-  //   const structuredDto = plainToInstance(TaskGenerationReq, body);
-  //   const validationErrors = await this.validator.validate(structuredDto);
-
-  //   if (validationErrors.length === 0) {
-  //     const result = await this.robotJobService.createTask(
-  //       warehouseId,
-  //       structuredDto,
-  //     );
-  //     if (result.status !== 'success') {
-  //       throw new BadRequestException(result.status);
-  //     }
-  //     return result;
-  //   }
-
-  //   if (configName) {
-  //     const result = await this.robotJobService.createUnstructuredTask(
-  //       warehouseId,
-  //       configName,
-  //       'create_task', // Specify the operation type
-  //       body,
-  //     );
-  //     if (result.status !== 'success') {
-  //       throw new BadRequestException(result.status);
-  //     }
-  //     return result;
-  //   }
-
-  //   throw new BadRequestException(
-  //     'Request body is not a valid task structure and no `config_name` was provided for transformation.',
-  //   );
-  // }
 
   @ApiOperation({ summary: 'Create a batch task' })
   @ApiParam({
@@ -188,13 +133,6 @@ export class RobotJobController {
     example: 'WH_001',
   })
 
-  // @ApiQuery({
-  //   name: 'config_name',
-  //   required: false,
-  //   type: String,
-  //   description: 'Optional config name used for unstructured task creation',
-  //   example: 'robot_sorting_config',
-  // })
   @ApiBody({
     type: TaskGenerationReq,
     description: 'Task request body',
@@ -256,44 +194,6 @@ export class RobotJobController {
     throw new BadRequestException('Request body is not valid.');
   }
 
-  // @Patch(':warehouse_id/tasks')
-  // async unifiedUpdateTask(
-  //   @Param('warehouse_id') warehouseId: string,
-  //   @Body() body: any,
-  //   @Query('config_name') configName?: string,
-  // ): Promise<TaskUpdateRes> {
-  //   const structuredDto = plainToInstance(TaskUpdateReq, body);
-  //   const validationErrors = await this.validator.validate(structuredDto);
-
-  //   if (validationErrors.length === 0) {
-  //     const result = await this.robotJobService.updateTask(
-  //       warehouseId,
-  //       structuredDto,
-  //     );
-  //     if (result.status !== 'success') {
-  //       throw new BadRequestException(result.message);
-  //     }
-  //     return result;
-  //   }
-
-  //   if (configName) {
-  //     const result = await this.robotJobService.updateUnstructuredTask(
-  //       warehouseId,
-  //       configName,
-  //       'update_task', // Specify the operation type
-  //       body,
-  //     );
-  //     if (result.status !== 'success') {
-  //       throw new BadRequestException(result.message);
-  //     }
-  //     return result;
-  //   }
-
-  //   throw new BadRequestException(
-  //     'Request body is not a valid update structure and no `config_name` was provided for transformation.',
-  //   );
-  // }
-
   @ApiOperation({ summary: 'Update a batch task' })
   @ApiParam({
     name: 'warehouse_id',
@@ -302,13 +202,6 @@ export class RobotJobController {
     example: 'WH_001',
   })
 
-  // @ApiQuery({
-  //   name: 'config_name',
-  //   required: false,
-  //   type: String,
-  //   description: 'Optional config name used for unstructured task update',
-  //   example: 'robot_sorting_config',
-  // })
   @ApiBody({
     type: TaskUpdateReq,
     description: 'Task update body',
@@ -329,11 +222,6 @@ export class RobotJobController {
     type: UnauthorizedDto,
   })
 
-  // @ApiResponse({
-  //   status: 403,
-  //   description: 'User does not have permission to update tasks in this warehouse',
-  //   type: ForbiddenDto,
-  // })
   @ApiResponse({
     status: 404,
     description: 'Batch or task not found in the specified warehouse',
@@ -387,46 +275,6 @@ export class RobotJobController {
     );
   }
 
-  // @Patch(':warehouse_id/tasks/:batch_id/cancel')
-  // async cancelBatch(
-  //   @Param('warehouse_id') warehouseId: string,
-  //   @Param('batch_id') batchId: string,
-  //   @Body() body: CancelReq,
-  //   @Query('config_name') configName?: string
-  // ): Promise<BatchCancelRes> {
-  //   if (configName) {
-  //     const result = await this.robotJobService.cancelUnstructuredBatch(
-  //       warehouseId,
-  //       batchId,
-  //       configName,
-  //       'cancel_task', // Specify the operation type
-  //       body,
-  //     );
-  //     if (result.status !== 'success') {
-  //       throw new BadRequestException(result.message);
-  //     }
-  //     return result;
-  //   }
-  //   const batchDto = plainToInstance(CancelReq, body);
-  //   const validationErrors = await this.validator.validate(batchDto);
-  //   console.log('structuredDto: ', batchDto);
-  //   if (validationErrors.length === 0) {
-  //     const result = await this.robotJobService.cancelBatch(
-  //       warehouseId,
-  //       batchId,
-  //       batchDto,
-  //     );
-  //     if (result.status !== 'success') {
-  //       throw new BadRequestException(result.message);
-  //     }
-  //     return result;
-  //   }
-
-  //   throw new BadRequestException(
-  //     'Request body is not a valid cancellation structure and no `config_name` was provided for transformation.',
-  //   );
-  // }
-
   @ApiOperation({ summary: 'Cancel a batch task' })
   @ApiParam({
     name: 'warehouse_id',
@@ -441,13 +289,6 @@ export class RobotJobController {
     example: 'BATCH_456',
   })
 
-  // @ApiQuery({
-  //   name: 'config_name',
-  //   required: false,
-  //   type: String,
-  //   description: 'Optional config name for unstructured batch cancellation',
-  //   example: 'cancel_config_v1',
-  // })
   @ApiBody({
     type: CancelBatchReq,
     description: 'Cancellation request body',
@@ -489,7 +330,6 @@ export class RobotJobController {
   @Body() body: CancelTaskReq,
     @Req() request: Request,
   ): Promise<BatchCancelRes> {
-    console.log('reached');
     const config = request.taskConfigs?.cancel_task;
     if (config) {
       const result = await this.robotJobService.cancelUnstructuredBatch(
@@ -506,9 +346,8 @@ export class RobotJobController {
 
   const batchDto = plainToInstance(CancelTaskReq, body);
     const validationErrors = await this.validator.validate(batchDto);
-    console.log('proceeding');
+
     if (validationErrors.length === 0) {
-      console.log('entering');
       const result = await this.robotJobService.cancelBatch(
         warehouseId,
         batchId,
@@ -522,48 +361,6 @@ export class RobotJobController {
     console.log('going');
     throw new BadRequestException('Invalid request body found.');
   }
-
-  // @Patch(':warehouse_id/tasks/:batch_id/:task_id/cancel')
-  // async cancelTask(
-  //   @Param('warehouse_id') warehouseId: string,
-  //   @Param('batch_id') batchId: string,
-  //   @Param('task_id') taskId: string,
-  //   @Body() body: CancelReq,
-  //   @Query('config_name') configName?: string
-  // ): Promise<TaskCancelRes> {
-  //   if (configName) {
-  //     const result = await this.robotJobService.cancelUnstructuredTask(
-  //       warehouseId,
-  //       batchId,
-  //       taskId,
-  //       configName,
-  //       'cancel_task', // Specify the operation type
-  //       body,
-  //     );
-  //     if (result.status !== 'success') {
-  //       throw new BadRequestException(result.message);
-  //     }
-  //     return result;
-  //   }
-  //   const singleTaskDto = plainToInstance(CancelReq, body);
-  //   const validationErrors = await this.validator.validate(singleTaskDto);
-
-  //   if (validationErrors.length === 0) {
-  //     const result = await this.robotJobService.cancelTask(
-  //       warehouseId,
-  //       batchId,
-  //       taskId,
-  //       singleTaskDto,
-  //     );
-  //     if (result.status !== 'success') {
-  //       throw new BadRequestException(result.message);
-  //     }
-  //     return result;
-  //   }
-  //   throw new BadRequestException(
-  //     'Request body is not a valid cancellation structure and no `config_name` was provided for transformation.',
-  //   );
-  // }
 
   @ApiOperation({ summary: 'Cancel a task' })
   @ApiParam({
@@ -585,13 +382,6 @@ export class RobotJobController {
     example: 'TASK_789',
   })
 
-  // @ApiQuery({
-  //   name: 'config_name',
-  //   required: false,
-  //   type: String,
-  //   description: 'Optional config name used for unstructured task cancellation',
-  //   example: 'cancel_config_v1',
-  // })
   @ApiBody({
     type: CancelTaskReq,
     description:
@@ -612,11 +402,7 @@ export class RobotJobController {
     description: 'Unauthorized request due to invalid or missing API key',
     type: UnauthorizedDto,
   })
-  // @ApiResponse({
-  //   status: 403,
-  //   description: 'Forbidden — user lacks permission to cancel this task',
-  //   type: ForbiddenDto,
-  // })
+  
   @ApiResponse({
     status: 404,
     description: 'Batch or task not found in the given warehouse',
@@ -674,27 +460,6 @@ export class RobotJobController {
     throw new BadRequestException('Invalid Request Body Found.');
   }
 
-  //   @Get(':warehouse_id/locations')
-  //   async getEmptyLocations(
-  //     @Param('warehouse_id') warehouseId: string,
-  //     @Body() getLocationReq: GetLocationReq,
-  //     @Query('config_name') configName: string,
-  //   ): Promise<GetLocationRes> {
-  //     if (configName) {
-  //       return await this.robotJobService.getLocations(
-  //         warehouseId,
-  //         getLocationReq,
-  //         configName,
-  //       );
-  //     } else {
-  //       // Handle the case when configName is provided, or throw an error if not supported
-  //       throw new BadRequestException(
-  //         '`config_name` parameter is not supported for this endpoint.'
-  //       );
-  //     }
-  //   }
-
-  // }
   @ApiOperation({ summary: 'Get available empty locations in a warehouse' })
   @ApiParam({
     name: 'warehouse_id',
@@ -703,13 +468,6 @@ export class RobotJobController {
     example: 'WH_001',
   })
 
-  // @ApiQuery({
-  //   name: 'config_name',
-  //   required: true,
-  //   type: String,
-  //   description: 'Configuration name used to filter locations',
-  //   example: 'putaway_config_v1',
-  // })
   @ApiQuery({
     name: 'location_status',
     required: false,
@@ -762,11 +520,6 @@ export class RobotJobController {
     type: UnauthorizedDto,
   })
 
-  // @ApiResponse({
-  //   status: 403,
-  //   description: 'Forbidden - user does not have access to this warehouse',
-  //   type: ForbiddenDto,
-  // })
   @ApiResponse({
     status: 404,
     description: 'Warehouse not found or invalid reference in filters',
