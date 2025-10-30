@@ -813,12 +813,12 @@ export class RobotJobController {
       return {
         'zone_id': 'station',
         'available_location_types': [
-          {'location_id': 'ST010'},
+          // {'location_id': 'ST010'},
           {'location_id': 'ST001'},
           {'location_id': 'ST002'},
-          {'location_id': 'ST003'},
-          {'location_id': 'ST004'},
-          {'location_id': 'ST008'}
+          // {'location_id': 'ST003'},
+          // {'location_id': 'ST004'},
+          // {'location_id': 'ST008'}
         ]
       }
     }
@@ -898,14 +898,14 @@ export class RobotJobController {
         'available_location_types': [
           { 'location_id': 'EM0101' },
           { 'location_id': 'EM0102' },
-          { 'location_id': 'EM0103' },
-          { 'location_id': 'EM0104' },
-          { 'location_id': 'EM0105' },
-          { 'location_id': 'EM0106' },
-          { 'location_id': 'EM0107' },
-          { 'location_id': 'EM0108' },
-          { 'location_id': 'EM0109' },
-          { 'location_id': 'EM0110' },
+          // { 'location_id': 'EM0103' },
+          // { 'location_id': 'EM0104' },
+          // { 'location_id': 'EM0105' },
+          // { 'location_id': 'EM0106' },
+          // { 'location_id': 'EM0107' },
+          // { 'location_id': 'EM0108' },
+          // { 'location_id': 'EM0109' },
+          // { 'location_id': 'EM0110' },
         ]
       }
     }

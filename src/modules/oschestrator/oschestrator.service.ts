@@ -229,7 +229,7 @@ export class OschestratorService {
                     // Process all successfully updated tasks outside transactions
                     if (processedTasks.length > 0) {
                         try {
-                            await new Promise(resolve => setTimeout(resolve, 5000));
+                            // await new Promise(resolve => setTimeout(resolve, 5000));
                             await this.wms_webhook({tasks: processedTasks, existingBatchJob: pendingBatchJob});
                             
                             // Don't await this - let it run in background
