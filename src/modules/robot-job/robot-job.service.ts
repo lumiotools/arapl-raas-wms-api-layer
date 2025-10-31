@@ -897,7 +897,7 @@ export class RobotJobService {
       if (task.robot_id) {
         // TODO: Implement robot availability update logic
         // This would typically involve calling an external service or updating a robot status table
-        await this.orchestratorService.makeRobotAvailable(task.robot_id);
+        // await this.orchestratorService.makeRobotAvailable(task.robot_id);
         console.log(`Making robot ${task.robot_id} available`);
       }
     }
