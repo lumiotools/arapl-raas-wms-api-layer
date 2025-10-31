@@ -170,6 +170,7 @@ export class OschestratorService {
                                     // Update local task object
                                     task.robot_id = availableRobotId;
                                     assignedRobotId = availableRobotId;
+                                    task.status = 'robot_assigned';
                                     
                                     this.logger.log(`Assigned robot ${availableRobotId} to task ${task.task_id}`);
                                 }
@@ -188,6 +189,8 @@ export class OschestratorService {
                                     { available: false }
                                 );
                             }
+
+                            await this.wms_webhook({tasks: [task], existingBatchJob: pendingBatchJob});
 
                             // Update task status
                             task.status = 'processing';
@@ -229,7 +232,10 @@ export class OschestratorService {
                     // Process all successfully updated tasks outside transactions
                     if (processedTasks.length > 0) {
                         try {
-                            // await new Promise(resolve => setTimeout(resolve, 5000));
+                            if (processedTasks[0].start_location.location_action === LocationAction.PICK){
+                                await new Promise(resolve => setTimeout(resolve, 10000));
+                            }
+                            
                             await this.wms_webhook({tasks: processedTasks, existingBatchJob: pendingBatchJob});
                             
                             // Don't await this - let it run in background
