@@ -289,6 +289,7 @@ export enum FallbackAction {
 export enum LocationAction {
   PICK = 'PICK',
   DROP = 'DROP',
+  NOP = 'NOP',
   NOP_RESUME = 'NOP_RESUME',
   NOP_PAUSE = 'NOP_PAUSE',
 }
