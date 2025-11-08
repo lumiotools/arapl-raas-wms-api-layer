@@ -511,11 +511,9 @@ export class TaskGenerationReq {
   @IsOptional()
   batch_job_id?: string;
 
-  @ApiPropertyOptional({ example: 5, minimum: 0, maximum: 10 })
+  @ApiPropertyOptional({ example: 5})
   @IsOptional()
   @IsNumber()
-  @Min(0)
-  @Max(10)
   batch_priority?: number = 5;
 
   @ApiPropertyOptional({ enum: batch_type, default: batch_type.DISCRETE })

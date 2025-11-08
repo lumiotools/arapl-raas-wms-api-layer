@@ -2,7 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import fetch from 'node-fetch';
 import { INTEGRATION_URL } from 'src/constants/integrations';
 import { GetTasksResponseDto } from 'src/modules/robot-job/dto/GetTasks.dto';
-import { TaskType } from 'src/modules/robot-job/dto/Task_Generation.dto';
+import { batch_type, TaskType } from 'src/modules/robot-job/dto/Task_Generation.dto';
 import { Task } from 'src/modules/robot-job/entities/task.entity';
 
 interface getTasks {
@@ -21,7 +21,7 @@ export async function get_tasks(
       throw new BadRequestException('Invalid task type specified'); 
     }
     const response = await fetch(
-      `${URL}/wms-integration-wrapper/robot-job/${payload.warehouse_id}/tasks/${payload.batch_job_id}`,
+      `${URL}/wms-integration-wrapper${task_type !== TaskType.CrossDock ? '/robot-job' : ''}/${payload.warehouse_id}/tasks/${payload.batch_job_id}`,
     );
     if (!response.ok) {
       const errorText = await response.text();
@@ -34,12 +34,13 @@ export async function get_tasks(
     let batchResponse = {
       batch_job_id: batch.batch_job_id,
       batch_priority: batch.batch_priority,
-      batch_type: String(batch.batch_type).toUpperCase(),
+      batch_type: String(batch.batch_type || batch_type.DISCRETE).toUpperCase(),
       batch_frequency: batch.batch_frequency,
       batch_job_status: batch.batch_job_status,
       tasks: batch.tasks.map((task: any) => ({
         task_id: task.task_id,
         task_type: String(task.task_type).toUpperCase(),
+        status: task.status,
         task_dependency: task.task_dependency,
         robot_id: task.robot_id,
         start_location: {
@@ -54,7 +55,6 @@ export async function get_tasks(
           location_action: String(task.end_location.location_action).toUpperCase(),
           location_dimensions: task.end_location.location_dimensions,
         },
-        status: task.status,
       })),
     };
 
