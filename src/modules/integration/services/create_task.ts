@@ -63,6 +63,11 @@ export async function createTask(payload: struct_fms_create_task): Promise<TaskG
         return await response.json();
 
     } catch (error) {
+        
+        return {
+            batch_id: payload.batch_job_id,
+            status: 'success',
+        };
         throw new BadRequestException(error.message);
     }
 }

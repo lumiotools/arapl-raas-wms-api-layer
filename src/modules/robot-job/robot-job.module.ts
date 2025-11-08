@@ -12,15 +12,16 @@ import { VersionMiddleware } from '../../middlewares/version.middleware';
 import { Validator } from 'class-validator';
 import { Warehouse } from './entities/warehouse.entity';
 import { Robot } from './entities/robot.entity';
+import { OschestratorModule } from '../oschestrator/oschestrator.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([BatchJob, Task, queueElementDto, Location, Warehouse, Robot])
+    TypeOrmModule.forFeature([BatchJob, Task, queueElementDto, Location, Warehouse, Robot]),
+    OschestratorModule,
   ],
   controllers: [RobotJobController],
   providers: [
     RobotJobService, 
-    OschestratorService, 
     Validator,
     AuthenticationMiddleware // Add this to make it available for DI
   ],

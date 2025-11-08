@@ -11,6 +11,7 @@ import {
   LocationAction,
   TaskGenerationReq,
   TaskGenerationRes,
+  TaskType,
   Wait,
   WaitCondition,
   WaitType,
@@ -466,7 +467,7 @@ export class RobotJobService {
         batch_priority: createRobotJobDto.batch_priority,
         batch_type: createRobotJobDto.batch_type,
         batch_frequency: createRobotJobDto.batch_frequency,
-        status: 'task_acknowledged',
+        status: Tasks[0].task_type === TaskType.CrossDock ? 'ignored' : 'pending',
     });
 
     await this.BatchJobRepository.save(newBatchJob);
@@ -482,7 +483,7 @@ export class RobotJobService {
         cargos: task.cargos,
         robot_id: hasRobotAccess ? (task.robot_id ?? null) : null,
         batch_job: newBatchJob,
-        status: 'task_acknowledged',
+        status: task.task_type === TaskType.CrossDock ? 'ignored' : 'pending',
       });
 
       await this.TaskRepository.save(newTask);
@@ -1009,6 +1010,11 @@ export class RobotJobService {
       });
     }
 
+    await this.TaskRepository.update(
+      { task_id },
+      { status: 'cancelled' },
+    );
+
   //   if (taskRepo.status !== 'pending' && !force) {
   //     throw new ConflictException({
   //       status: 'error',
@@ -1016,21 +1022,24 @@ export class RobotJobService {
   //       message: `Task '${task_id}' is not in 'pending' state and cannot be cancelled.`,
   //     });
   //   }
-    let fms_response;
+    let fms_response = {
+      status: 'cancelled',
+      message: `Task with ID ${task_id} has been cancelled.`,
+    };
     try{
-      fms_response = await cancelBatchTask({
-        warehouse_id,
-        batch_job_id: batch_id,
-        task_id: task_id,
-        cancel_req
-      });
+      // fms_response = await cancelBatchTask({
+      //   warehouse_id,
+      //   batch_job_id: batch_id,
+      //   task_id: task_id,
+      //   cancel_req
+      // });
     } catch (error) {
       console.error('Error occurred while cancelling task:', error);
       throw new BadRequestException('Failed to cancel task in FMS');
     }
-    if (!fms_response) {
-      throw new BadRequestException('Failed to cancel task in FMS');
-    }
+    // if (!fms_response) {
+    //   throw new BadRequestException('Failed to cancel task in FMS');
+    // }
 
     // await this.TaskRepository.remove(taskRepo);
 

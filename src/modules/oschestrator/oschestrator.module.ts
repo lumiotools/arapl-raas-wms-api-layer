@@ -16,5 +16,6 @@ import { TaskGenerationReq } from '../robot-job/dto/Task_Generation.dto';
   ],
   controllers: [OschestratorController],
   providers: [OschestratorService],
+  exports: [OschestratorService, TypeOrmModule],
 })
 export class OschestratorModule {}

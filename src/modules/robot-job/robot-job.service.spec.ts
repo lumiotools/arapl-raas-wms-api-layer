@@ -15,6 +15,7 @@ import { Location } from './entities/locations.entity';
 import { Warehouse } from './entities/warehouse.entity';
 import {
   TaskGenerationReq,
+  TaskGenerationRes,
   TaskType,
   LocationType,
   LocationAction,
@@ -22,15 +23,19 @@ import {
   WaitType,
   WaitCondition,
 } from './dto/Task_Generation.dto';
-import { TaskUpdateReq } from './dto/Task_Update.dto';
-import { CancelBatchReq, CancelTaskReq } from './dto/Cancel.dto';
+import { TaskUpdateReq, TaskUpdateRes } from './dto/Task_Update.dto';
+import { CancelReq, BatchCancelRes, TaskCancelRes } from './dto/Cancel.dto';
 import {
   GetLocationReq,
+  GetLocationRes,
   LocationStatus,
   LocationType as GetLocationLocationType,
 } from './dto/GetLocation.dto';
-import { UpdateWebhookReq } from './dto/UpdateWebhook.dto';
-import { UpdateLocationTrackingReq } from './dto/UpdateLocationTracking.dto';
+import { UpdateWebhookReq, UpdateWebhookRes } from './dto/UpdateWebhook.dto';
+import {
+  UpdateLocationTrackingReq,
+  UpdateLocationTrackingRes,
+} from './dto/UpdateLocationTracking.dto';
 
 describe('RobotJobService', () => {
   let service: RobotJobService;
@@ -133,7 +138,7 @@ describe('RobotJobService', () => {
       {
         id: 'task-uuid-1',
         task_id: 'TASK_001',
-        task_type: TaskType.CrossDock,
+        task_type: TaskType.CrossDocking,
         batch_job_id: mockBatchJob.id,
         status: 'pending',
       },
@@ -183,17 +188,17 @@ describe('RobotJobService', () => {
       tasks: [
         {
           task_id: 'TASK_001',
-          task_type: TaskType.CrossDock,
+          task_type: TaskType.CrossDocking,
           start_location: {
             location_id: 'LOC_001',
             location_type: LocationType.Pallet,
-            location_action: LocationAction.PICK,
+            location_action: LocationAction.Pick,
             location_dimension: { length: 100, width: 50, height: 80 },
           },
           end_location: {
             location_id: 'LOC_002',
             location_type: LocationType.Pallet,
-            location_action: LocationAction.DROP,
+            location_action: LocationAction.Drop,
             location_dimension: { length: 100, width: 50, height: 80 },
           },
           cargos: [
@@ -598,7 +603,7 @@ describe('RobotJobService', () => {
   describe('cancelBatch', () => {
     const warehouseId = 'WH_001';
     const batchId = 'BATCH_001';
-    const cancelReq: CancelBatchReq = {
+    const cancelReq: CancelReq = {
       reason: 'User requested cancellation',
     };
 
@@ -655,7 +660,7 @@ describe('RobotJobService', () => {
     const warehouseId = 'WH_001';
     const batchId = 'BATCH_001';
     const taskId = 'TASK_001';
-    const cancelReq: CancelTaskReq = {
+    const cancelReq: CancelReq = {
       reason: 'Task no longer needed',
     };
 
@@ -1147,7 +1152,6 @@ describe('RobotJobService', () => {
       location_type: GetLocationLocationType.Pallet,
       location_level: '1',
       location_limit: 10,
-      warehouse_id: warehouseId,
     };
 
     const mockWarehouse = {
@@ -1175,7 +1179,7 @@ describe('RobotJobService', () => {
       mockWarehouseRepository.findOne.mockResolvedValue(null);
 
       await expect(
-        service.getLocations(warehouseId, getLocationReq),
+        service.getLocations(warehouseId, getLocationReq, mockConfig),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -1191,6 +1195,7 @@ describe('RobotJobService', () => {
       const result = await service.getLocations(
         warehouseId,
         getLocationReq,
+        mockConfig,
       );
 
       expect(result).toHaveProperty('zone_id');
@@ -1212,6 +1217,7 @@ describe('RobotJobService', () => {
       const result = await service.getLocations(
         warehouseId,
         getLocationReq,
+        invalidConfig,
       );
 
       expect(result).toHaveProperty('zone_id');
@@ -1764,17 +1770,17 @@ describe('RobotJobService', () => {
         tasks: [
           {
             task_id: 'TASK_001',
-            task_type: TaskType.CrossDock,
+            task_type: TaskType.CrossDocking,
             start_location: {
               location_id: 'LOC_001',
               location_type: LocationType.Pallet,
-              location_action: LocationAction.PICK,
+              location_action: LocationAction.Pick,
               location_dimension: { length: 100, width: 50, height: 80 },
             },
             end_location: {
               location_id: 'LOC_002',
               location_type: LocationType.Pallet,
-              location_action: LocationAction.DROP,
+              location_action: LocationAction.Drop,
               location_dimension: { length: 100, width: 50, height: 80 },
             },
             cargos: [{ cargo_code: 'CARGO_001' }],
@@ -1811,17 +1817,17 @@ describe('RobotJobService', () => {
         tasks: [
           {
             task_id: 'TASK_001',
-            task_type: TaskType.CrossDock,
+            task_type: TaskType.CrossDocking,
             start_location: {
               location_id: 'LOC_001',
               location_type: LocationType.Pallet,
-              location_action: LocationAction.PICK,
+              location_action: LocationAction.Pick,
               location_dimension: { length: 100, width: 50, height: 80 },
             },
             end_location: {
               location_id: 'LOC_002',
               location_type: LocationType.Pallet,
-              location_action: LocationAction.DROP,
+              location_action: LocationAction.Drop,
               location_dimension: { length: 100, width: 50, height: 80 },
             },
             cargos: [{ cargo_code: 'CARGO_001' }],
@@ -1846,17 +1852,17 @@ describe('RobotJobService', () => {
         tasks: [
           {
             task_id: 'TASK_001',
-            task_type: TaskType.CrossDock,
+            task_type: TaskType.CrossDocking,
             start_location: {
               location_id: 'LOC_001',
               location_type: LocationType.Pallet,
-              location_action: LocationAction.PICK,
+              location_action: LocationAction.Pick,
               location_dimension: { length: 100, width: 50, height: 80 },
             },
             end_location: {
               location_id: 'LOC_002',
               location_type: LocationType.Pallet,
-              location_action: LocationAction.DROP,
+              location_action: LocationAction.Drop,
               location_dimension: { length: 100, width: 50, height: 80 },
             },
             cargos: [{ cargo_code: 'CARGO_001' }],
@@ -1927,12 +1933,12 @@ describe('RobotJobService', () => {
         location_type: GetLocationLocationType.Pallet,
         location_level: '1',
         location_limit: 10,
-        warehouse_id: 'WH_001',
       };
 
       const result = await service.getLocations(
         'WH_001',
         getLocationReq,
+        mockConfig,
       );
 
       expect(result).toHaveProperty('zone_id');
