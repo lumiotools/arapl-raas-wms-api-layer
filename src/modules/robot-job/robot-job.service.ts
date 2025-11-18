@@ -89,7 +89,7 @@ export class RobotJobService {
       if (task.status === null){
         continue;
       }
-      task.robot_name = task.robot_id;
+      task.robot_name = task.robot_name || task.robot_id;
       if (db_task.status!=task.status){
         db_task.status = task.status;
         await this.TaskRepository.save(db_task);
