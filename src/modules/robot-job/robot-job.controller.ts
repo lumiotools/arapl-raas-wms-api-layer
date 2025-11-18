@@ -814,8 +814,8 @@ export class RobotJobController {
         'zone_id': 'station',
         'available_location_types': [
           // {'location_id': 'ST010'},
-          {'location_id': 'ST001'},
-          {'location_id': 'ST002'},
+          {'location_id': 'ST001', 'customer_location_id': 'Station 1'},
+          {'location_id': 'ST002', 'customer_location_id': 'Station 2'},
           // {'location_id': 'ST003'},
           // {'location_id': 'ST004'},
           // {'location_id': 'ST008'}
@@ -827,43 +827,56 @@ export class RobotJobController {
         'zone_id': 'inventory',
         'available_location_types': [
           {
-            'location_id': 'R10X23'
+            'location_id': 'R10X23',
+            'customer_location_id': 'FPS001'
           },
           {
-            'location_id': 'R10X02'
+            'location_id': 'R10X02',
+            'customer_location_id': 'FPS002'
           },
           {
-            'location_id': 'R20X01'
+            'location_id': 'R20X01',
+            'customer_location_id': 'FPS003'
           },
           {
-            'location_id': 'R10X01'
+            'location_id': 'R10X01',
+            'customer_location_id': 'FPS004'
           },
           {
-            'location_id': 'R10X03'
+            'location_id': 'R10X03',
+            'customer_location_id': 'FPS005'
           },
           {
-            'location_id': 'R10X04'
+            'location_id': 'R10X04',
+            'customer_location_id': 'FPS006'
           },
           {
-            'location_id': 'R10X05'
+            'location_id': 'R10X05',
+            'customer_location_id': 'FPS007'
           },
           {
-            'location_id': 'R10X06'
+            'location_id': 'R10X06',
+            'customer_location_id': 'FPS008'
           },
           {
-            'location_id': 'R10X07'
+            'location_id': 'R10X07',
+            'customer_location_id': 'FPS009'
           },
           {
-            'location_id': 'R10X08'
+            'location_id': 'R10X08',
+            'customer_location_id': 'FPS010'
           },
           {
-            'location_id': 'R10X09'
+            'location_id': 'R10X09',
+            'customer_location_id': 'FPS011'
           },
           {
-            'location_id': 'R10X10'
+            'location_id': 'R10X10',
+            'customer_location_id': 'FPS012'
           },
           {
-            'location_id': 'R30X23'
+            'location_id': 'R30X23',
+            'customer_location_id': 'FPS013'
           }
         ]
       }
@@ -872,22 +885,9 @@ export class RobotJobController {
       return {
         'zone_id': 'wait',
         'available_location_types': [
-          { 'location_id': 'WA0101' },
-          { 'location_id': 'WA0102' },
-          { 'location_id': 'WA0103' },
-          { 'location_id': 'WA0104' },
-          { 'location_id': 'WA0105' },
-          { 'location_id': 'WA0106' },
-          { 'location_id': 'WA0107' },
-          { 'location_id': 'WA0108' },
-          { 'location_id': 'WA0109' },
-          { 'location_id': 'WA0110' },
-          { 'location_id': 'WA0111' },
-          { 'location_id': 'WA0112' },
-          { 'location_id': 'WA0113' },
-          { 'location_id': 'WA0114' },
-          { 'location_id': 'WA0115' },
-          { 'location_id': 'WA0116' }
+          { 'location_id': 'WA0101', 'customer_location_id': 'Wait 1' },
+          { 'location_id': 'WA0102', 'customer_location_id': 'Wait 2' },
+          { 'location_id': 'WA0103', 'customer_location_id': 'Wait 3' },
         ]
       }
     }
@@ -896,8 +896,8 @@ export class RobotJobController {
       return {
         'zone_id': 'empty',
         'available_location_types': [
-          { 'location_id': 'EM0101' },
-          { 'location_id': 'EM0102' },
+          { 'location_id': 'EM0101', 'customer_location_id': 'Empty 1' },
+          { 'location_id': 'EM0102', 'customer_location_id': 'Empty 2' },
           // { 'location_id': 'EM0103' },
           // { 'location_id': 'EM0104' },
           // { 'location_id': 'EM0105' },

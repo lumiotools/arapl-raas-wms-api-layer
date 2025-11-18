@@ -83,12 +83,13 @@ export class RobotJobService {
     const tasks = data.data || [];
     console.log(`tasks length: ${tasks.length}`);
     for (const socket_batch of tasks){
-      const task = socket_batch.tasks[0];
+      let task = socket_batch.tasks[0];
       const db_task = await this.TaskRepository.findOne({ where: { task_id: task.task_id } });
       if(!db_task) continue;
       if (task.status === null){
         continue;
       }
+      task.robot_name = task.robot_id;
       if (db_task.status!=task.status){
         db_task.status = task.status;
         await this.TaskRepository.save(db_task);
@@ -897,7 +898,7 @@ export class RobotJobService {
       if (task.robot_id) {
         // TODO: Implement robot availability update logic
         // This would typically involve calling an external service or updating a robot status table
-        // await this.orchestratorService.makeRobotAvailable(task.robot_id);
+        await this.orchestratorService.makeRobotAvailable(task.robot_id);
         console.log(`Making robot ${task.robot_id} available`);
       }
     }

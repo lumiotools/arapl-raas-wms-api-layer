@@ -193,7 +193,7 @@ export class OschestratorService {
                             await this.wms_webhook({tasks: [task], existingBatchJob: pendingBatchJob});
 
                             // Update task status
-                            task.status = 'processing';
+                            task.status = 'pickup_successful';
                             await taskQueryRunner.manager.save(task);
                             
                             // Commit the task transaction
@@ -307,12 +307,12 @@ export class OschestratorService {
                 this.logger.warn(`Batch job ${firstTask.batch_job.batch_job_id} does not exist or Cancelled. Skipping.`);
                 return;
             }
-            existingBatchJob.status = 'processing';
+            existingBatchJob.status = 'pickup_successful';
             await this.batchJobRepository.save(existingBatchJob);
 
             for (const task of tasksToProcess) {
                 if (!task.robot_id) { continue; }
-                task.status = 'processing';
+                task.status = 'pickup_successful';
                 await this.taskRepository.save(task);
                 await this.wms_webhook({ tasks: [task], existingBatchJob: existingBatchJob });
 
