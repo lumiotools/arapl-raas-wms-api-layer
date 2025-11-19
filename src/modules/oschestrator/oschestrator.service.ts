@@ -374,7 +374,8 @@ export class OschestratorService {
                 {
                     "task_id": tasks[0].task_id,
                     "status": tasks[0].status,
-                    "robot_id": tasks[0].robot_id
+                    "robot_id": tasks[0].robot_id,
+                    "robot_name": "name_" + tasks[0].robot_id,
                 }
             ]
         }
