@@ -37,9 +37,9 @@ export async function createTask(payload: struct_fms_create_task): Promise<TaskG
                     location_type: task.end_location.location_type,
                     location_action: task.end_location.location_action,
                 },
-                cargos: task.cargos.map(cargo => ({
+                cargos: task.cargos?.map(cargo => ({
                     cargo_code: cargo.cargo_code,
-                })),
+                })) ?? [],
             })),
         }
         // let URL = process.env.FMS_BASE_URL;
