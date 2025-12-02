@@ -124,6 +124,11 @@ export class OschestratorService {
                             taskQueryRunner = this.batchJobRepository.manager.connection.createQueryRunner();
                             await taskQueryRunner.connect();
                             await taskQueryRunner.startTransaction();
+
+                            task.status = 'task_acknowledged';
+                            await taskQueryRunner.manager.save(task);
+                            await this.wms_webhook({tasks: [task], existingBatchJob: pendingBatchJob});
+                            await new Promise(resolve => setTimeout(resolve, 1000));
                             
                             let assignedRobotId = task.robot_id;
                             
@@ -190,10 +195,11 @@ export class OschestratorService {
                                 );
                             }
 
-                            await this.wms_webhook({tasks: [task], existingBatchJob: pendingBatchJob});
+                            await this.wms_webhook({tasks: [task], existingBatchJob: pendingBatchJob})
 
                             // Update task status
                             task.status = 'pickup_successful';
+                            task.robot_id = assignedRobotId;
                             await taskQueryRunner.manager.save(task);
                             
                             // Commit the task transaction
@@ -375,7 +381,7 @@ export class OschestratorService {
                     "task_id": tasks[0].task_id,
                     "status": tasks[0].status,
                     "robot_id": tasks[0].robot_id,
-                    "robot_name": "name_" + tasks[0].robot_id,
+                    "robot_name": tasks[0].robot_id,
                 }
             ]
         }
@@ -459,7 +465,7 @@ export class OschestratorService {
             //         this.logger.log(`Initialized robot ${robotId} in database`);
             //     }
             // }
-            this.createRobots(10);
+            this.createRobots(4);
         } catch (error) {
             this.logger.error('Error initializing robots:', error);
         }
@@ -477,24 +483,24 @@ export class OschestratorService {
                 .createQueryBuilder('robot')
                 .orderBy('robot.robot_id', 'DESC')
                 .getOne();
-            if (highestRobot?.robot_id === 'ROBOT-010') {
+            if (highestRobot?.robot_id === 'MAIA-004') {
                 return {
-                    message: 'Maximum robot limit reached (ROBOT-010). Cannot create more robots.',
+                    message: 'Maximum robot limit reached (MAIA-004). Cannot create more robots.',
                     success: false,
                     robots: []
                 }
             }
 
             let startIndex = 1;
-            if (highestRobot && /^ROBOT-\d+$/.test(highestRobot.robot_id)) {
+            if (highestRobot && /^MAIA-\d+$/.test(highestRobot.robot_id)) {
                 // Extract the numeric part and increment
-                const lastNum = parseInt(highestRobot.robot_id.replace('ROBOT-', ''), 10);
+                const lastNum = parseInt(highestRobot.robot_id.replace('MAIA-', ''), 10);
                 startIndex = lastNum + 1;
             }
 
             const robots: string[] = [];
             for (let i = 0; i < count; i++) {
-                const robotId = `ROBOT-${String(startIndex + i).padStart(3, '0')}`;
+                const robotId = `MAIA-${String(startIndex + i).padStart(3, '0')}`;
                 console.log(`Creating robot with ID: ${robotId}, index: ${i}`);
                 const robot = this.robotRepository.create({
                     robot_id: robotId,

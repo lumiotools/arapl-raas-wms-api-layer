@@ -25,7 +25,8 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       'https://arapl-raas-gtp-ui.vercel.app',
-      'https://arapl-raas-gtp.onrender.com'
+      'https://arapl-raas-gtp.onrender.com',
+      'http://localhost:8000',
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     allowedHeaders: 'Content-Type, Authorization',
@@ -34,6 +35,6 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api-docs', app, document); 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 9000);
 }
 bootstrap();
