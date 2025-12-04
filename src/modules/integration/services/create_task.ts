@@ -56,18 +56,21 @@ export async function createTask(payload: struct_fms_create_task): Promise<TaskG
             body: JSON.stringify(RequestBody)
         });
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new BadRequestException(errorText);
+            const errorResponse = await response.json();
+            throw new BadRequestException(errorResponse["message"] ?? response.statusText);
         }
 
         return await response.json();
 
     } catch (error) {
+
+        if(payload.tasks[0].task_type !== TaskType.CrossDock) {
+            return {
+                batch_id: payload.batch_job_id,
+                status: 'success',
+            };
+        }
         
-        return {
-            batch_id: payload.batch_job_id,
-            status: 'success',
-        };
         throw new BadRequestException(error.message);
     }
 }
