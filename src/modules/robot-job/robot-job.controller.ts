@@ -847,18 +847,6 @@ export class RobotJobController {
             'customer_location_id': 'FPS005'
           },
           {
-            'location_id': 'R10X04',
-            'customer_location_id': 'FPS006'
-          },
-          {
-            'location_id': 'R10X05',
-            'customer_location_id': 'FPS007'
-          },
-          {
-            'location_id': 'R10X06',
-            'customer_location_id': 'FPS008'
-          },
-          {
             'location_id': 'R10X07',
             'customer_location_id': 'FPS009'
           },
@@ -888,6 +876,25 @@ export class RobotJobController {
           { 'location_id': 'WA0101', 'customer_location_id': 'Wait 1' },
           { 'location_id': 'WA0102', 'customer_location_id': 'Wait 2' },
           { 'location_id': 'WA0103', 'customer_location_id': 'Wait 3' },
+        ]
+      }
+    }
+    if (locationZone === 'quarantine'){
+      return {
+        'zone_id': 'quarantine',
+        'available_location_types': [
+          {
+            'location_id': 'R10X04',
+            'customer_location_id': 'FPS006'
+          },
+          {
+            'location_id': 'R10X05',
+            'customer_location_id': 'FPS007'
+          },
+          {
+            'location_id': 'R10X06',
+            'customer_location_id': 'FPS008'
+          },
         ]
       }
     }
