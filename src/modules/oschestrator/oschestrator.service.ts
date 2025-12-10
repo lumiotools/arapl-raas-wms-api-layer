@@ -357,7 +357,8 @@ export class OschestratorService {
                 {
                     "task_id": tasks[0].task_id,
                     "status": tasks[0].status,
-                    "robot_id": tasks[0].robot_id
+                    "robot_id": tasks[0].robot_id,
+                    "robot_name": tasks[0].robot_id ? (await this.robotRepository.findOne({ where: { robot_id: tasks[0].robot_id } }))?.robot_name || '' : '',
                 }
             ]
         }

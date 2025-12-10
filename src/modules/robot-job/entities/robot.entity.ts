@@ -6,6 +6,9 @@ export class Robot {
     @PrimaryColumn({ type: 'varchar', length: 50 })
     robot_id: string;
 
+    @Column({ type: 'varchar', length: 100, unique: true, nullable: true })
+    robot_name: string;
+
     @Column({ type: 'boolean', default: true })
     available: boolean;
 
