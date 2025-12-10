@@ -54,6 +54,7 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { GetIdleRobotsRes } from './dto/GetIdleRobots.dto';
+import { PauseResumeReq, PauseResumeRes } from './dto/PauseResume.dto';
 
 @ApiSecurity('api-key')
 @Controller('robot-job')
@@ -61,7 +62,7 @@ export class RobotJobController {
   private readonly logger = new Logger(RobotJobController.name);
   private readonly validator = new Validator();
 
-  constructor(private readonly robotJobService: RobotJobService) {}
+  constructor(private readonly robotJobService: RobotJobService) { }
 
   // @Get(':warehouse_id/tasks/:batch_id')
   // async getTasks(
@@ -131,7 +132,7 @@ export class RobotJobController {
       params.batch_id,
     );
     const includeRobot = !!request.warehouse?.robot_access;
-    
+
     const tasksForResponse = taskEntities.map((entity) => ({
       ...entity,
       wait: entity.wait_time,
@@ -486,7 +487,7 @@ export class RobotJobController {
   async cancelBatch(
     @Param('warehouse_id') warehouseId: string,
     @Param('batch_id') batchId: string,
-  @Body() body: CancelTaskReq,
+    @Body() body: CancelTaskReq,
     @Req() request: Request,
   ): Promise<BatchCancelRes> {
     console.log('reached');
@@ -504,7 +505,7 @@ export class RobotJobController {
       return result;
     }
 
-  const batchDto = plainToInstance(CancelTaskReq, body);
+    const batchDto = plainToInstance(CancelTaskReq, body);
     const validationErrors = await this.validator.validate(batchDto);
     console.log('proceeding');
     if (validationErrors.length === 0) {
@@ -637,7 +638,7 @@ export class RobotJobController {
     @Param('warehouse_id') warehouseId: string,
     @Param('batch_id') batchId: string,
     @Param('task_id') taskId: string,
-  @Body() body: CancelTaskReq,
+    @Body() body: CancelTaskReq,
     @Req() request: Request,
   ): Promise<TaskCancelRes> {
     const config = request.taskConfigs?.cancel_task;
@@ -655,7 +656,7 @@ export class RobotJobController {
       return result;
     }
 
-  const singleTaskDto = plainToInstance(CancelTaskReq, body);
+    const singleTaskDto = plainToInstance(CancelTaskReq, body);
     const validationErrors = await this.validator.validate(singleTaskDto);
 
     if (validationErrors.length === 0) {
@@ -928,8 +929,8 @@ export class RobotJobController {
     if (!request.warehouse?.robot_access) {
       throw new ForbiddenException('Warehouse does not have robot access');
     }
-  const robots = await this.robotJobService.getIdleRobots();
-  return { robots };
+    const robots = await this.robotJobService.getIdleRobots();
+    return { robots };
   }
 
   @Patch(':warehouse_id/locations/status')
@@ -958,6 +959,26 @@ export class RobotJobController {
     const { location_id, status } = body;
 
     return this.robotJobService.updateLocationStatus(warehouseId, location_id, status);
+  }
+
+  @Patch(`:warehouse_id/tasks/:batch_id/:task_id/state`)
+  async updateTaskState(
+    @Param('warehouse_id') warehouseId: string,
+    @Param('batch_id') batchId: string,
+    @Param('task_id') taskId: string,
+    @Body() body: PauseResumeReq,
+  ): Promise<PauseResumeRes> {
+    const structuredDto = plainToInstance(PauseResumeReq, body);
+    const validationErrors = await this.validator.validate(structuredDto);
+    if (validationErrors.length > 0) {
+      throw new BadRequestException('Invalid task state update request');
+    }
+    return await this.robotJobService.updateTaskState(
+      warehouseId,
+      batchId,
+      taskId,
+      structuredDto,
+    );
   }
 
 }

@@ -53,6 +53,8 @@ import { io, Socket } from 'socket.io-client';
 import { get_location } from '../FMS_Integration/services/get_location';
 import { get_idle_robots } from '../FMS_Integration/services/idle_robots';
 import { update_location_status } from '../FMS_Integration/services/update_location_status';
+import { PauseResumeReq } from './dto/PauseResume.dto';
+import { pause_resume_task } from 'src/modules/FMS_Integration/services/pause_resume';
 
 @Injectable()
 export class RobotJobService {
@@ -1339,4 +1341,9 @@ export class RobotJobService {
   async updateLocationStatus(warehouseId: string, locationId: string, status: string){
     return update_location_status(warehouseId, locationId, status);
   }
+
+  async updateTaskState(warehouseId: string, batchId: string, taskId: string, pauseResumeReq: PauseResumeReq){
+    return pause_resume_task(warehouseId, batchId, taskId, pauseResumeReq);
+  }
 }
+
