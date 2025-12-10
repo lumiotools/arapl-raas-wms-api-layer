@@ -114,6 +114,7 @@ export class RobotJobService {
         if (db_task.status!=task.status || batch.status!=socket_batch.batch_job_status){
           db_task.status = task.status;
           db_task.robot_id = task.robot_id;
+          db_task.robot_name = task.robot_name;
           await this.TaskRepository.save(db_task);
 
           batch.status = socket_batch.batch_job_status;
@@ -130,6 +131,7 @@ export class RobotJobService {
           const includeRobot = !!warehouse?.robot_access;
 
           task.robot_id = includeRobot ? (task.robot_id ?? undefined) : undefined;
+          task.robot_name = includeRobot ? (task.robot_name ?? undefined) : undefined;
 
           const webhook_payload = {
             batch_job_id: socket_batch.batch_job_id,
@@ -442,6 +444,7 @@ export class RobotJobService {
 
       if (!hasRobotAccess) {
         task.robot_id = null;
+        task.robot_name = null;
       }
     }
 
@@ -481,6 +484,7 @@ export class RobotJobService {
         wait_time: task.wait_time,
         cargos: task.cargos,
         robot_id: hasRobotAccess ? (task.robot_id ?? null) : null,
+        robot_name: hasRobotAccess ? (task.robot_name ?? null) : null,
         batch_job: newBatchJob,
         status: 'task_acknowledged',
       });

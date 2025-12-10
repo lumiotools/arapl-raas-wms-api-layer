@@ -43,6 +43,7 @@ export async function get_tasks(
         status: task.status,
         task_dependency: task.task_dependency,
         robot_id: task.robot_id,
+        robot_name: task.robot_name,
         start_location: {
           location_id: task.start_location.location_id,
           location_type: String(task.start_location.location_type).toUpperCase(),

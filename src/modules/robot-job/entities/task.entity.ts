@@ -30,6 +30,9 @@ export class Task {
     @Column({ type: 'varchar', nullable: true })
     robot_id: string | null;
 
+    @Column({ type: 'varchar', nullable: true })
+    robot_name: string | null;
+
     @ManyToOne(() => BatchJob, batchJob => batchJob.id, {
         nullable: true,
         eager: true,
