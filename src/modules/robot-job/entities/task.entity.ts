@@ -49,6 +49,9 @@ export class Task {
     @Column ({ type: 'varchar', default: "pending" })
     status: string;
 
+    @Column({ type: 'boolean', default: false })
+    isPaused: boolean;
+
     @CreateDateColumn()
     created_at: Date;
 

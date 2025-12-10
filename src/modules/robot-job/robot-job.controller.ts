@@ -29,6 +29,7 @@ import {
   LocationStatus,
   LocationType,
 } from './dto/GetLocation.dto';
+import { UpdateTaskStateReq, UpdateTaskStateRes } from './dto/TaskState.dto';
 
 import { NotFoundDto } from './dto/NotFound.dto';
 import { BadRequestDto } from './dto/BadRequest.dto';
@@ -711,6 +712,80 @@ export class RobotJobController {
     const { location_id, status } = body;
 
     return this.robotJobService.updateLocationStatus(warehouseId, location_id, status);
+  }
+
+  @ApiOperation({ summary: 'Pause or Resume a task by specifying the action' })
+  @ApiParam({
+    name: 'warehouse_id',
+    type: String,
+    description: 'Unique identifier of the warehouse',
+    example: 'WH_001',
+  })
+  @ApiParam({
+    name: 'batch_id',
+    type: String,
+    description: 'Unique batch identifier',
+    example: 'BATCH_123',
+  })
+  @ApiParam({
+    name: 'task_id',
+    type: String,
+    description: 'Unique task identifier',
+    example: 'TASK_456',
+  })
+  @ApiBody({
+    type: UpdateTaskStateReq,
+    description: 'Task state update request body',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Task state updated successfully',
+    type: UpdateTaskStateRes,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request body',
+    type: BadRequestDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - invalid or missing API key',
+    type: UnauthorizedDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Task or batch not found in the specified warehouse',
+    type: NotFoundDto,
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Unexpected internal server error',
+    type: InternalServerErrorDto,
+  })
+  @Patch(':warehouse_id/tasks/:batch_id/:task_id/state')
+  async updateTaskState(
+    @Param('warehouse_id') warehouseId: string,
+    @Param('batch_id') batchId: string,
+    @Param('task_id') taskId: string,
+    @Body() updateTaskStateDto: UpdateTaskStateReq,
+  ): Promise<UpdateTaskStateRes> {
+    const structuredDto = plainToInstance(UpdateTaskStateReq, updateTaskStateDto);
+    const validationErrors = await this.validator.validate(structuredDto);
+
+    if (validationErrors.length > 0) {
+      throw new BadRequestException('Invalid task state update request');
+    }
+
+    try {
+      return await this.robotJobService.updateTaskState(
+        warehouseId,
+        batchId,
+        taskId,
+        structuredDto.action,
+      );
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
   }
 
 }

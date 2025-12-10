@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   HttpException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { NotFoundException } from '@nestjs/common';
 import {
@@ -54,6 +55,7 @@ import { get_location } from '../integration/services/get_location';
 import { get_idle_robots } from '../integration/services/idle_robots';
 import { update_location_status } from '../integration/services/update_location_status';
 import { GetTasksResponseDto } from './dto/GetTasks.dto';
+import { updateTaskState as updateTaskStateIntegration } from '../integration/services/update_task_state';
 
 @Injectable()
 export class RobotJobService {
@@ -1402,5 +1404,92 @@ export class RobotJobService {
 
   async updateLocationStatus(warehouseId: string, locationId: string, status: string){
     return update_location_status(warehouseId, locationId, status);
+  }
+
+  async updateTaskState(
+    warehouseId: string,
+    batchId: string,
+    taskId: string,
+    action: 'pause' | 'resume',
+  ): Promise<{ task_id: string; status: string; state: string; message: string }> {
+    const warehouse = await this.WarehouseRepository.findOne({
+      where: { warehouse_id: warehouseId },
+      select: ['warehouse_id', 'robot_access'],
+    });
+
+    if (!warehouse) {
+      throw new NotFoundException(`Warehouse with ID '${warehouseId}' not found.`);
+    }
+
+    // Check if warehouse has robot access
+    if (!warehouse.robot_access) {
+      throw new ForbiddenException('Warehouse does not have robot access to pause/resume tasks.');
+    }
+
+    const task = await this.TaskRepository.findOne({
+      where: {
+        task_id: taskId,
+        batch_job: {
+          batch_job_id: batchId,
+          warehouse_id: warehouseId,
+        },
+      },
+      relations: ['batch_job'],
+    });
+
+    if (!task) {
+      throw new NotFoundException(
+        `Task with ID '${taskId}' not found in batch '${batchId}' for warehouse '${warehouseId}'.`,
+      );
+    }
+
+    // Check if task can be paused/resumed
+    if (action === 'pause' && task.isPaused) {
+      return {
+        task_id: taskId,
+        status: 'success',
+        state: 'paused',
+        message: 'Task is already paused.',
+      };
+    }
+
+    if (action === 'resume' && !task.isPaused) {
+      return {
+        task_id: taskId,
+        status: 'success',
+        state: 'active',
+        message: 'Task is not in paused state.',
+      };
+    }
+
+    // Call FMS integration to update task state
+    let fmsResponse;
+    try {
+      fmsResponse = await updateTaskStateIntegration({
+        warehouse_id: warehouseId,
+        batch_job_id: batchId,
+        task_id: taskId,
+        action: action,
+      });
+    } catch (error) {
+      console.error('Error updating task state in FMS:', error);
+      throw new BadRequestException(`Failed to update task state in FMS: ${error.message}`);
+    }
+
+    if (!fmsResponse || !fmsResponse.success) {
+      throw new BadRequestException(fmsResponse?.message || 'Failed to update task state in FMS');
+    }
+
+    // Update task isPaused flag in database based on action
+    task.isPaused = action === 'pause';
+    await this.TaskRepository.save(task);
+
+    const newState = task.isPaused ? 'paused' : 'active';
+    return {
+      task_id: taskId,
+      status: 'success',
+      state: newState,
+      message: fmsResponse.message,
+    };
   }
 }
