@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   HttpException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { NotFoundException } from '@nestjs/common';
 import {
@@ -56,6 +57,7 @@ import { get_idle_robots } from '../integration/services/idle_robots';
 import { update_location_status } from '../integration/services/update_location_status';
 import { GetTasksResponseDto } from './dto/GetTasks.dto';
 import { PauseResumeReq, PauseResumeRes } from './dto/PauseResume.dto';
+import { updateTaskState as updateTaskStateIntegration } from '../integration/services/update_task_state';
 
 @Injectable()
 export class RobotJobService {
@@ -1412,6 +1414,20 @@ export class RobotJobService {
 
    async updateTaskState(warehouse_id: string, batch_id: string, task_id: string, pauseResumeReq: PauseResumeReq): Promise<PauseResumeRes> {
     try {
+      // Check warehouse has robot access
+      const warehouse = await this.WarehouseRepository.findOne({
+        where: { warehouse_id: warehouse_id },
+        select: ['warehouse_id', 'robot_access'],
+      });
+
+      if (!warehouse) {
+        throw new NotFoundException(`Warehouse with ID '${warehouse_id}' not found.`);
+      }
+
+      if (!warehouse.robot_access) {
+        throw new ForbiddenException('Warehouse does not have robot access to manage task state.');
+      }
+
       const task = await this.TaskRepository.findOne({
         where: {
           task_id: task_id,
@@ -1423,14 +1439,50 @@ export class RobotJobService {
           `Task with ID '${task_id}' not found.`,
         );
       }
-      task.status = pauseResumeReq.action === 'pause' ? 'paused' : 'pending';
-      task.batch_job.status = pauseResumeReq.action === 'pause' ? 'paused' : 'pending';
-      await this.TaskRepository.save(task);
+
+      // For cancel&retry, new_task_id is required
+      if (pauseResumeReq.action === 'cancel&retry' && !pauseResumeReq.new_task_id) {
+        throw new BadRequestException('new_task_id is required for cancel&retry action.');
+      }
+
+      // Call FMS integration to update task state
+      let fmsResponse;
+      try {
+        fmsResponse = await updateTaskStateIntegration({
+          warehouse_id: warehouse_id,
+          batch_job_id: batch_id,
+          task_id: task_id,
+          action: pauseResumeReq.action,
+          new_task_id: pauseResumeReq.new_task_id,
+        });
+      } catch (error) {
+        console.error('Error updating task state in FMS:', error);
+        throw new BadRequestException(`Failed to update task state in FMS: ${error.message}`);
+      }
+
+      if (!fmsResponse || !fmsResponse.success) {
+        throw new BadRequestException(fmsResponse?.message || 'Failed to update task state in FMS');
+      }
+
+      // Update local database based on action
+      if (pauseResumeReq.action === 'pause') {
+        task.isPaused = true;
+        await this.TaskRepository.save(task);
+      } else if (pauseResumeReq.action === 'resume') {
+        task.isPaused = false;
+        await this.TaskRepository.save(task);
+      } else if (pauseResumeReq.action === 'cancel&retry') {
+        // For cancel&retry, save the new_task_id in the database
+        task.new_task_id = pauseResumeReq.new_task_id || null;
+        task.status = 'cancelled';
+        await this.TaskRepository.save(task);
+      }
+
       return {
         success: true,
-        message: `Task ${task_id} has been ${pauseResumeReq.action}d successfully.`,
-        taskId: task_id,
-      }
+        message: fmsResponse.message,
+        taskId: fmsResponse.taskId,
+      };
     } catch (error) {
       throw new BadRequestException(
         `Failed to update task state: ${error.message}`,
