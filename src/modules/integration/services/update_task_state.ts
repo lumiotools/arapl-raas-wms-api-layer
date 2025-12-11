@@ -1,5 +1,4 @@
 import { BadRequestException } from "@nestjs/common";
-import fetch from 'node-fetch';
 
 interface UpdateTaskStatePayload {
     warehouse_id: string;

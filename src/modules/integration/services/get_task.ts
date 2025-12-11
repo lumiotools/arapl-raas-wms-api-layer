@@ -1,5 +1,4 @@
 import { BadRequestException } from '@nestjs/common';
-import fetch from 'node-fetch';
 import { INTEGRATION_URL } from 'src/constants/integrations';
 import { GetTasksResponseDto } from 'src/modules/robot-job/dto/GetTasks.dto';
 import { batch_type, TaskType } from 'src/modules/robot-job/dto/Task_Generation.dto';

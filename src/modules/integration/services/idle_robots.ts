@@ -1,6 +1,5 @@
 
 import { BadRequestException } from "@nestjs/common";
-import fetch from 'node-fetch';
 
 export async function get_idle_robots(): Promise<any[]> {
     try{

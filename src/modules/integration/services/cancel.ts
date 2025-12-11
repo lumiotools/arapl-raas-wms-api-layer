@@ -1,7 +1,6 @@
 
 import { BadRequestException } from "@nestjs/common";
 import {authenticate} from "./authentication";
-import fetch from 'node-fetch';
 import { TaskGenerationReq, TaskGenerationRes } from "src/modules/robot-job/dto/Task_Generation.dto";
 import { Task } from "src/modules/robot-job/entities/task.entity";
 import { CancelBatchReq} from "src/modules/robot-job/dto/Cancel.dto";

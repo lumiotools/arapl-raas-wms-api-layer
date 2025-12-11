@@ -1,6 +1,5 @@
 
 import { BadRequestException } from "@nestjs/common";
-import fetch from 'node-fetch';
 import { GetLocationReq, GetLocationRes } from "src/modules/robot-job/dto/GetLocation.dto";
 import { Task } from "src/modules/robot-job/entities/task.entity";
 

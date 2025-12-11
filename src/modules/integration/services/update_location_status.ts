@@ -1,5 +1,4 @@
 import { BadRequestException } from "@nestjs/common";
-import fetch from 'node-fetch';
 
 
 export async function update_location_status(warehouseId:string, locationId:string, status:string) {
