@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, Interval } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Batch, QueryRunner, Repository } from 'typeorm';
+import { Batch, In, QueryRunner, Repository } from 'typeorm';
 import { Task } from '../robot-job/entities/task.entity';
 import { BatchJob } from '../robot-job/entities/batch_task.entity';
 import { Warehouse } from '../robot-job/entities/warehouse.entity';
@@ -327,11 +327,11 @@ export class OschestratorService {
 
                 // check if this task was cancelled
                 const checkTaskForCancel = await this.taskRepository.findOne({
-                    where: { task_id: task.task_id, status: 'cancelled' }
+                    where: { task_id: task.task_id, status: In(['cancelled','paused']) }
                 });
 
                 if (checkTaskForCancel) {
-                    this.logger.warn(`Task ${task.task_id} was cancelled. Skipping.`);
+                    this.logger.warn(`Task ${task.task_id} was cancelled or paused. Skipping.`);
                     continue;
                 }
 

@@ -53,6 +53,7 @@ import { cancelBatch, cancelBatchTask } from '../FMS_Integration/services/cancel
 import { io, Socket } from 'socket.io-client';
 import { get_location } from '../FMS_Integration/services/get_location';
 import { get_idle_robots } from '../FMS_Integration/services/idle_robots';
+import { PauseResumeReq, PauseResumeRes } from './dto/PauseResume.dto';
 
 @Injectable()
 export class RobotJobService {
@@ -1373,5 +1374,33 @@ export class RobotJobService {
     //   { id: '8b7e5c9d-3a42-4f1d-9f1a-123456789abc', status: 'idle' },
     // ];
     return get_idle_robots();
+  }
+
+  async updateTaskState(warehouse_id: string, batch_id: string, task_id: string, pauseResumeReq: PauseResumeReq): Promise<PauseResumeRes> {
+    try {
+      const task = await this.TaskRepository.findOne({
+        where: {
+          task_id: task_id,
+        },
+        relations: ['batch_job'],
+      });
+      if (!task) {
+        throw new NotFoundException(
+          `Task with ID '${task_id}' not found.`,
+        );
+      }
+      task.status = pauseResumeReq.action === 'pause' ? 'paused' : 'pending';
+      task.batch_job.status = pauseResumeReq.action === 'pause' ? 'paused' : 'pending';
+      await this.TaskRepository.save(task);
+      return {
+        success: true,
+        message: `Task ${task_id} has been ${pauseResumeReq.action}d successfully.`,
+        taskId: task_id,
+      }
+    } catch (error) {
+      throw new BadRequestException(
+        `Failed to update task state: ${error.message}`,
+      );
+    }
   }
 }

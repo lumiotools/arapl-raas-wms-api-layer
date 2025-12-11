@@ -59,6 +59,7 @@ import { GetIdleRobotsRes } from './dto/GetIdleRobots.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Robot } from './entities/robot.entity';
 import { Repository } from 'typeorm';
+import { PauseResumeReq, PauseResumeRes } from './dto/PauseResume.dto';
 
 @ApiSecurity('api-key')
 @Controller('robot-job')
@@ -1132,5 +1133,25 @@ export class RobotJobController {
     robot.message_code = message_code;
     await this.robotRepository.save(robot);
     return { message: `Robot ${robotId} ${robot.is_active ? 'activated' : 'deactivated'} successfully` };
+  }
+
+  @Patch(`:warehouse_id/tasks/:batch_id/:task_id/state`)
+  async updateTaskState(
+    @Param('warehouse_id') warehouseId: string,
+    @Param('batch_id') batchId: string,
+    @Param('task_id') taskId: string,
+    @Body() body: PauseResumeReq,
+  ): Promise<PauseResumeRes> {
+    const structuredDto = plainToInstance(PauseResumeReq, body);
+    const validationErrors = await this.validator.validate(structuredDto);
+    if (validationErrors.length > 0) {
+      throw new BadRequestException('Invalid task state update request');
+    }
+    return await this.robotJobService.updateTaskState(
+      warehouseId,
+      batchId,
+      taskId,
+      structuredDto,
+    );
   }
 }
