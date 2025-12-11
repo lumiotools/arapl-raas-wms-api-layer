@@ -1412,7 +1412,7 @@ export class RobotJobService {
     taskId: string,
     action: 'pause' | 'resume' | 'cancel&retry',
     newTaskId?: string,
-  ): Promise<{ task_id: string; status: string; state: string; message: string }> {
+  ): Promise<{ task_id: string; status: string; message: string }> {
     const warehouse = await this.WarehouseRepository.findOne({
       where: { warehouse_id: warehouseId },
       select: ['warehouse_id', 'robot_access'],
@@ -1449,7 +1449,6 @@ export class RobotJobService {
       return {
         task_id: taskId,
         status: 'success',
-        state: 'paused',
         message: 'Task is already paused.',
       };
     }
@@ -1458,7 +1457,6 @@ export class RobotJobService {
       return {
         task_id: taskId,
         status: 'success',
-        state: 'active',
         message: 'Task is not in paused state.',
       };
     }
@@ -1482,15 +1480,18 @@ export class RobotJobService {
       throw new BadRequestException(fmsResponse?.message || 'Failed to update task state in FMS');
     }
 
-    // Update task isPaused flag in database based on action
-    task.isPaused = action === 'pause';
-    await this.TaskRepository.save(task);
+    if(action === 'cancel&retry' && newTaskId) {
+      // Update task ID in database
+      await this.TaskRepository.update({ task_id: taskId }, { task_id: newTaskId });
+    } else {
+      // Update task isPaused flag in database based on action
+      task.isPaused = action === 'pause';
+      await this.TaskRepository.save(task);
+    }
 
-    const newState = task.isPaused ? 'paused' : 'active';
     return {
       task_id: taskId,
       status: 'success',
-      state: newState,
       message: fmsResponse.message,
     };
   }

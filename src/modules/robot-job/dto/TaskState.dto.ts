@@ -4,6 +4,7 @@ import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 export enum TaskAction {
   Pause = 'pause',
   Resume = 'resume',
+  CancelAndRetry = 'cancel&retry',
 }
 
 export class UpdateTaskStateReq {
@@ -12,7 +13,7 @@ export class UpdateTaskStateReq {
     enum: TaskAction,
     example: TaskAction.Pause,
   })
-  @IsEnum(TaskAction, { message: 'Action must be either "pause" or "resume"' })
+  @IsEnum(TaskAction, { message: 'Action must be either "pause", "resume", or "cancel&retry"' })
   @IsNotEmpty()
   action: TaskAction;
 
@@ -38,12 +39,6 @@ export class UpdateTaskStateRes {
     example: 'success',
   })
   status: string;
-
-  @ApiProperty({
-    description: 'Current state of the task after update',
-    example: 'paused',
-  })
-  state: string;
 
   @ApiProperty({
     description: 'Additional message about the operation',
