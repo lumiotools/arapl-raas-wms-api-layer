@@ -782,6 +782,7 @@ export class RobotJobController {
         batchId,
         taskId,
         structuredDto.action,
+        structuredDto.new_task_id,
       );
     } catch (error) {
       throw new BadRequestException(error.message);

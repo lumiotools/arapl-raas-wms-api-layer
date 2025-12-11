@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsNotEmpty } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export enum TaskAction {
   Pause = 'pause',
@@ -15,6 +15,15 @@ export class UpdateTaskStateReq {
   @IsEnum(TaskAction, { message: 'Action must be either "pause" or "resume"' })
   @IsNotEmpty()
   action: TaskAction;
+
+  @ApiProperty({
+    description: 'Optional new task ID to assign when cancel and restarting a task',
+    example: 'TASK_456',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  new_task_id?: string;
 }
 
 export class UpdateTaskStateRes {

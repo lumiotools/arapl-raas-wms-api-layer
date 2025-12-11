@@ -1410,7 +1410,8 @@ export class RobotJobService {
     warehouseId: string,
     batchId: string,
     taskId: string,
-    action: 'pause' | 'resume',
+    action: 'pause' | 'resume' | 'cancel&retry',
+    newTaskId?: string,
   ): Promise<{ task_id: string; status: string; state: string; message: string }> {
     const warehouse = await this.WarehouseRepository.findOne({
       where: { warehouse_id: warehouseId },
@@ -1470,6 +1471,7 @@ export class RobotJobService {
         batch_job_id: batchId,
         task_id: taskId,
         action: action,
+        new_task_id: newTaskId,
       });
     } catch (error) {
       console.error('Error updating task state in FMS:', error);

@@ -4,7 +4,8 @@ interface UpdateTaskStatePayload {
     warehouse_id: string;
     batch_job_id: string;
     task_id: string;
-    action: 'pause' | 'resume';
+    action: 'pause' | 'resume' | 'cancel&retry';
+    new_task_id?: string;
 }
 
 interface UpdateTaskStateResponse {
@@ -21,12 +22,17 @@ export async function updateTaskState(payload: UpdateTaskStatePayload): Promise<
         console.log(`Update Task State URL: ${endpoint}`);
         console.log(`Action: ${payload.action}`);
 
+        const requestBody: any = { action: payload.action };
+        if (payload.new_task_id) {
+            requestBody.new_task_id = payload.new_task_id;
+        }
+
         const response = await fetch(endpoint, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ action: payload.action })
+            body: JSON.stringify(requestBody)
         });
         
         if (!response.ok) {
