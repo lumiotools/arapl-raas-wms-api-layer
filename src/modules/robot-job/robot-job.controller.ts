@@ -1143,10 +1143,6 @@ export class RobotJobController {
     @Body() body: PauseResumeReq,
   ): Promise<PauseResumeRes> {
     const structuredDto = plainToInstance(PauseResumeReq, body);
-    const validationErrors = await this.validator.validate(structuredDto);
-    if (validationErrors.length > 0) {
-      throw new BadRequestException('Invalid task state update request');
-    }
     return await this.robotJobService.updateTaskState(
       warehouseId,
       batchId,

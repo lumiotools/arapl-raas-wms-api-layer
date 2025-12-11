@@ -1396,7 +1396,7 @@ export class RobotJobService {
         success: true,
         message: `Task ${task_id} has been ${pauseResumeReq.action}d successfully.`,
         taskId: task_id,
-      }
+      };
     } catch (error) {
       throw new BadRequestException(
         `Failed to update task state: ${error.message}`,
