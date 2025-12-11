@@ -26,6 +26,7 @@ export async function createTask(payload: struct_fms_create_task): Promise<TaskG
             tasks: payload.tasks.map(task => ({
                 task_id: task.task_id,
                 task_type: task.task_type,
+                task_dependency: task.task_dependency,
                 robot_id: task.robot_id,
                 start_location: {
                     location_id: task.start_location.location_id,
