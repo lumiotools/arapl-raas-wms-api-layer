@@ -54,6 +54,7 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { GetIdleRobotsRes } from './dto/GetIdleRobots.dto';
+import { PauseResumeReq, PauseResumeRes } from './dto/PauseResume.dto';
 
 @ApiSecurity('api-key')
 @Controller('robot-job')
@@ -711,6 +712,22 @@ export class RobotJobController {
     const { location_id, status } = body;
 
     return this.robotJobService.updateLocationStatus(warehouseId, location_id, status);
+  }
+
+  @Patch(`:warehouse_id/tasks/:batch_id/:task_id/state`)
+  async updateTaskState(
+    @Param('warehouse_id') warehouseId: string,
+    @Param('batch_id') batchId: string,
+    @Param('task_id') taskId: string,
+    @Body() body: PauseResumeReq,
+  ): Promise<PauseResumeRes> {
+    const structuredDto = plainToInstance(PauseResumeReq, body);
+    return await this.robotJobService.updateTaskState(
+      warehouseId,
+      batchId,
+      taskId,
+      structuredDto,
+    );
   }
 
 }

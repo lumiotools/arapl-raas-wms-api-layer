@@ -55,6 +55,7 @@ import { get_location } from '../integration/services/get_location';
 import { get_idle_robots } from '../integration/services/idle_robots';
 import { update_location_status } from '../integration/services/update_location_status';
 import { GetTasksResponseDto } from './dto/GetTasks.dto';
+import { PauseResumeReq, PauseResumeRes } from './dto/PauseResume.dto';
 
 @Injectable()
 export class RobotJobService {
@@ -1407,5 +1408,33 @@ export class RobotJobService {
 
   async updateLocationStatus(warehouseId: string, locationId: string, status: string){
     return update_location_status(warehouseId, locationId, status);
+  }
+
+   async updateTaskState(warehouse_id: string, batch_id: string, task_id: string, pauseResumeReq: PauseResumeReq): Promise<PauseResumeRes> {
+    try {
+      const task = await this.TaskRepository.findOne({
+        where: {
+          task_id: task_id,
+        },
+        relations: ['batch_job'],
+      });
+      if (!task) {
+        throw new NotFoundException(
+          `Task with ID '${task_id}' not found.`,
+        );
+      }
+      task.status = pauseResumeReq.action === 'pause' ? 'paused' : 'pending';
+      task.batch_job.status = pauseResumeReq.action === 'pause' ? 'paused' : 'pending';
+      await this.TaskRepository.save(task);
+      return {
+        success: true,
+        message: `Task ${task_id} has been ${pauseResumeReq.action}d successfully.`,
+        taskId: task_id,
+      }
+    } catch (error) {
+      throw new BadRequestException(
+        `Failed to update task state: ${error.message}`,
+      );
+    }
   }
 }
