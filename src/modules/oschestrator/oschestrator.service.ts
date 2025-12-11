@@ -128,7 +128,7 @@ export class OschestratorService {
                             task.status = 'task_acknowledged';
                             await taskQueryRunner.manager.save(task);
                             await this.wms_webhook({tasks: [task], existingBatchJob: pendingBatchJob});
-                            await new Promise(resolve => setTimeout(resolve, 1000));
+                            // await new Promise(resolve => setTimeout(resolve, 1000));
                             
                             let assignedRobotId = task.robot_id;
                             
@@ -239,7 +239,7 @@ export class OschestratorService {
                     if (processedTasks.length > 0) {
                         try {
                             if (processedTasks[0].start_location.location_action === LocationAction.PICK){
-                                await new Promise(resolve => setTimeout(resolve, 10000));
+                                await new Promise(resolve => setTimeout(resolve, 1000));
                             }
                             
                             await this.wms_webhook({tasks: processedTasks, existingBatchJob: pendingBatchJob});
