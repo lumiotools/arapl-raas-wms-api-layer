@@ -103,9 +103,12 @@ export class RobotJobService {
 
   private async processTaskUpdate(data: any) {
     const tasks = data.data || [];
-    console.log(`tasks length: ${tasks.length}`);
     for (const socket_batch of tasks){
       for (const task of socket_batch.tasks) {
+        console.log(`------------------------------------------------------------------------------`)
+        console.log(`Received Websocket Task Update: ${task.status}, robot_id: ${task.robot_id}, robot_name: ${task.robot_name} for task_id: ${task.task_id}`);
+        console.log(`------------------------------------------------------------------------------`)
+
         const db_task = await this.TaskRepository.findOne({ where: { task_id: task.task_id } });
         if(!db_task) continue;
         const batch = await this.BatchJobRepository.findOne({ where: { id: db_task.batch_job_id } });
