@@ -1448,21 +1448,21 @@ export class RobotJobService {
       // Call FMS integration to update task state
       let fmsResponse;
       try {
-        fmsResponse = await updateTaskStateIntegration({
-          warehouse_id: warehouse_id,
-          batch_job_id: batch_id,
-          task_id: task_id,
-          action: pauseResumeReq.action,
-          new_task_id: pauseResumeReq.new_task_id,
-        });
+        // fmsResponse = await updateTaskStateIntegration({
+        //   warehouse_id: warehouse_id,
+        //   batch_job_id: batch_id,
+        //   task_id: task_id,
+        //   action: pauseResumeReq.action,
+        //   new_task_id: pauseResumeReq.new_task_id,
+        // });
       } catch (error) {
         console.error('Error updating task state in FMS:', error);
         throw new BadRequestException(`Failed to update task state in FMS: ${error.message}`);
       }
 
-      if (!fmsResponse || !fmsResponse.success) {
-        throw new BadRequestException(fmsResponse?.message || 'Failed to update task state in FMS');
-      }
+      // if (!fmsResponse || !fmsResponse.success) {
+      //   throw new BadRequestException(fmsResponse?.message || 'Failed to update task state in FMS');
+      // }
 
       // Update local database based on action
       if (pauseResumeReq.action === 'pause') {
@@ -1473,15 +1473,14 @@ export class RobotJobService {
         await this.TaskRepository.save(task);
       } else if (pauseResumeReq.action === 'cancel&retry') {
         // For cancel&retry, save the new_task_id in the database
-        task.new_task_id = pauseResumeReq.new_task_id || null;
-        task.status = 'cancelled';
+        task.task_id = pauseResumeReq.new_task_id!;
         await this.TaskRepository.save(task);
       }
 
       return {
         success: true,
-        message: fmsResponse.message,
-        taskId: fmsResponse.taskId,
+        message: "fmsResponse.message",
+        taskId: "fmsResponse.taskId",
       };
     } catch (error) {
       throw new BadRequestException(
