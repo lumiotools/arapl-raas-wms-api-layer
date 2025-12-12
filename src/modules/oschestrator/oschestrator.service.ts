@@ -275,7 +275,7 @@ export class OschestratorService {
                     break;
                 }
 
-                const latestTask = await this.taskRepository.findOne({ where: { task_id: task.task_id } });
+                const latestTask = await this.taskRepository.findOne({ where: { id: task.id } });
                 if (latestTask?.status === 'cancelled') {
                     this.logger.warn(`Task ${task.task_id} is cancelled before start. Halting chain.`);
                     if (chainRobotId) {
@@ -291,11 +291,11 @@ export class OschestratorService {
                 await this.wms_webhook({ tasks: [task], existingBatchJob: existingBatchJob });
 
                 // Simulate task processing time of 60 seconds
-                await new Promise(resolve => setTimeout(resolve, 10000));
+                await new Promise(resolve => setTimeout(resolve, 15000));
 
                 // check if this task was cancelled
                 const checkTaskForCancel = await this.taskRepository.findOne({
-                    where: { task_id: task.task_id, status: 'cancelled' }
+                    where: { id: task.id, status: 'cancelled' }
                 });
 
                 if (checkTaskForCancel) {
@@ -313,19 +313,26 @@ export class OschestratorService {
                     break;
                 }
 
-                const checkTaskForPause = await this.taskRepository.findOne({
-                    where: { task_id: task.task_id, status: 'paused' }
-                });
-                if (checkTaskForPause) {
-                    this.logger.warn(`Task ${task.task_id} is paused. Halting chain.`);
-                    continue;
+                while(true) {
+                    const checkTaskForPause = await this.taskRepository.findOne({
+                        where: { id: task.id, isPaused: true }
+                    });
+                    if (checkTaskForPause) {
+                        this.logger.warn(`Task ${task.task_id} is paused. Halting chain.`);
+                    } else {
+                        break;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 5000));
                 }
+                const completedTask = await this.taskRepository.findOne({
+                    where: { id: task.id }
+                })
 
-                task.status = 'completed';
-                await this.taskRepository.save(task);
+                completedTask!.status = 'completed';
+                await this.taskRepository.save(completedTask!);
                 // Do not release robot here; release after the entire chain completes
 
-                await this.wms_webhook({ tasks: [task], existingBatchJob: existingBatchJob });
+                await this.wms_webhook({ tasks: [completedTask!], existingBatchJob: existingBatchJob });
             }
             // After chain completion, release robot (if not already released due to cancellation)
             if (chainRobotId && !robotReleasedInLoop) {
