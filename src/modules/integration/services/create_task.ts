@@ -1,5 +1,5 @@
 
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, HttpException } from "@nestjs/common";
 import {authenticate} from "./authentication";
 import { TaskGenerationReq, TaskGenerationRes, TaskType } from "src/modules/robot-job/dto/Task_Generation.dto";
 import { Task } from "src/modules/robot-job/entities/task.entity";
@@ -57,12 +57,24 @@ export async function createTask(payload: struct_fms_create_task): Promise<TaskG
         });
         if (!response.ok) {
             const errorText = await response.text();
-            throw new BadRequestException(errorText);
+            try {
+                const parsed = JSON.parse(errorText);
+                parsed.message = parsed.message.replace("\n", ", ");
+                // If the integration already returns a structured error, preserve it and status
+                const status = parsed.statusCode ?? response.status ?? 400;
+                throw new HttpException(parsed, status);
+            } catch (e) {
+                if (e instanceof HttpException) throw e;
+                // Not JSON, throw as plain bad request
+                throw new BadRequestException(errorText);
+            }
         }
 
         return await response.json();
 
     } catch (error) {
+        // If it's already an HttpException (we rethrew above), propagate it as-is
+        if (error instanceof HttpException) throw error;
         throw new BadRequestException(error.message);
     }
 }

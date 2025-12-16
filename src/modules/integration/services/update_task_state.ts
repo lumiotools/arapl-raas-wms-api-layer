@@ -1,4 +1,4 @@
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, HttpException } from "@nestjs/common";
 
 interface UpdateTaskStatePayload {
     warehouse_id: string;
@@ -37,7 +37,14 @@ export async function updateTaskState(payload: UpdateTaskStatePayload): Promise<
         
         if (!response.ok) {
             const errorText = await response.text();
-            throw new BadRequestException(`Failed to update task state: ${response.status} ${errorText}`);
+            try {
+                const parsed = JSON.parse(errorText);
+                const status = parsed.statusCode ?? response.status ?? 400;
+                throw new HttpException(parsed, status);
+            } catch (e) {
+                if (e instanceof HttpException) throw e;
+                throw new BadRequestException(`Failed to update task state: ${response.status} ${errorText}`);
+            }
         }
 
         const responseData = await response.json();
@@ -46,6 +53,7 @@ export async function updateTaskState(payload: UpdateTaskStatePayload): Promise<
 
     } catch (error) {
         console.error('Error during update-task-state:', error);
+        if (error instanceof HttpException) throw error;
         throw new BadRequestException(`FMS Update task state failed: ${error.message}`);
     }
 }

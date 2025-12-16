@@ -11,6 +11,7 @@ import {
   Logger,
   Req,
   ForbiddenException,
+  HttpException,
 } from '@nestjs/common';
 import { RobotJobService } from './robot-job.service';
 import { Validator } from 'class-validator';
@@ -785,6 +786,7 @@ export class RobotJobController {
         structuredDto.new_task_id,
       );
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       throw new BadRequestException(error.message);
     }
   }

@@ -1,5 +1,5 @@
 
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, HttpException } from "@nestjs/common";
 import {authenticate} from "./authentication";
 import { TaskGenerationReq, TaskGenerationRes } from "src/modules/robot-job/dto/Task_Generation.dto";
 import { Task } from "src/modules/robot-job/entities/task.entity";
@@ -33,13 +33,21 @@ export async function updateTask(payload: update_payload): Promise<TaskUpdateRes
         console.log(`response: ${JSON.stringify(response)}`);
         if (!response.ok) {
             const errorText = await response.text();
-            throw new BadRequestException(`Failed to update task: ${response.status} ${errorText}`);
+            try {
+                const parsed = JSON.parse(errorText);
+                const status = parsed.statusCode ?? response.status ?? 400;
+                throw new HttpException(parsed, status);
+            } catch (e) {
+                if (e instanceof HttpException) throw e;
+                throw new BadRequestException(`Failed to update task: ${response.status} ${errorText}`);
+            }
         }
 
         return await response.json();
 
     } catch (error) {
         console.error('Error during update-task:', error);
+        if (error instanceof HttpException) throw error;
         throw new BadRequestException('FMS Update task failed');
     }
 }

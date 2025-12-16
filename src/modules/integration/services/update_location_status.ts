@@ -1,4 +1,4 @@
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, HttpException } from "@nestjs/common";
 
 
 export async function update_location_status(warehouseId:string, locationId:string, status:string) {
@@ -19,13 +19,21 @@ export async function update_location_status(warehouseId:string, locationId:stri
         });
         if (!response.ok) {
             const errorText = await response.text();
-            throw new BadRequestException(`Failed to update location status: ${response.status} ${errorText}`);
+            try {
+                const parsed = JSON.parse(errorText);
+                const status = parsed.statusCode ?? response.status ?? 400;
+                throw new HttpException(parsed, status);
+            } catch (e) {
+                if (e instanceof HttpException) throw e;
+                throw new BadRequestException(`Failed to update location status: ${response.status} ${errorText}`);
+            }
         }
 
         return await response.json();
 
     } catch (error) {
         console.error('Error during update_location_status:', error);
+        if (error instanceof HttpException) throw error;
         throw new BadRequestException('FMS Update location status failed');
     }
 }

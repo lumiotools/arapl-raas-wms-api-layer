@@ -463,7 +463,8 @@ export class RobotJobService {
         batch_frequency: createRobotJobDto.batch_frequency,
         tasks: Tasks,
       });
-    } catch(err){
+    } catch (err) {
+      if (err instanceof HttpException) throw err;
       throw new BadRequestException(err.message);
     }
     console.log(`Task Creation Response: ${JSON.stringify(response)}`);
@@ -926,6 +927,7 @@ export class RobotJobService {
       });
     } catch (error) {
       console.error('Error occurred while cancelling batch:', error);
+      if (error instanceof HttpException) throw error;
       throw new BadRequestException('Failed to cancel batch in FMS');
     }
 
@@ -1035,6 +1037,7 @@ export class RobotJobService {
       });
     } catch (error) {
       console.error('Error occurred while cancelling task:', error);
+      if (error instanceof HttpException) throw error;
       throw new BadRequestException('Failed to cancel task in FMS');
     }
     if (!fms_response) {

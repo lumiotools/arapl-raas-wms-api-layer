@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, HttpException } from '@nestjs/common';
 import { INTEGRATION_URL } from 'src/constants/integrations';
 import { GetTasksResponseDto } from 'src/modules/robot-job/dto/GetTasks.dto';
 import { batch_type, TaskType } from 'src/modules/robot-job/dto/Task_Generation.dto';
@@ -24,9 +24,16 @@ export async function get_tasks(
     );
     if (!response.ok) {
       const errorText = await response.text();
-      throw new BadRequestException(
-        `Failed to get tasks: ${response.status} ${errorText}`,
-      );
+      try {
+        const parsed = JSON.parse(errorText);
+        const status = parsed.statusCode ?? response.status ?? 400;
+        throw new HttpException(parsed, status);
+      } catch (e) {
+        if (e instanceof HttpException) throw e;
+        throw new BadRequestException(
+          `Failed to get tasks: ${response.status} ${errorText}`,
+        );
+      }
     }
     const batch = await response.json();
 
@@ -60,6 +67,7 @@ export async function get_tasks(
 
     return batchResponse as GetTasksResponseDto;
   } catch (error) {
+    if (error instanceof HttpException) throw error;
     throw new BadRequestException(error.message);
   }
 }
