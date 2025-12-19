@@ -542,13 +542,21 @@ export class OschestratorService {
             }
 
             const robots: string[] = [];
+            const robotTypes = [TaskType.GoodsToPerson, TaskType.CrossDock_Internal, TaskType.Baseops];
             for (let i = 0; i < count; i++) {
                 const robotId = `ROBOT-${String(startIndex + i).padStart(3, '0')}`;
-                console.log(`Creating robot with ID: ${robotId}, index: ${i}`);
+                // Rotate through the 3 types: GoodsToPerson, CrossDock_Internal, Baseops
+                const taskType = robotTypes[i % robotTypes.length];
+                // Only the first 3 robots are enabled; the rest are created but marked inactive/off
+                const isActive = i < 4;
+                const available = isActive;
+                this.logger.log(`Creating robot ${robotId} (type: ${taskType}, active: ${isActive})`);
                 const robot = this.robotRepository.create({
                     robot_id: robotId,
-                    available: true,
-                    task_type: (i%2)==0 ? TaskType.CrossDock_Internal: TaskType.Baseops
+                    robot_name: robotId,
+                    available,
+                    task_type: taskType,
+                    is_active: isActive
                 });
                 await this.robotRepository.save(robot);
                 robots.push(robotId);
