@@ -187,13 +187,10 @@ export class OschestratorService {
                                 continue; // Skip to next task, not batch job
                             }
 
-                            // Update robot status if not already updated
-                            if (task.robot_id !== assignedRobotId) {
-                                await taskQueryRunner.manager.update(Robot,
-                                    { robot_id: assignedRobotId },
-                                    { available: false }
-                                );
-                            }
+                            await taskQueryRunner.manager.update(Robot,
+                                { robot_id: assignedRobotId },
+                                { available: false }
+                            );
 
                             await this.wms_webhook({tasks: [task], existingBatchJob: pendingBatchJob})
 
