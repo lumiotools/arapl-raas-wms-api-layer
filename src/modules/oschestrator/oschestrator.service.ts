@@ -286,7 +286,7 @@ export class OschestratorService {
                     break;
                 }
 
-                task.status = 'processing';
+                task.status = 'pickup_successful';
                 await this.taskRepository.save(task);
                 await this.wms_webhook({ tasks: [task], existingBatchJob: existingBatchJob });
 
