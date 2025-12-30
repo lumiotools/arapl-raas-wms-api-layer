@@ -286,6 +286,15 @@ export class OschestratorService {
                     break;
                 }
 
+                // Set robot_movement_started status
+                task.status = 'robot_movement_started';
+                await this.taskRepository.save(task);
+                await this.wms_webhook({ tasks: [task], existingBatchJob: existingBatchJob });
+
+                // Wait 5 seconds before pickup_successful
+                await new Promise(resolve => setTimeout(resolve, 5000));
+
+                // Set pickup_successful status
                 task.status = 'pickup_successful';
                 await this.taskRepository.save(task);
                 await this.wms_webhook({ tasks: [task], existingBatchJob: existingBatchJob });
